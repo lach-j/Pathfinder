@@ -13,10 +13,16 @@ npm install
 npm run build
 ```
 
+Run the local CLI with:
+
+```bash
+npm exec -- pathfinder help
+```
+
 Initialise Pathfinder state from the root of a Git repository:
 
 ```bash
-npx pathfinder init
+npm exec -- pathfinder init
 ```
 
 This creates:
@@ -30,25 +36,25 @@ This creates:
 Create and inspect a workstream:
 
 ```bash
-npx pathfinder workstream create --title "Add billing foundation"
-npx pathfinder workstream list
-npx pathfinder workstream show add-billing-foundation
+npm exec -- pathfinder workstream create --title "Add billing foundation"
+npm exec -- pathfinder workstream list
+npm exec -- pathfinder workstream show add-billing-foundation
 ```
 
 Attach and read a markdown implementation plan:
 
 ```bash
-npx pathfinder plan set add-billing-foundation --file ./plan.md
-npx pathfinder plan show add-billing-foundation
+npm exec -- pathfinder plan set add-billing-foundation --file ./plan.md
+npm exec -- pathfinder plan show add-billing-foundation
 ```
 
 Add slices and set the active slice:
 
 ```bash
-npx pathfinder slice add add-billing-foundation --title "Create local state" --description "Add filesystem-backed Pathfinder state files."
-npx pathfinder slice list add-billing-foundation
-npx pathfinder slice active add-billing-foundation create-local-state
-npx pathfinder slice show-active
+npm exec -- pathfinder slice add add-billing-foundation --title "Create local state" --description "Add filesystem-backed Pathfinder state files."
+npm exec -- pathfinder slice list add-billing-foundation
+npm exec -- pathfinder slice active add-billing-foundation create-local-state
+npm exec -- pathfinder slice show-active
 ```
 
 Each workstream is stored as human-readable local files:

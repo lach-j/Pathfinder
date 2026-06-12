@@ -4,6 +4,9 @@
   "description": "Local-first context, planning, and review state for AI-assisted development.",
   "private": true,
   "type": "module",
+  "bin": {
+    "pathfinder": "./packages/cli/dist/index.js"
+  },
   "workspaces": [
     "packages/core",
     "packages/state",
