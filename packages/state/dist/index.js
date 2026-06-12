@@ -1,0 +1,221 @@
+import { constants } from "node:fs";
+import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { PathfinderError, assertNonEmptyText, createTimestamp, nextAvailableId, toUrlSafeId } from "@pathfinder/core";
+export class PathfinderStore {
+    cwd;
+    constructor(cwd = process.cwd()) {
+        this.cwd = path.resolve(cwd);
+    }
+    async initProject() {
+        const gitRoot = await findGitRoot(this.cwd);
+        if (!gitRoot) {
+            throw new PathfinderError("pathfinder init must be run inside a Git repository.");
+        }
+        const stateRoot = path.join(gitRoot, ".pathfinder");
+        const projectPath = path.join(stateRoot, "project.json");
+        if (await exists(projectPath)) {
+            throw new PathfinderError("Pathfinder state already exists in this repository.");
+        }
+        const now = createTimestamp();
+        const project = {
+            schemaVersion: 1,
+            name: path.basename(gitRoot),
+            createdAt: now
+        };
+        await mkdir(path.join(stateRoot, "workstreams"), { recursive: true });
+        await writeJson(projectPath, project);
+        return project;
+    }
+    async getProject() {
+        const stateRoot = await this.requireStateRoot();
+        return readJson(path.join(stateRoot, "project.json"));
+    }
+    async createWorkstream(title) {
+        const stateRoot = await this.requireStateRoot();
+        const cleanTitle = assertNonEmptyText(title, "Workstream title");
+        const existingIds = await this.listWorkstreamIds();
+        const id = nextAvailableId(toUrlSafeId(cleanTitle), existingIds);
+        const workstreamRoot = path.join(stateRoot, "workstreams", id);
+        if (await exists(workstreamRoot)) {
+            throw new PathfinderError(`Workstream '${id}' already exists.`);
+        }
+        const now = createTimestamp();
+        const workstream = {
+            id,
+            title: cleanTitle,
+            createdAt: now,
+            updatedAt: now
+        };
+        await mkdir(workstreamRoot, { recursive: false });
+        await writeJson(path.join(workstreamRoot, "workstream.json"), workstream);
+        await writeFile(path.join(workstreamRoot, "plan.md"), "", "utf8");
+        await writeJson(path.join(workstreamRoot, "slices.json"), { slices: [] });
+        await writeJson(path.join(workstreamRoot, "comments.json"), { comments: [] });
+        await writeJson(path.join(workstreamRoot, "reviews.json"), { reviews: [] });
+        await writeFile(path.join(workstreamRoot, "pr.md"), "", "utf8");
+        return workstream;
+    }
+    async listWorkstreams() {
+        const ids = await this.listWorkstreamIds();
+        const workstreams = await Promise.all(ids.map((id) => this.getWorkstream(id)));
+        return workstreams.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+    }
+    async getWorkstream(id) {
+        const root = await this.requireWorkstreamRoot(id);
+        return readJson(path.join(root, "workstream.json"));
+    }
+    async setPlanFromFile(workstreamId, sourceFile) {
+        const root = await this.requireWorkstreamRoot(workstreamId);
+        const sourcePath = path.resolve(this.cwd, sourceFile);
+        if (!(await exists(sourcePath))) {
+            throw new PathfinderError(`Plan file not found: ${sourceFile}`);
+        }
+        const content = await readFile(sourcePath, "utf8");
+        await writeFile(path.join(root, "plan.md"), content, "utf8");
+    }
+    async getPlan(workstreamId) {
+        const root = await this.requireWorkstreamRoot(workstreamId);
+        return readFile(path.join(root, "plan.md"), "utf8");
+    }
+    async addSlice(workstreamId, title, description) {
+        const root = await this.requireWorkstreamRoot(workstreamId);
+        const cleanTitle = assertNonEmptyText(title, "Slice title");
+        const cleanDescription = assertNonEmptyText(description, "Slice description");
+        const slicesFile = await this.readSlices(root);
+        const id = nextAvailableId(toUrlSafeId(cleanTitle), slicesFile.slices.map((slice) => slice.id));
+        const now = createTimestamp();
+        const slice = {
+            id,
+            title: cleanTitle,
+            description: cleanDescription,
+            status: "proposed",
+            createdAt: now,
+            updatedAt: now
+        };
+        slicesFile.slices.push(slice);
+        await writeJson(path.join(root, "slices.json"), slicesFile);
+        return slice;
+    }
+    async listSlices(workstreamId) {
+        const root = await this.requireWorkstreamRoot(workstreamId);
+        const slicesFile = await this.readSlices(root);
+        return slicesFile.slices;
+    }
+    async setActiveSlice(workstreamId, sliceId) {
+        const stateRoot = await this.requireStateRoot();
+        const root = await this.requireWorkstreamRoot(workstreamId);
+        const workstream = await this.getWorkstream(workstreamId);
+        const slices = await this.listSlices(workstreamId);
+        const slice = slices.find((candidate) => candidate.id === sliceId);
+        if (!slice) {
+            throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
+        }
+        const updatedWorkstream = {
+            ...workstream,
+            activeSliceId: slice.id,
+            updatedAt: createTimestamp()
+        };
+        await writeJson(path.join(root, "workstream.json"), updatedWorkstream);
+        const project = await this.getProject();
+        await writeJson(path.join(stateRoot, "project.json"), {
+            ...project,
+            activeWorkstreamId: workstreamId
+        });
+        return { workstream: updatedWorkstream, slice };
+    }
+    async getActiveSlice() {
+        const project = await this.getProject();
+        if (!project.activeWorkstreamId) {
+            return undefined;
+        }
+        const workstream = await this.getWorkstream(project.activeWorkstreamId);
+        if (!workstream.activeSliceId) {
+            return undefined;
+        }
+        const slices = await this.listSlices(workstream.id);
+        const slice = slices.find((candidate) => candidate.id === workstream.activeSliceId);
+        if (!slice) {
+            throw new PathfinderError(`Active slice '${workstream.activeSliceId}' was not found in workstream '${workstream.id}'.`);
+        }
+        return { workstream, slice };
+    }
+    async listWorkstreamIds() {
+        const stateRoot = await this.requireStateRoot();
+        const workstreamsRoot = path.join(stateRoot, "workstreams");
+        if (!(await exists(workstreamsRoot))) {
+            return [];
+        }
+        const entries = await readdir(workstreamsRoot, { withFileTypes: true });
+        return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+    }
+    async requireStateRoot() {
+        const repoRoot = await findGitRoot(this.cwd);
+        if (!repoRoot) {
+            throw new PathfinderError("This command must be run inside a Git repository.");
+        }
+        const stateRoot = path.join(repoRoot, ".pathfinder");
+        const projectPath = path.join(stateRoot, "project.json");
+        if (!(await exists(projectPath))) {
+            throw new PathfinderError("Pathfinder state not found. Run 'pathfinder init' first.");
+        }
+        return stateRoot;
+    }
+    async requireWorkstreamRoot(workstreamId) {
+        const stateRoot = await this.requireStateRoot();
+        const root = path.join(stateRoot, "workstreams", workstreamId);
+        const infoPath = path.join(root, "workstream.json");
+        if (!(await exists(infoPath))) {
+            throw new PathfinderError(`Workstream '${workstreamId}' was not found.`);
+        }
+        return root;
+    }
+    async readSlices(workstreamRoot) {
+        return readJson(path.join(workstreamRoot, "slices.json"));
+    }
+}
+export async function findGitRoot(startDirectory) {
+    let current = path.resolve(startDirectory);
+    while (true) {
+        if (await isDirectory(path.join(current, ".git"))) {
+            return current;
+        }
+        const parent = path.dirname(current);
+        if (parent === current) {
+            return undefined;
+        }
+        current = parent;
+    }
+}
+async function exists(filePath) {
+    try {
+        await access(filePath, constants.F_OK);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+async function isDirectory(filePath) {
+    try {
+        const result = await stat(filePath);
+        return result.isDirectory();
+    }
+    catch {
+        return false;
+    }
+}
+async function readJson(filePath) {
+    try {
+        return JSON.parse(await readFile(filePath, "utf8"));
+    }
+    catch (error) {
+        if (error instanceof SyntaxError) {
+            throw new PathfinderError(`Could not parse JSON file: ${filePath}`);
+        }
+        throw error;
+    }
+}
+async function writeJson(filePath, value) {
+    await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}

@@ -1,0 +1,21 @@
+{
+  "name": "pathfinder",
+  "version": "0.1.0",
+  "description": "Local-first context, planning, and review state for AI-assisted development.",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "packages/state",
+    "packages/cli"
+  ],
+  "scripts": {
+    "build": "tsc -b packages/core packages/state packages/cli",
+    "typecheck": "tsc -b --pretty false",
+    "test": "npm run build && node --test packages/core/dist/*.test.js packages/state/dist/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "typescript": "^5.8.0"
+  }
+}
