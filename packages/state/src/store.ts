@@ -10,9 +10,11 @@ import {
   RepositorySummary,
   Review,
   ReviewComment,
+  ReviewCommentTarget,
   ReviewSession,
   Slice,
   SliceStatus,
+  StructuredDiff,
   Workstream,
   assertNonEmptyText,
   createTimestamp,
@@ -20,9 +22,12 @@ import {
   generateDeterministicReview,
   generatePrMarkdown,
   isEvidenceKind,
+  isReviewCommentSide,
   isSliceStatus,
   nextAvailableId,
   parseStagePlanMarkdown,
+  structuredDiffHasFile,
+  structuredDiffHasLine,
   toUrlSafeId
 } from "@pathfinder/core";
 
@@ -70,6 +75,17 @@ export interface ImportedStagePlanState {
   slices: Slice[];
 }
 
+export interface AddCommentInput {
+  body: string;
+  target?: ReviewCommentTarget;
+  structuredDiff?: StructuredDiff;
+}
+
+export interface ListCommentsOptions {
+  sessionId?: string;
+  openOnly?: boolean;
+}
+
 interface SlicesFile {
   slices: Slice[];
 }
@@ -88,6 +104,11 @@ interface ReviewSessionsFile {
 
 interface EvidenceFile {
   evidence: Evidence[];
+}
+
+interface ValidatedCommentTarget {
+  target: ReviewCommentTarget;
+  sliceId?: string;
 }
 
 export class PathfinderStore {
@@ -372,15 +393,25 @@ export class PathfinderStore {
     }));
   }
 
-  async addComment(workstreamId: string, sliceId: string, body: string): Promise<ReviewComment> {
+  async addComment(workstreamId: string, sliceId: string, body: string): Promise<ReviewComment>;
+  async addComment(workstreamId: string, input: AddCommentInput): Promise<ReviewComment>;
+  async addComment(
+    workstreamId: string,
+    sliceIdOrInput: string | AddCommentInput,
+    body?: string
+  ): Promise<ReviewComment> {
     const root = await this.requireWorkstreamRoot(workstreamId);
-    const cleanBody = assertNonEmptyText(body, "Comment body");
-    const slices = await this.listSlices(workstreamId);
-    const slice = slices.find((candidate) => candidate.id === sliceId);
-
-    if (!slice) {
-      throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
-    }
+    const input = typeof sliceIdOrInput === "string"
+      ? {
+          body: body ?? "",
+          target: {
+            type: "slice",
+            sliceId: sliceIdOrInput
+          } satisfies ReviewCommentTarget
+        }
+      : sliceIdOrInput;
+    const cleanBody = assertNonEmptyText(input.body, "Comment body");
+    const validatedTarget = await this.validateCommentTarget(workstreamId, input.target, input.structuredDiff);
 
     const commentsFile = await this.readComments(root);
     const id = nextAvailableId(
@@ -389,7 +420,8 @@ export class PathfinderStore {
     );
     const comment: ReviewComment = {
       id,
-      sliceId,
+      ...(validatedTarget.sliceId ? { sliceId: validatedTarget.sliceId } : {}),
+      target: validatedTarget.target,
       body: cleanBody,
       resolved: false,
       createdAt: createTimestamp()
@@ -400,10 +432,20 @@ export class PathfinderStore {
     return comment;
   }
 
-  async listComments(workstreamId: string): Promise<ReviewComment[]> {
+  async listComments(workstreamId: string, options: ListCommentsOptions = {}): Promise<ReviewComment[]> {
     const root = await this.requireWorkstreamRoot(workstreamId);
     const commentsFile = await this.readComments(root);
-    return commentsFile.comments;
+    return commentsFile.comments.filter((comment) => {
+      if (options.openOnly && comment.resolved) {
+        return false;
+      }
+
+      if (options.sessionId && !commentTargetsSession(comment, options.sessionId)) {
+        return false;
+      }
+
+      return true;
+    });
   }
 
   async createReview(workstreamId: string, sliceId: string, summary: string): Promise<Review> {
@@ -774,6 +816,75 @@ export class PathfinderStore {
     };
   }
 
+  private async validateCommentTarget(
+    workstreamId: string,
+    target: ReviewCommentTarget | undefined,
+    structuredDiff: StructuredDiff | undefined
+  ): Promise<ValidatedCommentTarget> {
+    if (!target) {
+      return {
+        target: { type: "workstream" }
+      };
+    }
+
+    if (target.type === "workstream") {
+      return { target };
+    }
+
+    if (target.type === "slice") {
+      const slices = await this.listSlices(workstreamId);
+      const slice = slices.find((candidate) => candidate.id === target.sliceId);
+
+      if (!slice) {
+        throw new PathfinderError(`Slice '${target.sliceId}' was not found in workstream '${workstreamId}'.`);
+      }
+
+      return {
+        target,
+        sliceId: target.sliceId
+      };
+    }
+
+    const session = await this.getReviewSession(workstreamId, target.sessionId);
+    if (!session.changedFiles.some((file) => changedFileMatches(file.path, file.previousPath, target.filePath))) {
+      throw new PathfinderError(
+        `File '${target.filePath}' was not found in review session '${target.sessionId}'.`
+      );
+    }
+
+    if (structuredDiff && !structuredDiffHasFile(structuredDiff, target.filePath)) {
+      throw new PathfinderError(
+        `File '${target.filePath}' was not found in the parsed diff for review session '${target.sessionId}'.`
+      );
+    }
+
+    if (target.type === "file") {
+      return {
+        target,
+        sliceId: session.sliceId
+      };
+    }
+
+    if (!Number.isInteger(target.lineNumber) || target.lineNumber < 1) {
+      throw new PathfinderError("Comment line number must be a positive integer.");
+    }
+
+    if (!isReviewCommentSide(target.side)) {
+      throw new PathfinderError("Invalid comment side. Expected old or new.");
+    }
+
+    if (structuredDiff && !structuredDiffHasLine(structuredDiff, target.filePath, target.lineNumber, target.side)) {
+      throw new PathfinderError(
+        `Line ${target.lineNumber} (${target.side}) was not found for '${target.filePath}' in review session '${target.sessionId}'.`
+      );
+    }
+
+    return {
+      target,
+      sliceId: session.sliceId
+    };
+  }
+
   private async listWorkstreamIds(): Promise<string[]> {
     const stateRoot = await this.requireStateRoot();
     const workstreamsRoot = path.join(stateRoot, "workstreams");
@@ -860,4 +971,15 @@ export class PathfinderStore {
 
     return readJson<EvidenceFile>(filePath);
   }
+}
+
+function changedFileMatches(path: string, previousPath: string | undefined, filePath: string): boolean {
+  return path === filePath || previousPath === filePath;
+}
+
+function commentTargetsSession(comment: ReviewComment, sessionId: string): boolean {
+  return (
+    (comment.target?.type === "file" || comment.target?.type === "line") &&
+    comment.target.sessionId === sessionId
+  );
 }

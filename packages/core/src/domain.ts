@@ -128,10 +128,42 @@ export interface Slice {
 export interface ReviewComment {
   id: string;
   sliceId?: string;
+  target?: ReviewCommentTarget;
   body: string;
   resolved: boolean;
   createdAt: string;
   resolvedAt?: string;
+}
+
+export type ReviewCommentSide = "old" | "new";
+
+export type ReviewCommentTarget =
+  | ReviewCommentSliceTarget
+  | ReviewCommentFileTarget
+  | ReviewCommentLineTarget
+  | ReviewCommentWorkstreamTarget;
+
+export interface ReviewCommentSliceTarget {
+  type: "slice";
+  sliceId: string;
+}
+
+export interface ReviewCommentFileTarget {
+  type: "file";
+  sessionId: string;
+  filePath: string;
+}
+
+export interface ReviewCommentLineTarget {
+  type: "line";
+  sessionId: string;
+  filePath: string;
+  lineNumber: number;
+  side: ReviewCommentSide;
+}
+
+export interface ReviewCommentWorkstreamTarget {
+  type: "workstream";
 }
 
 export interface Review {

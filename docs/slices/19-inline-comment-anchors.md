@@ -1,6 +1,6 @@
 # Slice 19: Inline Comment Anchors
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -97,6 +97,31 @@ Smoke test:
 npm exec -- pathfinder comment add <workstream-id> --session <session-id> --file packages/example.ts --line 12 --side new --body "Handle the empty case."
 npm exec -- pathfinder comment list <workstream-id> --session <session-id> --open
 npm exec -- pathfinder comment resolve <workstream-id> <comment-id>
+```
+
+## Implementation Notes
+
+- Added typed review comment targets for workstream, slice, file, and line anchors.
+- Preserved backward-compatible slice-level comments by keeping `sliceId` on slice comments.
+- Added session file and line validation against stored review sessions and parsed structured diffs.
+- Added `pathfinder comment add --session --file [--line --side]` and filtered `comment list --session --open`.
+- Updated CLI formatting and PR/current-context output to include readable comment target details.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke tested in a temporary Git repository:
+
+```bash
+npm exec -- pathfinder comment add inline-comments --session review-add-report --file src/report.ts --line 1 --side new --body "Handle the empty case."
+npm exec -- pathfinder comment list inline-comments --session review-add-report --open
+npm exec -- pathfinder comment resolve inline-comments handle-the-empty-case
 ```
 
 ## Suggested Prompt

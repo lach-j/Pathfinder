@@ -1,4 +1,4 @@
-import { PathfinderError } from "@pathfinder/core";
+import { PathfinderError, ReviewCommentTarget, isReviewCommentSide } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { PathfinderStore } from "@pathfinder/state";
 
@@ -127,6 +127,19 @@ async function getStructuredDiffForSession(git: GitAdapter, sessionId: string | 
   requireOption(sessionId, "--session");
   const session = await store.findReviewSession(sessionId);
   return git.getStructuredDiffBetweenRefs(session.mergeBase, session.headCommit);
+}
+
+function parseOptionalLineNumber(value: string | undefined): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const lineNumber = Number(value);
+  if (!Number.isInteger(lineNumber) || lineNumber < 1) {
+    throw usageError("Invalid --line value. Expected a positive integer.");
+  }
+
+  return lineNumber;
 }
 
 async function runGit(action: string | undefined, args: string[]): Promise<void> {
@@ -389,18 +402,69 @@ async function runComment(action: string | undefined, args: string[]): Promise<v
     const [workstreamId, ...optionArgs] = args;
     requireArgument(workstreamId, "workstream id");
     const options = parseOptions(optionArgs);
-    requireOption(options.slice, "--slice");
     requireOption(options.body, "--body");
-    const comment = await store.addComment(workstreamId, options.slice, options.body);
-    console.log(formatComment(comment));
-    return;
+    const git = new GitAdapter({ cwd: process.cwd() });
+
+    if (options.slice && options.session) {
+      throw usageError("Use either --slice or --session, not both.");
+    }
+
+    if (options.slice) {
+      const comment = await store.addComment(workstreamId, options.slice, options.body);
+      console.log(formatComment(comment));
+      return;
+    }
+
+    if (options.session) {
+      requireOption(options.file, "--file");
+      const lineNumber = parseOptionalLineNumber(options.line);
+      const side = options.side;
+
+      if (lineNumber === undefined && side) {
+        throw usageError("Use --side only with --line.");
+      }
+
+      const structuredDiff = await getStructuredDiffForSession(git, options.session);
+      let target: ReviewCommentTarget;
+      if (lineNumber === undefined) {
+        target = {
+          type: "file",
+          sessionId: options.session,
+          filePath: options.file
+        };
+      } else {
+        requireOption(side, "--side");
+        if (!isReviewCommentSide(side)) {
+          throw usageError("Invalid --side value. Expected old or new.");
+        }
+        target = {
+          type: "line",
+          sessionId: options.session,
+          filePath: options.file,
+          lineNumber,
+          side
+        };
+      }
+      const comment = await store.addComment(workstreamId, {
+        body: options.body,
+        target,
+        structuredDiff
+      });
+      console.log(formatComment(comment));
+      return;
+    }
+
+    throw usageError("Missing required option --slice or --session.");
   }
 
   if (action === "list") {
-    const [workstreamId, ...extra] = args;
+    const [workstreamId, ...optionArgs] = args;
     requireArgument(workstreamId, "workstream id");
-    expectNoExtraArgs(extra);
-    const comments = await store.listComments(workstreamId);
+    const options = parseOptions(optionArgs);
+    const comments = await store.listComments(workstreamId, {
+      sessionId: options.session,
+      openOnly: Boolean(options.open)
+    });
     if (comments.length === 0) {
       console.log("No comments found.");
       return;

@@ -1,4 +1,5 @@
 import {
+  describeReviewCommentTarget,
   Evidence,
   RepositoryChangeStatus,
   RepositorySummary,
@@ -19,8 +20,7 @@ export function formatSlice(slice: Slice): string {
 
 export function formatComment(comment: ReviewComment): string {
   const status = comment.resolved ? "resolved" : "open";
-  const slice = comment.sliceId ?? "-";
-  return `${comment.id}\t${status}\t${slice}\t${comment.body}`;
+  return `${comment.id}\t${status}\t${describeReviewCommentTarget(comment)}\t${comment.body}`;
 }
 
 export function formatReview(review: Review): string {
@@ -209,8 +209,7 @@ export function formatCurrentContext(context: CurrentContext): string {
     lines.push("No unresolved comments.");
   } else {
     for (const comment of context.unresolvedComments) {
-      const sliceText = comment.sliceId ? `slice ${comment.sliceId}` : "workstream";
-      lines.push(`- ${comment.id} (${sliceText}): ${comment.body}`);
+      lines.push(`- ${comment.id} (${describeReviewCommentTarget(comment)}): ${comment.body}`);
     }
   }
 
@@ -243,7 +242,7 @@ function formatReviewComments(comments: ReviewComment[]): string[] {
     return ["No unresolved comments for the active slice."];
   }
 
-  return comments.map((comment) => `- ${comment.id}: ${comment.body}`);
+  return comments.map((comment) => `- ${comment.id} (${describeReviewCommentTarget(comment)}): ${comment.body}`);
 }
 
 function formatReviewEvidence(evidence: Evidence[]): string[] {

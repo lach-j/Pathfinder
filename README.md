@@ -106,6 +106,17 @@ npm exec -- pathfinder comment list add-billing-foundation
 npm exec -- pathfinder comment resolve add-billing-foundation needs-tests
 ```
 
+Add file-level and line-level comments anchored to a review session:
+
+```bash
+npm exec -- pathfinder comment add add-billing-foundation --session review-create-local-state --file packages/core/src/index.ts --body "Review this file."
+npm exec -- pathfinder comment add add-billing-foundation --session review-create-local-state --file packages/core/src/index.ts --line 12 --side new --body "Handle the empty case."
+npm exec -- pathfinder comment list add-billing-foundation --session review-create-local-state --open
+```
+
+Line anchors validate against the parsed session diff. Use `--side new` for new/context
+line numbers and `--side old` for old/context line numbers.
+
 Start and inspect a durable local review session for the active slice:
 
 ```bash

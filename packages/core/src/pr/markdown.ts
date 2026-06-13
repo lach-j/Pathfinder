@@ -8,6 +8,7 @@ import {
   Slice
 } from "../domain.js";
 import { countRepositoryCategories } from "../repository.js";
+import { describeReviewCommentTarget } from "../review/comment-targets.js";
 
 export function generatePrMarkdown(input: PrMarkdownInput): string {
   const slices = sortSlices(input.slices);
@@ -246,19 +247,21 @@ function formatReviewNotes(
     lines.push("- No open review comments.");
   } else {
     for (const comment of openComments) {
-      const sliceText = comment.sliceId ? `slice \`${comment.sliceId}\`` : "workstream";
-      lines.push(`- Open comment \`${comment.id}\` (${sliceText}): ${comment.body}`);
+      lines.push(`- Open comment \`${comment.id}\` (${formatCommentTarget(comment)}): ${comment.body}`);
     }
   }
 
   if (resolvedComments.length > 0) {
     for (const comment of resolvedComments) {
-      const sliceText = comment.sliceId ? `slice \`${comment.sliceId}\`` : "workstream";
-      lines.push(`- Resolved comment \`${comment.id}\` (${sliceText}): ${comment.body}`);
+      lines.push(`- Resolved comment \`${comment.id}\` (${formatCommentTarget(comment)}): ${comment.body}`);
     }
   }
 
   return lines;
+}
+
+function formatCommentTarget(comment: ReviewComment): string {
+  return describeReviewCommentTarget(comment).replace(/^slice (.+)$/, "slice `$1`");
 }
 
 function formatRisks(openComments: ReviewComment[], reviews: Review[]): string[] {

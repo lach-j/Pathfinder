@@ -340,11 +340,15 @@ test("adds, lists, and resolves review comments", async () => {
 
   const first = await store.addComment(workstream.id, slice.id, "Needs tests.");
   const second = await store.addComment(workstream.id, slice.id, "Needs tests.");
+  const workstreamComment = await store.addComment(workstream.id, {
+    body: "Applies everywhere."
+  });
   const commentsBeforeResolve = await store.listComments(workstream.id);
 
   assert.equal(first.id, "needs-tests");
   assert.equal(second.id, "needs-tests-2");
-  assert.equal(commentsBeforeResolve.length, 2);
+  assert.equal(workstreamComment.target?.type, "workstream");
+  assert.equal(commentsBeforeResolve.length, 3);
   assert.equal(commentsBeforeResolve[0]?.resolved, false);
 
   const resolved = await store.resolveComment(workstream.id, first.id);
@@ -354,6 +358,100 @@ test("adds, lists, and resolves review comments", async () => {
   assert.equal(typeof resolved.resolvedAt, "string");
   assert.equal(commentsAfterResolve[0]?.resolved, true);
   assert.equal(commentsAfterResolve[0]?.resolvedAt, resolved.resolvedAt);
+});
+
+test("adds file and line review comments anchored to sessions", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add comment support.");
+  await store.setActiveSlice(workstream.id, slice.id);
+  const session = await store.startReviewSession({
+    baseRef: "main",
+    headRef: "feature",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "src/report.ts",
+        status: "modified",
+        category: "source"
+      }
+    ]
+  });
+  const structuredDiff = {
+    files: [
+      {
+        path: "src/report.ts",
+        status: "modified" as const,
+        oldPath: "src/report.ts",
+        newPath: "src/report.ts",
+        hunks: [
+          {
+            header: "@@ -1 +1,2 @@",
+            oldStart: 1,
+            oldLines: 1,
+            newStart: 1,
+            newLines: 2,
+            lines: [
+              {
+                kind: "context" as const,
+                oldLineNumber: 1,
+                newLineNumber: 1,
+                text: "const one = 1;"
+              },
+              {
+                kind: "addition" as const,
+                newLineNumber: 2,
+                text: "const two = 2;"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+
+  const fileComment = await store.addComment(workstream.id, {
+    body: "Review this file.",
+    target: {
+      type: "file",
+      sessionId: session.id,
+      filePath: "src/report.ts"
+    },
+    structuredDiff
+  });
+  const lineComment = await store.addComment(workstream.id, {
+    body: "Handle the empty case.",
+    target: {
+      type: "line",
+      sessionId: session.id,
+      filePath: "src/report.ts",
+      lineNumber: 2,
+      side: "new"
+    },
+    structuredDiff
+  });
+  const sessionComments = await store.listComments(workstream.id, { sessionId: session.id, openOnly: true });
+
+  assert.equal(fileComment.target?.type, "file");
+  assert.equal(lineComment.target?.type, "line");
+  assert.equal(lineComment.sliceId, slice.id);
+  assert.deepEqual(
+    sessionComments.map((comment) => comment.id),
+    ["review-this-file", "handle-the-empty-case"]
+  );
+
+  const resolved = await store.resolveComment(workstream.id, lineComment.id);
+
+  assert.deepEqual(resolved.target, lineComment.target);
+  assert.deepEqual(
+    (await store.listComments(workstream.id, { sessionId: session.id, openOnly: true })).map(
+      (comment) => comment.id
+    ),
+    ["review-this-file"]
+  );
 });
 
 test("validates comment workstream, slice, body, and resolution state", async () => {
@@ -371,6 +469,97 @@ test("validates comment workstream, slice, body, and resolution state", async ()
 
   await store.resolveComment(workstream.id, comment.id);
   await assert.rejects(() => store.resolveComment(workstream.id, comment.id), PathfinderError);
+});
+
+test("validates session comment targets", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add comment support.");
+  await store.setActiveSlice(workstream.id, slice.id);
+  const session = await store.startReviewSession({
+    baseRef: "main",
+    headRef: "feature",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "src/report.ts",
+        status: "modified",
+        category: "source"
+      }
+    ]
+  });
+  const structuredDiff = {
+    files: [
+      {
+        path: "src/report.ts",
+        status: "modified" as const,
+        oldPath: "src/report.ts",
+        newPath: "src/report.ts",
+        hunks: [
+          {
+            header: "@@ -1 +1 @@",
+            oldStart: 1,
+            oldLines: 1,
+            newStart: 1,
+            newLines: 1,
+            lines: [
+              {
+                kind: "context" as const,
+                oldLineNumber: 1,
+                newLineNumber: 1,
+                text: "const one = 1;"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+
+  await assert.rejects(
+    () =>
+      store.addComment(workstream.id, {
+        body: "Missing session.",
+        target: {
+          type: "file",
+          sessionId: "missing",
+          filePath: "src/report.ts"
+        },
+        structuredDiff
+      }),
+    PathfinderError
+  );
+  await assert.rejects(
+    () =>
+      store.addComment(workstream.id, {
+        body: "Missing file.",
+        target: {
+          type: "file",
+          sessionId: session.id,
+          filePath: "src/missing.ts"
+        },
+        structuredDiff
+      }),
+    PathfinderError
+  );
+  await assert.rejects(
+    () =>
+      store.addComment(workstream.id, {
+        body: "Missing line.",
+        target: {
+          type: "line",
+          sessionId: session.id,
+          filePath: "src/report.ts",
+          lineNumber: 2,
+          side: "new"
+        },
+        structuredDiff
+      }),
+    PathfinderError
+  );
 });
 
 test("creates, lists, and gets local review records", async () => {

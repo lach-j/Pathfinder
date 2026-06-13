@@ -728,6 +728,189 @@ test("starts, lists, and shows a review session against committed branch changes
   assert.match(stored, /"sessions": \[/);
 });
 
+test("adds, lists, filters, and resolves file and line comments for a review session", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--slice",
+      "add-report",
+      "--body",
+      "Keep compatibility."
+    ],
+    repo
+  );
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-inline-comments"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  await runCli(["review", "start", "--base", "main"], repo);
+
+  const fileComment = await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--session",
+      "review-add-report",
+      "--file",
+      "src/report.ts",
+      "--body",
+      "Review this file."
+    ],
+    repo
+  );
+  const lineComment = await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--session",
+      "review-add-report",
+      "--file",
+      "src/report.ts",
+      "--line",
+      "1",
+      "--side",
+      "new",
+      "--body",
+      "Handle the empty case."
+    ],
+    repo
+  );
+  const list = await runCli(["comment", "list", "inventory-alerts", "--session", "review-add-report", "--open"], repo);
+  await runCli(["comment", "resolve", "inventory-alerts", "handle-the-empty-case"], repo);
+  const openList = await runCli(["comment", "list", "inventory-alerts", "--session", "review-add-report", "--open"], repo);
+
+  assert.match(fileComment.stdout, /review-this-file\topen\tsession review-add-report file src\/report\.ts\tReview this file\./);
+  assert.match(
+    lineComment.stdout,
+    /handle-the-empty-case\topen\tsession review-add-report file src\/report\.ts new line 1\tHandle the empty case\./
+  );
+  assert.match(list.stdout, /review-this-file/);
+  assert.match(list.stdout, /handle-the-empty-case/);
+  assert.doesNotMatch(list.stdout, /keep-compatibility/);
+  assert.match(openList.stdout, /review-this-file/);
+  assert.doesNotMatch(openList.stdout, /handle-the-empty-case/);
+});
+
+test("reports invalid inline comment session files and lines clearly", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-inline-comment-errors"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  await runCli(["review", "start", "--base", "main"], repo);
+
+  await assert.rejects(
+    () =>
+      runCli(
+        [
+          "comment",
+          "add",
+          "inventory-alerts",
+          "--session",
+          "missing",
+          "--file",
+          "src/report.ts",
+          "--body",
+          "Missing session."
+        ],
+        repo
+      ),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: Review session 'missing' was not found\./.test(error.stderr)
+  );
+  await assert.rejects(
+    () =>
+      runCli(
+        [
+          "comment",
+          "add",
+          "inventory-alerts",
+          "--session",
+          "review-add-report",
+          "--file",
+          "src/missing.ts",
+          "--body",
+          "Missing file."
+        ],
+        repo
+      ),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: File 'src\/missing\.ts' was not found in review session 'review-add-report'\./.test(error.stderr)
+  );
+  await assert.rejects(
+    () =>
+      runCli(
+        [
+          "comment",
+          "add",
+          "inventory-alerts",
+          "--session",
+          "review-add-report",
+          "--file",
+          "src/report.ts",
+          "--line",
+          "2",
+          "--side",
+          "new",
+          "--body",
+          "Missing line."
+        ],
+        repo
+      ),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: Line 2 \(new\) was not found for 'src\/report\.ts'/.test(error.stderr)
+  );
+});
+
 test("review session start reports missing active slice and invalid base refs", async () => {
   const repo = await createRealTempGitRepo();
 

@@ -21,7 +21,8 @@ Usage:
   pathfinder slice branch <workstream-id> <slice-id> --base <base-ref>
   pathfinder slice show-active
   pathfinder comment add <workstream-id> --slice <slice-id> --body "..."
-  pathfinder comment list <workstream-id>
+  pathfinder comment add <workstream-id> --session <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
+  pathfinder comment list <workstream-id> [--session <session-id>] [--open]
   pathfinder comment resolve <workstream-id> <comment-id>
   pathfinder review start --base <base-ref>
   pathfinder review sessions <workstream-id>

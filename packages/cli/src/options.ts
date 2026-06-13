@@ -9,7 +9,10 @@ export interface OptionMap {
   summary?: string;
   base?: string;
   session?: string;
+  line?: string;
+  side?: string;
   json?: boolean;
+  open?: boolean;
   dependsOn?: string[];
   kind?: string;
   path?: string;
@@ -28,6 +31,11 @@ export function parseOptions(args: string[]): OptionMap {
 
     if (flag === "--json") {
       options.json = true;
+      continue;
+    }
+
+    if (flag === "--open") {
+      options.open = true;
       continue;
     }
 
@@ -51,6 +59,10 @@ export function parseOptions(args: string[]): OptionMap {
       options.base = value;
     } else if (flag === "--session") {
       options.session = value;
+    } else if (flag === "--line") {
+      options.line = value;
+    } else if (flag === "--side") {
+      options.side = value;
     } else if (flag === "--depends-on") {
       options.dependsOn = [...(options.dependsOn ?? []), value];
     } else if (flag === "--kind") {
