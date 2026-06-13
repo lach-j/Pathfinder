@@ -935,6 +935,7 @@ test("serves local review JSON endpoints and mutates comments", async () => {
   try {
     const baseUrl = serverBaseUrl(server);
     const html = await fetch(`${baseUrl}/`);
+    const htmlText = await html.text();
     const current = await jsonFetch(`${baseUrl}/api/current`);
     const workstreams = await jsonFetch(`${baseUrl}/api/workstreams`);
     const sessions = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/review-sessions`);
@@ -960,7 +961,9 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     );
 
     assert.equal(html.status, 200);
-    assert.match(await html.text(), /Pathfinder review server is running/);
+    assert.match(htmlText, /Pathfinder Review/);
+    assert.match(htmlText, /id="app"/);
+    assert.match(htmlText, /Changed files/);
     assert.equal(current.activeSlice.id, "add-report");
     assert.equal(workstreams.workstreams[0].id, "inventory-alerts");
     assert.equal(sessions.sessions[0].id, "review-add-report");

@@ -152,6 +152,12 @@ The server binds to `127.0.0.1` and is not a hosted backend. It does not add aut
 cloud sync, or external API calls; it only exposes local Pathfinder state and local Git diffs
 from the current repository.
 
+Open the printed URL, such as `http://127.0.0.1:4783`, to use the read-only
+diff viewer. The viewer shows the active workstream and slice, lets you switch
+between stored review sessions, lists changed files with simple stats, renders
+unified diffs, and displays existing file or line comments near their targets.
+Comment creation and resolution still use the CLI or JSON endpoints.
+
 Available JSON endpoints:
 
 ```text

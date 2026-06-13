@@ -1,6 +1,6 @@
 # Slice 22: Read-Only Diff Viewer UI
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -85,6 +85,34 @@ Open:
 ```text
 http://127.0.0.1:4783
 ```
+
+## Implementation Notes
+
+- Replaced the local review server placeholder page with a dependency-light static browser app served at `/`.
+- The viewer uses the existing slice 21 JSON endpoints for current context, review sessions, structured diffs, and comments.
+- Added active workstream/slice display, review session selection, changed-file navigation, unified diff rendering, old/new line numbers, line styling, and in-place display for existing file and line comments.
+- Added empty states for missing active workstream, missing active slice, missing review sessions, and empty diffs.
+- Kept comment creation/resolution, auth, hosted backend behavior, AI review, MCP, remote Git hosting integrations, and external APIs out of scope.
+- Documented the read-only viewer in `README.md`.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Browser smoke tested with a disposable local Git repository and real review session:
+
+```bash
+npm exec -- pathfinder review serve --port 4783
+```
+
+Verified `http://127.0.0.1:4783` rendered the active workstream, active slice,
+review session selector, changed-file list, unified diff, and an existing inline
+comment on desktop and a narrow viewport.
 
 ## Suggested Prompt
 
