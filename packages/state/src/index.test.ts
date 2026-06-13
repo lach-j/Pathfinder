@@ -35,6 +35,7 @@ test("creates workstreams with markdown and JSON state files", async () => {
       "plan.md",
       "pr.md",
       "requirements.md",
+      "review-sessions.json",
       "reviews.json",
       "slices.json",
       "workstream.json"
@@ -396,6 +397,72 @@ test("creates, lists, and gets local review records", async () => {
   assert.equal((await store.getReview(workstream.id, first.id)).summary, "Manual review passed.");
   assert.match(storedFile, /"reviews": \[/);
   assert.match(storedFile, /\n    \{/);
+});
+
+test("starts, lists, and gets local review sessions for the active slice", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add session support.");
+  await store.setActiveSlice(workstream.id, slice.id);
+
+  const first = await store.startReviewSession({
+    baseRef: "main",
+    headRef: "feature-review",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "src/index.ts",
+        status: "added",
+        category: "source"
+      }
+    ]
+  });
+  const second = await store.startReviewSession({
+    baseRef: "main",
+    headRef: "feature-review",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: []
+  });
+  const sessions = await store.listReviewSessions(workstream.id);
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", workstream.id, "review-sessions.json"),
+    "utf8"
+  );
+
+  assert.equal(first.id, "review-first-slice");
+  assert.equal(second.id, "review-first-slice-2");
+  assert.equal(first.workstreamId, workstream.id);
+  assert.equal(first.sliceId, slice.id);
+  assert.equal(first.baseRef, "main");
+  assert.equal(first.changedFiles.length, 1);
+  assert.equal(sessions.length, 2);
+  assert.equal((await store.getReviewSession(workstream.id, first.id)).headRef, "feature-review");
+  assert.match(stored, /"sessions": \[/);
+  assert.match(stored, /"changedFiles": \[/);
+});
+
+test("review sessions require an active slice and validate lookup ids", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+
+  await assert.rejects(
+    () =>
+      store.startReviewSession({
+        baseRef: "main",
+        headRef: "feature",
+        headCommit: "abc123",
+        mergeBase: "abc000",
+        files: []
+      }),
+    PathfinderError
+  );
+  await assert.rejects(() => store.getReviewSession(workstream.id, "missing"), PathfinderError);
 });
 
 test("runs and stores deterministic reviews for the active slice", async () => {

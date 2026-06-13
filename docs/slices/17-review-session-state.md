@@ -1,6 +1,6 @@
 # Slice 17: Review Session State
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -85,6 +85,23 @@ Smoke test:
 npm exec -- pathfinder review start --base main
 npm exec -- pathfinder review sessions <workstream-id>
 npm exec -- pathfinder review session <workstream-id> <session-id>
+```
+
+## Implementation Notes
+
+- Added `ReviewSession` core state for durable local review passes.
+- Added `.pathfinder/workstreams/<workstream-id>/review-sessions.json`.
+- Added `pathfinder review start --base <base-ref>`, `pathfinder review sessions <workstream-id>`, and `pathfinder review session <workstream-id> <session-id>`.
+- Reused the local Git summary metadata for base ref, head ref, head commit, merge base, and changed files.
+- Left deterministic `pathfinder review run` behavior unchanged.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
 ```
 
 ## Suggested Prompt

@@ -106,6 +106,17 @@ npm exec -- pathfinder comment list add-billing-foundation
 npm exec -- pathfinder comment resolve add-billing-foundation needs-tests
 ```
 
+Start and inspect a durable local review session for the active slice:
+
+```bash
+npm exec -- pathfinder review start --base main
+npm exec -- pathfinder review sessions add-billing-foundation
+npm exec -- pathfinder review session add-billing-foundation review-create-local-state
+```
+
+Review sessions are stored under the active workstream and capture the active slice, base ref,
+head ref, head commit, merge base, and changed files for that review pass.
+
 Create and inspect local review records for a slice:
 
 ```bash
@@ -184,6 +195,7 @@ Each workstream is stored as human-readable local files:
       plan.md
       slices.json
       comments.json
+      review-sessions.json
       reviews.json
       evidence.json
       pr.md
@@ -205,6 +217,9 @@ npm exec -- pathfinder slice status add-billing-foundation create-local-state co
 npm exec -- pathfinder slice next add-billing-foundation
 # Requires a clean working tree before running:
 npm exec -- pathfinder slice branch add-billing-foundation create-local-state --base main
+npm exec -- pathfinder review start --base main
+npm exec -- pathfinder review sessions add-billing-foundation
+npm exec -- pathfinder review session add-billing-foundation review-create-local-state
 npm exec -- pathfinder review create add-billing-foundation --slice create-local-state --summary "Manual review passed."
 npm exec -- pathfinder review run --base main
 npm exec -- pathfinder review list add-billing-foundation

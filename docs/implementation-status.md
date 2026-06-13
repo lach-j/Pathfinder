@@ -87,7 +87,7 @@ The next slices should build the review loop before MCP, AI review, Claude/Codex
 | 14 | done | `docs/slices/14-deterministic-review-checks.md` |
 | 15 | done | `docs/slices/15-pr-composer-v2.md` |
 | 16 | done | `docs/slices/16-stage-plan-import.md` |
-| 17 | ready | `docs/slices/17-review-session-state.md` |
+| 17 | done | `docs/slices/17-review-session-state.md` |
 | 18 | ready | `docs/slices/18-structured-diff-model.md` |
 | 19 | ready | `docs/slices/19-inline-comment-anchors.md` |
 | 20 | ready | `docs/slices/20-feedback-queue-export.md` |

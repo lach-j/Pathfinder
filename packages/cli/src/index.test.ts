@@ -35,6 +35,9 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder comment add",
     "pathfinder comment list",
     "pathfinder comment resolve",
+    "pathfinder review start --base <base-ref>",
+    "pathfinder review sessions",
+    "pathfinder review session",
     "pathfinder review create",
     "pathfinder review run --base <base-ref>",
     "pathfinder review list",
@@ -614,6 +617,92 @@ test("runs a deterministic review against committed branch changes", async () =>
   assert.match(result.stdout, /- A\tsource\tsrc\/report\.ts/);
   assert.match(list.stdout, /deterministic-review\topen\tadd-report\tDeterministic review against main: 1 warning\(s\)\./);
   assert.match(stored, /"checks": \[/);
+});
+
+test("starts, lists, and shows a review session against committed branch changes", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-session"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+
+  const start = await runCli(["review", "start", "--base", "main"], repo);
+  const list = await runCli(["review", "sessions", "inventory-alerts"], repo);
+  const show = await runCli(["review", "session", "inventory-alerts", "review-add-report"], repo);
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", "inventory-alerts", "review-sessions.json"),
+    "utf8"
+  );
+
+  assert.match(start.stdout, /# Pathfinder Review Session/);
+  assert.match(start.stdout, /Session: review-add-report/);
+  assert.match(start.stdout, /Base ref: main/);
+  assert.match(start.stdout, /Head ref: feature-session/);
+  assert.match(start.stdout, /Changed files: 1/);
+  assert.match(start.stdout, /- A\tsource\tsrc\/report\.ts/);
+  assert.match(list.stdout, /review-add-report\tadd-report\tmain\tfeature-session\t[a-f0-9]+\t1 file\(s\)/);
+  assert.match(show.stdout, /"id": "review-add-report"/);
+  assert.match(show.stdout, /"sliceId": "add-report"/);
+  assert.match(show.stdout, /"changedFiles": \[/);
+  assert.match(stored, /"sessions": \[/);
+});
+
+test("review session start reports missing active slice and invalid base refs", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+
+  await assert.rejects(
+    () => runCli(["review", "start", "--base", "main"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: No active slice set\. Use 'pathfinder slice active <workstream-id> <slice-id>' first\./.test(
+        error.stderr
+      )
+  );
+
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+
+  await assert.rejects(
+    () => runCli(["review", "start", "--base", "missing"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: Base ref 'missing' was not found or is not a commit\./.test(error.stderr)
+  );
 });
 
 test("generates PR markdown with committed repository summary", async () => {

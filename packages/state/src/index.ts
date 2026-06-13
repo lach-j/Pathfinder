@@ -11,6 +11,7 @@ import {
   RepositorySummary,
   Review,
   ReviewComment,
+  ReviewSession,
   Slice,
   SliceStatus,
   Workstream,
@@ -75,6 +76,10 @@ interface CommentsFile {
 
 interface ReviewsFile {
   reviews: Review[];
+}
+
+interface ReviewSessionsFile {
+  sessions: ReviewSession[];
 }
 
 interface EvidenceFile {
@@ -144,6 +149,10 @@ export class PathfinderStore {
     await writeJson(path.join(workstreamRoot, "slices.json"), { slices: [] } satisfies SlicesFile);
     await writeJson(path.join(workstreamRoot, "comments.json"), { comments: [] } satisfies CommentsFile);
     await writeJson(path.join(workstreamRoot, "reviews.json"), { reviews: [] } satisfies ReviewsFile);
+    await writeJson(
+      path.join(workstreamRoot, "review-sessions.json"),
+      { sessions: [] } satisfies ReviewSessionsFile
+    );
     await writeJson(path.join(workstreamRoot, "evidence.json"), { evidence: [] } satisfies EvidenceFile);
     await writeFile(path.join(workstreamRoot, "pr.md"), "", "utf8");
 
@@ -243,6 +252,10 @@ export class PathfinderStore {
     await writeJson(path.join(workstreamRoot, "slices.json"), { slices } satisfies SlicesFile);
     await writeJson(path.join(workstreamRoot, "comments.json"), { comments: [] } satisfies CommentsFile);
     await writeJson(path.join(workstreamRoot, "reviews.json"), { reviews: [] } satisfies ReviewsFile);
+    await writeJson(
+      path.join(workstreamRoot, "review-sessions.json"),
+      { sessions: [] } satisfies ReviewSessionsFile
+    );
     await writeJson(path.join(workstreamRoot, "evidence.json"), { evidence: [] } satisfies EvidenceFile);
     await writeFile(path.join(workstreamRoot, "pr.md"), "", "utf8");
 
@@ -477,6 +490,42 @@ export class PathfinderStore {
     return reviewsFile.reviews;
   }
 
+  async startReviewSession(repositorySummary: RepositorySummary): Promise<ReviewSession> {
+    const active = await this.getActiveSlice();
+
+    if (!active) {
+      throw new PathfinderError("No active slice set. Use 'pathfinder slice active <workstream-id> <slice-id>' first.");
+    }
+
+    const root = await this.requireWorkstreamRoot(active.workstream.id);
+    const sessionsFile = await this.readReviewSessions(root);
+    const id = nextAvailableId(
+      `review-${active.slice.id}`,
+      sessionsFile.sessions.map((session) => session.id)
+    );
+    const session: ReviewSession = {
+      id,
+      workstreamId: active.workstream.id,
+      sliceId: active.slice.id,
+      baseRef: repositorySummary.baseRef,
+      headRef: repositorySummary.headRef,
+      headCommit: repositorySummary.headCommit,
+      mergeBase: repositorySummary.mergeBase,
+      changedFiles: repositorySummary.files,
+      createdAt: createTimestamp()
+    };
+
+    sessionsFile.sessions.push(session);
+    await writeJson(path.join(root, "review-sessions.json"), sessionsFile);
+    return session;
+  }
+
+  async listReviewSessions(workstreamId: string): Promise<ReviewSession[]> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const sessionsFile = await this.readReviewSessions(root);
+    return sessionsFile.sessions;
+  }
+
   async addEvidence(
     workstreamId: string,
     sliceId: string,
@@ -537,6 +586,17 @@ export class PathfinderStore {
     }
 
     return review;
+  }
+
+  async getReviewSession(workstreamId: string, sessionId: string): Promise<ReviewSession> {
+    const sessions = await this.listReviewSessions(workstreamId);
+    const session = sessions.find((candidate) => candidate.id === sessionId);
+
+    if (!session) {
+      throw new PathfinderError(`Review session '${sessionId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    return session;
   }
 
   async generatePrMarkdown(
@@ -761,6 +821,15 @@ export class PathfinderStore {
 
   private async readReviews(workstreamRoot: string): Promise<ReviewsFile> {
     return readJson<ReviewsFile>(path.join(workstreamRoot, "reviews.json"));
+  }
+
+  private async readReviewSessions(workstreamRoot: string): Promise<ReviewSessionsFile> {
+    const filePath = path.join(workstreamRoot, "review-sessions.json");
+    if (!(await exists(filePath))) {
+      return { sessions: [] };
+    }
+
+    return readJson<ReviewSessionsFile>(filePath);
   }
 
   private async readEvidence(workstreamRoot: string): Promise<EvidenceFile> {

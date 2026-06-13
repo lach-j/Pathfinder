@@ -112,6 +112,18 @@ export interface Review {
   updatedAt: string;
 }
 
+export interface ReviewSession {
+  id: string;
+  workstreamId: string;
+  sliceId: string;
+  baseRef: string;
+  headRef: string;
+  headCommit: string;
+  mergeBase: string;
+  changedFiles: RepositorySummaryFile[];
+  createdAt: string;
+}
+
 export interface Evidence {
   id: string;
   sliceId: string;

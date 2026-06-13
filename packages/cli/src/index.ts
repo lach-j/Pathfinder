@@ -7,6 +7,7 @@ import {
   Review,
   ReviewCheck,
   ReviewComment,
+  ReviewSession,
   Slice
 } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
@@ -404,6 +405,41 @@ async function runComment(action: string | undefined, args: string[]): Promise<v
 }
 
 async function runReview(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "start") {
+    const options = parseOptions(args);
+    requireOption(options.base, "--base");
+    const git = new GitAdapter({ cwd: process.cwd() });
+    const repositorySummary = await git.getCommittedSummaryAgainstBase(options.base);
+    const session = await store.startReviewSession(repositorySummary);
+    process.stdout.write(formatReviewSessionSummary(session));
+    return;
+  }
+
+  if (action === "sessions") {
+    const [workstreamId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    expectNoExtraArgs(extra);
+    const sessions = await store.listReviewSessions(workstreamId);
+    if (sessions.length === 0) {
+      console.log("No review sessions found.");
+      return;
+    }
+    for (const session of sessions) {
+      console.log(formatReviewSession(session));
+    }
+    return;
+  }
+
+  if (action === "session") {
+    const [workstreamId, sessionId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    requireArgument(sessionId, "session id");
+    expectNoExtraArgs(extra);
+    const session = await store.getReviewSession(workstreamId, sessionId);
+    console.log(JSON.stringify(session, null, 2));
+    return;
+  }
+
   if (action === "run") {
     const options = parseOptions(args);
     requireOption(options.base, "--base");
@@ -450,7 +486,7 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
     return;
   }
 
-  throw usageError("Unknown review command. Expected run, create, list, or show.");
+  throw usageError("Unknown review command. Expected start, sessions, session, run, create, list, or show.");
 }
 
 async function runEvidence(action: string | undefined, args: string[]): Promise<void> {
@@ -548,6 +584,40 @@ function formatComment(comment: ReviewComment): string {
 
 function formatReview(review: Review): string {
   return `${review.id}\t${review.status}\t${review.sliceId}\t${review.summary}`;
+}
+
+function formatReviewSession(session: ReviewSession): string {
+  return `${session.id}\t${session.sliceId}\t${session.baseRef}\t${session.headRef}\t${session.headCommit}\t${session.changedFiles.length} file(s)`;
+}
+
+function formatReviewSessionSummary(session: ReviewSession): string {
+  const lines = [
+    "# Pathfinder Review Session",
+    "",
+    `Session: ${session.id}`,
+    `Workstream: ${session.workstreamId}`,
+    `Slice: ${session.sliceId}`,
+    `Base ref: ${session.baseRef}`,
+    `Head ref: ${session.headRef}`,
+    `Head commit: ${session.headCommit}`,
+    `Merge base: ${session.mergeBase}`,
+    `Changed files: ${session.changedFiles.length}`,
+    ""
+  ];
+
+  if (session.changedFiles.length === 0) {
+    lines.push("No committed file changes found.");
+    return `${lines.join("\n")}\n`;
+  }
+
+  lines.push("## Files");
+  lines.push("");
+  lines.push(...session.changedFiles.map((file) => {
+    const pathText = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
+    return `- ${formatChangeStatus(file.status)}\t${file.category}\t${pathText}`;
+  }));
+
+  return `${lines.join("\n")}\n`;
 }
 
 function formatDeterministicReview(review: Review, repositorySummary: RepositorySummary): string {
@@ -828,6 +898,9 @@ Usage:
   pathfinder comment add <workstream-id> --slice <slice-id> --body "..."
   pathfinder comment list <workstream-id>
   pathfinder comment resolve <workstream-id> <comment-id>
+  pathfinder review start --base <base-ref>
+  pathfinder review sessions <workstream-id>
+  pathfinder review session <workstream-id> <session-id>
   pathfinder review create <workstream-id> --slice <slice-id> --summary "..."
   pathfinder review run --base <base-ref>
   pathfinder review list <workstream-id>
