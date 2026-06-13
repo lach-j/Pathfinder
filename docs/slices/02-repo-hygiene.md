@@ -1,6 +1,6 @@
 # Slice 02: Repo Hygiene
 
-Status: ready
+Status: done
 
 ## Goal
 

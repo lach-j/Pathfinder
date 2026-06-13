@@ -13,6 +13,8 @@ npm install
 npm run build
 ```
 
+Generated TypeScript output under `packages/*/dist/` is intentionally untracked. Recreate it locally with `npm run build` after a fresh checkout or dependency install.
+
 Run the local CLI with:
 
 ```bash
@@ -76,4 +78,7 @@ Run checks:
 ```bash
 npm run typecheck
 npm test
+npm run lint --if-present
+npm run build
+npm exec -- pathfinder help
 ```

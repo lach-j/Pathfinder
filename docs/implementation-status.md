@@ -12,6 +12,12 @@ Agents should read:
 
 Do not read every slice file unless the assigned slice explicitly depends on another one.
 
+For fresh implementation sessions, use `docs/agent-session-prompt.md` and provide only the slice number, for example:
+
+```text
+Use docs/agent-session-prompt.md for slice 3.
+```
+
 ## Current Product Boundary
 
 Pathfinder is local-first, open-source, filesystem-first, Git-aware, and single-user by default.
@@ -47,7 +53,7 @@ State currently lives under:
 | Slice | Status | Handoff |
 | ----- | ------ | ------- |
 | 01 | done | `docs/slices/01-stage-1-foundation.md` |
-| 02 | ready | `docs/slices/02-repo-hygiene.md` |
+| 02 | done | `docs/slices/02-repo-hygiene.md` |
 | 03 | ready | `docs/slices/03-comments-cli.md` |
 | 04 | ready | `docs/slices/04-git-diff-adapter.md` |
 | 05 | ready | `docs/slices/05-review-state-foundation.md` |
