@@ -3,6 +3,7 @@ import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promi
 import path from "node:path";
 
 import {
+  Evidence,
   PathfinderError,
   Project,
   Review,
@@ -14,6 +15,7 @@ import {
   createTimestamp,
   findNextActionableSlice,
   generatePrMarkdown,
+  isEvidenceKind,
   isSliceStatus,
   nextAvailableId,
   toUrlSafeId
@@ -33,6 +35,7 @@ export interface CurrentContext {
   planPath?: string;
   planMarkdown?: string;
   unresolvedComments: ReviewComment[];
+  evidence: Evidence[];
 }
 
 export interface GeneratedPrMarkdown {
@@ -56,6 +59,10 @@ interface CommentsFile {
 
 interface ReviewsFile {
   reviews: Review[];
+}
+
+interface EvidenceFile {
+  evidence: Evidence[];
 }
 
 export class PathfinderStore {
@@ -121,6 +128,7 @@ export class PathfinderStore {
     await writeJson(path.join(workstreamRoot, "slices.json"), { slices: [] } satisfies SlicesFile);
     await writeJson(path.join(workstreamRoot, "comments.json"), { comments: [] } satisfies CommentsFile);
     await writeJson(path.join(workstreamRoot, "reviews.json"), { reviews: [] } satisfies ReviewsFile);
+    await writeJson(path.join(workstreamRoot, "evidence.json"), { evidence: [] } satisfies EvidenceFile);
     await writeFile(path.join(workstreamRoot, "pr.md"), "", "utf8");
 
     return workstream;
@@ -350,6 +358,57 @@ export class PathfinderStore {
     return reviewsFile.reviews;
   }
 
+  async addEvidence(
+    workstreamId: string,
+    sliceId: string,
+    kind: string,
+    description: string,
+    evidencePath?: string
+  ): Promise<Evidence> {
+    if (!isEvidenceKind(kind)) {
+      throw new PathfinderError(
+        `Invalid evidence kind '${kind}'. Expected one of: test, screenshot, log, manual, benchmark, other.`
+      );
+    }
+
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const cleanDescription = assertNonEmptyText(description, "Evidence description");
+    const slices = await this.listSlices(workstreamId);
+    const slice = slices.find((candidate) => candidate.id === sliceId);
+
+    if (!slice) {
+      throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    if (evidencePath && !(await exists(path.resolve(this.cwd, evidencePath)))) {
+      throw new PathfinderError(`Evidence path not found: ${evidencePath}`);
+    }
+
+    const evidenceFile = await this.readEvidence(root);
+    const id = nextAvailableId(
+      toUrlSafeId(cleanDescription),
+      evidenceFile.evidence.map((item) => item.id)
+    );
+    const evidence: Evidence = {
+      id,
+      sliceId,
+      kind,
+      description: cleanDescription,
+      ...(evidencePath ? { path: evidencePath } : {}),
+      createdAt: createTimestamp()
+    };
+
+    evidenceFile.evidence.push(evidence);
+    await writeJson(path.join(root, "evidence.json"), evidenceFile);
+    return evidence;
+  }
+
+  async listEvidence(workstreamId: string): Promise<Evidence[]> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const evidenceFile = await this.readEvidence(root);
+    return evidenceFile.evidence;
+  }
+
   async getReview(workstreamId: string, reviewId: string): Promise<Review> {
     const reviews = await this.listReviews(workstreamId);
     const review = reviews.find((candidate) => candidate.id === reviewId);
@@ -368,7 +427,8 @@ export class PathfinderStore {
       planMarkdown: await this.getPlan(workstreamId),
       slices: await this.listSlices(workstreamId),
       comments: await this.listComments(workstreamId),
-      reviews: await this.listReviews(workstreamId)
+      reviews: await this.listReviews(workstreamId),
+      evidence: await this.listEvidence(workstreamId)
     });
     const outputPath = path.join(root, "pr.md");
 
@@ -460,7 +520,8 @@ export class PathfinderStore {
     if (!project.activeWorkstreamId) {
       return {
         project,
-        unresolvedComments: []
+        unresolvedComments: [],
+        evidence: []
       };
     }
 
@@ -473,6 +534,7 @@ export class PathfinderStore {
     const planPath = path.join(root, "plan.md");
     const planMarkdown = await readFile(planPath, "utf8");
     const unresolvedComments = (await this.listComments(workstream.id)).filter((comment) => !comment.resolved);
+    const evidence = await this.listEvidence(workstream.id);
 
     if (!workstream.activeSliceId) {
       return {
@@ -482,7 +544,8 @@ export class PathfinderStore {
         requirementsMarkdown,
         planPath,
         planMarkdown,
-        unresolvedComments
+        unresolvedComments,
+        evidence: []
       };
     }
 
@@ -502,7 +565,8 @@ export class PathfinderStore {
       requirementsMarkdown,
       planPath,
       planMarkdown,
-      unresolvedComments
+      unresolvedComments,
+      evidence: evidence.filter((item) => item.sliceId === activeSlice.id)
     };
   }
 
@@ -573,6 +637,15 @@ export class PathfinderStore {
 
   private async readReviews(workstreamRoot: string): Promise<ReviewsFile> {
     return readJson<ReviewsFile>(path.join(workstreamRoot, "reviews.json"));
+  }
+
+  private async readEvidence(workstreamRoot: string): Promise<EvidenceFile> {
+    const filePath = path.join(workstreamRoot, "evidence.json");
+    if (!(await exists(filePath))) {
+      return { evidence: [] };
+    }
+
+    return readJson<EvidenceFile>(filePath);
   }
 }
 

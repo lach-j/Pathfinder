@@ -29,7 +29,16 @@ test("creates workstreams with markdown and JSON state files", async () => {
   assert.equal(workstream.id, "add-billing");
   assert.deepEqual(
     await sortedFiles(path.join(repo, ".pathfinder", "workstreams", workstream.id)),
-    ["comments.json", "plan.md", "pr.md", "requirements.md", "reviews.json", "slices.json", "workstream.json"]
+    [
+      "comments.json",
+      "evidence.json",
+      "plan.md",
+      "pr.md",
+      "requirements.md",
+      "reviews.json",
+      "slices.json",
+      "workstream.json"
+    ]
   );
 });
 
@@ -184,6 +193,7 @@ test("returns current context for the active workstream and slice", async () => 
   await store.addComment(workstream.id, slice.id, "Check output.");
   const resolved = await store.addComment(workstream.id, slice.id, "Already handled.");
   await store.resolveComment(workstream.id, resolved.id);
+  await store.addEvidence(workstream.id, slice.id, "manual", "Manual QA passed.");
 
   const context = await store.getCurrentContext();
 
@@ -200,6 +210,10 @@ test("returns current context for the active workstream and slice", async () => 
     context.unresolvedComments.map((comment) => comment.id),
     ["check-output"]
   );
+  assert.deepEqual(
+    context.evidence.map((evidence) => evidence.id),
+    ["manual-qa-passed"]
+  );
 });
 
 test("returns clear current context when no active slice is set", async () => {
@@ -212,6 +226,51 @@ test("returns clear current context when no active slice is set", async () => {
   assert.equal(context.workstream, undefined);
   assert.equal(context.activeSlice, undefined);
   assert.deepEqual(context.unresolvedComments, []);
+  assert.deepEqual(context.evidence, []);
+});
+
+test("adds and lists slice evidence in human-readable state", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Evidence Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add evidence support.");
+  const logPath = path.join(repo, "test-output.log");
+  await writeFile(logPath, "tests passed\n", "utf8");
+
+  const first = await store.addEvidence(workstream.id, slice.id, "test", "npm test passed", "./test-output.log");
+  const second = await store.addEvidence(workstream.id, slice.id, "test", "npm test passed");
+  const evidence = await store.listEvidence(workstream.id);
+  const storedFile = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", workstream.id, "evidence.json"),
+    "utf8"
+  );
+
+  assert.equal(first.id, "npm-test-passed");
+  assert.equal(first.sliceId, slice.id);
+  assert.equal(first.kind, "test");
+  assert.equal(first.path, "./test-output.log");
+  assert.equal(second.id, "npm-test-passed-2");
+  assert.equal(evidence.length, 2);
+  assert.match(storedFile, /"evidence": \[/);
+  assert.match(storedFile, /\n    \{/);
+});
+
+test("validates evidence workstream, slice, kind, description, and path", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Evidence Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add evidence support.");
+
+  await assert.rejects(() => store.addEvidence("missing", slice.id, "test", "npm test passed"), PathfinderError);
+  await assert.rejects(() => store.addEvidence(workstream.id, "missing", "test", "npm test passed"), PathfinderError);
+  await assert.rejects(() => store.addEvidence(workstream.id, slice.id, "video", "Demo captured."), PathfinderError);
+  await assert.rejects(() => store.addEvidence(workstream.id, slice.id, "test", " "), PathfinderError);
+  await assert.rejects(
+    () => store.addEvidence(workstream.id, slice.id, "log", "Log captured.", "./missing.log"),
+    PathfinderError
+  );
 });
 
 test("adds, lists, and resolves review comments", async () => {
@@ -305,6 +364,7 @@ test("generates and writes local PR markdown", async () => {
   await store.setPlanFromFile(workstream.id, path.join(repo, "plan.md"));
   await store.updateSliceStatus(workstream.id, slice.id, "complete");
   await store.createReview(workstream.id, slice.id, "Manual review passed.");
+  await store.addEvidence(workstream.id, slice.id, "test", "npm test passed.");
   await store.addComment(workstream.id, slice.id, "Confirm generated output.");
 
   const result = await store.generatePrMarkdown(workstream.id);
@@ -315,6 +375,7 @@ test("generates and writes local PR markdown", async () => {
   assert.match(result.markdown, /## Summary/);
   assert.match(result.markdown, /- Workstream: PR Flow \(`pr-flow`\)/);
   assert.match(result.markdown, /- First Slice \(`first-slice`\): Generate markdown\./);
+  assert.match(result.markdown, /- npm test passed\. - slice `first-slice`/);
   assert.match(result.markdown, /- Review `manual-review-passed` \(open, slice `first-slice`\): Manual review passed\./);
   assert.match(result.markdown, /- Open comment `confirm-generated-output` \(slice `first-slice`\): Confirm generated output\./);
 });

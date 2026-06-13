@@ -13,6 +13,17 @@ export const sliceStatuses: readonly SliceStatus[] = [
   "complete"
 ];
 
+export type EvidenceKind = "test" | "screenshot" | "log" | "manual" | "benchmark" | "other";
+
+export const evidenceKinds: readonly EvidenceKind[] = [
+  "test",
+  "screenshot",
+  "log",
+  "manual",
+  "benchmark",
+  "other"
+];
+
 export interface Project {
   schemaVersion: 1;
   name: string;
@@ -68,7 +79,8 @@ export interface Review {
 
 export interface Evidence {
   id: string;
-  kind: "test" | "screenshot" | "log" | "manual" | "benchmark" | "other";
+  sliceId: string;
+  kind: EvidenceKind;
   description: string;
   path?: string;
   createdAt: string;
@@ -80,6 +92,7 @@ export interface PrMarkdownInput {
   slices: Slice[];
   comments: ReviewComment[];
   reviews: Review[];
+  evidence?: Evidence[];
 }
 
 export class PathfinderError extends Error {
@@ -91,6 +104,10 @@ export class PathfinderError extends Error {
 
 export function isSliceStatus(value: string): value is SliceStatus {
   return sliceStatuses.includes(value as SliceStatus);
+}
+
+export function isEvidenceKind(value: string): value is EvidenceKind {
+  return evidenceKinds.includes(value as EvidenceKind);
 }
 
 export function assertNonEmptyText(value: string, label: string): string {
@@ -155,11 +172,12 @@ export function findNextActionableSlice(slices: Slice[]): Slice | undefined {
 
 export function generatePrMarkdown(input: PrMarkdownInput): string {
   const completedSlices = input.slices.filter((slice) => slice.status === "complete");
-  const testEvidence = input.reviews.flatMap((review) =>
+  const reviewTestEvidence = input.reviews.flatMap((review) =>
     review.evidence
       .filter((evidence) => evidence.kind === "test")
       .map((evidence) => ({ review, evidence }))
   );
+  const sliceTestEvidence = (input.evidence ?? []).filter((evidence) => evidence.kind === "test");
   const openComments = input.comments.filter((comment) => !comment.resolved);
   const resolvedComments = input.comments.filter((comment) => comment.resolved);
 
@@ -176,7 +194,7 @@ export function generatePrMarkdown(input: PrMarkdownInput): string {
     "",
     "## Testing",
     "",
-    ...formatTesting(testEvidence),
+    ...formatTesting(reviewTestEvidence, sliceTestEvidence),
     "",
     "## Risks",
     "",
@@ -206,15 +224,25 @@ function formatCompletedSlices(slices: Slice[]): string[] {
   return slices.map((slice) => `- ${slice.title} (\`${slice.id}\`): ${slice.description}`);
 }
 
-function formatTesting(testEvidence: Array<{ review: Review; evidence: Evidence }>): string[] {
-  if (testEvidence.length === 0) {
+function formatTesting(
+  reviewTestEvidence: Array<{ review: Review; evidence: Evidence }>,
+  sliceTestEvidence: Evidence[]
+): string[] {
+  if (reviewTestEvidence.length === 0 && sliceTestEvidence.length === 0) {
     return ["- No testing evidence recorded."];
   }
 
-  return testEvidence.map(({ review, evidence }) => {
+  const lines = sliceTestEvidence.map((evidence) => {
     const pathText = evidence.path ? ` (${evidence.path})` : "";
-    return `- ${evidence.description}${pathText} - review \`${review.id}\``;
+    return `- ${evidence.description}${pathText} - slice \`${evidence.sliceId}\``;
   });
+
+  for (const { review, evidence } of reviewTestEvidence) {
+    const pathText = evidence.path ? ` (${evidence.path})` : "";
+    lines.push(`- ${evidence.description}${pathText} - review \`${review.id}\``);
+  }
+
+  return lines;
 }
 
 function formatReviewNotes(

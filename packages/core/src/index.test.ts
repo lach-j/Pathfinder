@@ -92,6 +92,7 @@ test("generates deterministic PR markdown from workstream state", () => {
         evidence: [
           {
             id: "npm-test",
+            sliceId: "create-state",
             kind: "test",
             description: "npm test",
             createdAt: "2026-01-01T00:00:00.000Z"
@@ -99,6 +100,16 @@ test("generates deterministic PR markdown from workstream state", () => {
         ],
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    evidence: [
+      {
+        id: "typecheck-passed",
+        sliceId: "create-state",
+        kind: "test",
+        description: "npm run typecheck",
+        path: "typecheck.log",
+        createdAt: "2026-01-01T00:00:00.000Z"
       }
     ]
   });
@@ -117,6 +128,7 @@ test("generates deterministic PR markdown from workstream state", () => {
 
 ## Testing
 
+- npm run typecheck (typecheck.log) - slice \`create-state\`
 - npm test - review \`manual-review\`
 
 ## Risks

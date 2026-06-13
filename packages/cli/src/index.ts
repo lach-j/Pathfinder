@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { PathfinderError, Review, ReviewComment, Slice } from "@pathfinder/core";
+import { Evidence, PathfinderError, Review, ReviewComment, Slice } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { CurrentContext, PathfinderStore } from "@pathfinder/state";
 
@@ -12,6 +12,8 @@ interface OptionMap {
   summary?: string;
   base?: string;
   dependsOn?: string[];
+  kind?: string;
+  path?: string;
 }
 
 const store = new PathfinderStore(process.cwd());
@@ -76,6 +78,11 @@ async function run(args: string[]): Promise<void> {
 
   if (area === "review") {
     await runReview(action, rest);
+    return;
+  }
+
+  if (area === "evidence") {
+    await runEvidence(action, rest);
     return;
   }
 
@@ -404,6 +411,43 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
   throw usageError("Unknown review command. Expected create, list, or show.");
 }
 
+async function runEvidence(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "add") {
+    const [workstreamId, ...optionArgs] = args;
+    requireArgument(workstreamId, "workstream id");
+    const options = parseOptions(optionArgs);
+    requireOption(options.slice, "--slice");
+    requireOption(options.kind, "--kind");
+    requireOption(options.description, "--description");
+    const evidence = await store.addEvidence(
+      workstreamId,
+      options.slice,
+      options.kind,
+      options.description,
+      options.path
+    );
+    console.log(formatEvidence(evidence));
+    return;
+  }
+
+  if (action === "list") {
+    const [workstreamId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    expectNoExtraArgs(extra);
+    const evidence = await store.listEvidence(workstreamId);
+    if (evidence.length === 0) {
+      console.log("No evidence found.");
+      return;
+    }
+    for (const item of evidence) {
+      console.log(formatEvidence(item));
+    }
+    return;
+  }
+
+  throw usageError("Unknown evidence command. Expected add or list.");
+}
+
 function parseOptions(args: string[]): OptionMap {
   const options: OptionMap = {};
 
@@ -435,6 +479,10 @@ function parseOptions(args: string[]): OptionMap {
       options.base = value;
     } else if (flag === "--depends-on") {
       options.dependsOn = [...(options.dependsOn ?? []), value];
+    } else if (flag === "--kind") {
+      options.kind = value;
+    } else if (flag === "--path") {
+      options.path = value;
     } else {
       throw usageError(`Unknown option '${flag}'.`);
     }
@@ -458,6 +506,11 @@ function formatComment(comment: ReviewComment): string {
 
 function formatReview(review: Review): string {
   return `${review.id}\t${review.status}\t${review.sliceId}\t${review.summary}`;
+}
+
+function formatEvidence(evidence: Evidence): string {
+  const pathText = evidence.path ? `\t${evidence.path}` : "";
+  return `${evidence.id}\t${evidence.kind}\t${evidence.sliceId}\t${evidence.description}${pathText}`;
 }
 
 function formatCurrentContext(context: CurrentContext): string {
@@ -509,6 +562,19 @@ function formatCurrentContext(context: CurrentContext): string {
     for (const comment of context.unresolvedComments) {
       const sliceText = comment.sliceId ? `slice ${comment.sliceId}` : "workstream";
       lines.push(`- ${comment.id} (${sliceText}): ${comment.body}`);
+    }
+  }
+
+  lines.push("");
+  lines.push("## Evidence");
+  lines.push("");
+
+  if (context.evidence.length === 0) {
+    lines.push("No evidence recorded for the active slice.");
+  } else {
+    for (const evidence of context.evidence) {
+      const pathText = evidence.path ? ` (${evidence.path})` : "";
+      lines.push(`- ${evidence.id} [${evidence.kind}]: ${evidence.description}${pathText}`);
     }
   }
 
@@ -578,6 +644,8 @@ Usage:
   pathfinder review create <workstream-id> --slice <slice-id> --summary "..."
   pathfinder review list <workstream-id>
   pathfinder review show <workstream-id> <review-id>
+  pathfinder evidence add <workstream-id> --slice <slice-id> --kind <kind> --description "..." [--path ./artifact.txt]
+  pathfinder evidence list <workstream-id>
   pathfinder git diff [--base <base-ref>]
   pathfinder pr generate <workstream-id>`);
 }

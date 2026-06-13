@@ -37,6 +37,8 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder review create",
     "pathfinder review list",
     "pathfinder review show",
+    "pathfinder evidence add",
+    "pathfinder evidence list",
     "pathfinder git diff",
     "pathfinder git diff [--base <base-ref>]",
     "pathfinder pr generate"
@@ -160,6 +162,119 @@ test("updates slice status and includes completed slices in generated PR markdow
   const result = await runCli(["pr", "generate", "inventory-alerts"], repo);
 
   assert.match(result.stdout, /- Add Reorder Report \(`add-reorder-report`\): Create a local report/);
+});
+
+test("adds, lists, and includes evidence in current context and PR markdown", async () => {
+  const repo = await createTempGitRepo();
+  await writeFile(path.join(repo, "test-output.log"), "tests passed\n", "utf8");
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  const addResult = await runCli(
+    [
+      "evidence",
+      "add",
+      "inventory-alerts",
+      "--slice",
+      "add-report",
+      "--kind",
+      "test",
+      "--description",
+      "npm test passed",
+      "--path",
+      "./test-output.log"
+    ],
+    repo
+  );
+  const listResult = await runCli(["evidence", "list", "inventory-alerts"], repo);
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  const currentResult = await runCli(["current"], repo);
+  const prResult = await runCli(["pr", "generate", "inventory-alerts"], repo);
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", "inventory-alerts", "evidence.json"),
+    "utf8"
+  );
+
+  assert.match(addResult.stdout, /npm-test-passed\ttest\tadd-report\tnpm test passed\t\.\/test-output\.log/);
+  assert.equal(listResult.stdout, addResult.stdout);
+  assert.match(currentResult.stdout, /## Evidence/);
+  assert.match(currentResult.stdout, /npm-test-passed \[test\]: npm test passed \(\.\/test-output\.log\)/);
+  assert.match(prResult.stdout, /- npm test passed \(\.\/test-output\.log\) - slice `add-report`/);
+  assert.match(stored, /"path": "\.\/test-output\.log"/);
+});
+
+test("reports evidence validation errors", async () => {
+  const repo = await createTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+
+  await assert.rejects(
+    () =>
+      runCli(
+        [
+          "evidence",
+          "add",
+          "inventory-alerts",
+          "--slice",
+          "add-report",
+          "--kind",
+          "video",
+          "--description",
+          "demo"
+        ],
+        repo
+      ),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: Invalid evidence kind 'video'\./.test(error.stderr)
+  );
+  await assert.rejects(
+    () =>
+      runCli(
+        [
+          "evidence",
+          "add",
+          "inventory-alerts",
+          "--slice",
+          "missing",
+          "--kind",
+          "test",
+          "--description",
+          "npm test passed"
+        ],
+        repo
+      ),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: Slice 'missing' was not found in workstream 'inventory-alerts'\./.test(error.stderr)
+  );
 });
 
 test("adds dependencies and selects the next actionable slice", async () => {

@@ -109,6 +109,16 @@ npm exec -- pathfinder review list add-billing-foundation
 npm exec -- pathfinder review show add-billing-foundation manual-review-passed
 ```
 
+Attach and list local evidence for a slice:
+
+```bash
+npm exec -- pathfinder evidence add add-billing-foundation --slice create-local-state --kind test --description "npm test passed"
+npm exec -- pathfinder evidence add add-billing-foundation --slice create-local-state --kind log --description "Typecheck output" --path ./typecheck.log
+npm exec -- pathfinder evidence list add-billing-foundation
+```
+
+Evidence is stored as JSON under the workstream and links to an existing slice. The optional `--path` value is validated relative to the current working directory and stored exactly as provided; Pathfinder does not copy artifact files.
+
 Inspect the current local working tree diff:
 
 ```bash
@@ -145,6 +155,7 @@ Each workstream is stored as human-readable local files:
       slices.json
       comments.json
       reviews.json
+      evidence.json
       pr.md
 ```
 
@@ -166,6 +177,8 @@ npm exec -- pathfinder slice branch add-billing-foundation create-local-state --
 npm exec -- pathfinder review create add-billing-foundation --slice create-local-state --summary "Manual review passed."
 npm exec -- pathfinder review list add-billing-foundation
 npm exec -- pathfinder review show add-billing-foundation manual-review-passed
+npm exec -- pathfinder evidence add add-billing-foundation --slice create-local-state --kind test --description "npm test passed"
+npm exec -- pathfinder evidence list add-billing-foundation
 npm exec -- pathfinder git diff
 npm exec -- pathfinder git diff --base main
 npm exec -- pathfinder pr generate add-billing-foundation
