@@ -1,0 +1,81 @@
+import { PathfinderError } from "@pathfinder/core";
+
+export interface OptionMap {
+  title?: string;
+  description?: string;
+  file?: string;
+  slice?: string;
+  body?: string;
+  summary?: string;
+  base?: string;
+  dependsOn?: string[];
+  kind?: string;
+  path?: string;
+}
+
+export function parseOptions(args: string[]): OptionMap {
+  const options: OptionMap = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const flag = args[index];
+    const value = args[index + 1];
+
+    if (!flag.startsWith("--")) {
+      throw usageError(`Unexpected argument '${flag}'.`);
+    }
+
+    if (!value || value.startsWith("--")) {
+      throw usageError(`Missing value for ${flag}.`);
+    }
+
+    if (flag === "--title") {
+      options.title = value;
+    } else if (flag === "--description") {
+      options.description = value;
+    } else if (flag === "--file") {
+      options.file = value;
+    } else if (flag === "--slice") {
+      options.slice = value;
+    } else if (flag === "--body") {
+      options.body = value;
+    } else if (flag === "--summary") {
+      options.summary = value;
+    } else if (flag === "--base") {
+      options.base = value;
+    } else if (flag === "--depends-on") {
+      options.dependsOn = [...(options.dependsOn ?? []), value];
+    } else if (flag === "--kind") {
+      options.kind = value;
+    } else if (flag === "--path") {
+      options.path = value;
+    } else {
+      throw usageError(`Unknown option '${flag}'.`);
+    }
+
+    index += 1;
+  }
+
+  return options;
+}
+
+export function requireArgument(value: string | undefined, label: string): asserts value is string {
+  if (!value) {
+    throw usageError(`Missing ${label}.`);
+  }
+}
+
+export function requireOption(value: string | undefined, flag: string): asserts value is string {
+  if (!value) {
+    throw usageError(`Missing required option ${flag}.`);
+  }
+}
+
+export function expectNoExtraArgs(args: string[]): void {
+  if (args.length > 0) {
+    throw usageError(`Unexpected argument '${args[0]}'.`);
+  }
+}
+
+export function usageError(message: string): PathfinderError {
+  return new PathfinderError(`${message} Run 'pathfinder help' for usage.`);
+}

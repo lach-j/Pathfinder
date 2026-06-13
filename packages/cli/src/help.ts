@@ -1,0 +1,38 @@
+export function printHelp(): void {
+  console.log(`Pathfinder Stage 1
+
+Usage:
+  pathfinder init
+  pathfinder current
+  pathfinder workstream create --title "..."
+  pathfinder workstream list
+  pathfinder workstream show <id>
+  pathfinder requirement set <workstream-id> --file ./requirements.md
+  pathfinder requirement show <workstream-id>
+  pathfinder plan import --file ./PLAN.md
+  pathfinder plan set <workstream-id> --file ./plan.md
+  pathfinder plan show <workstream-id>
+  pathfinder slice add <workstream-id> --title "..." --description "..." [--depends-on <slice-id>]
+  pathfinder slice list <workstream-id>
+  pathfinder slice active <workstream-id> <slice-id>
+  pathfinder slice depend <workstream-id> <slice-id> <dependency-slice-id>
+  pathfinder slice next <workstream-id>
+  pathfinder slice status <workstream-id> <slice-id> <status>
+  pathfinder slice branch <workstream-id> <slice-id> --base <base-ref>
+  pathfinder slice show-active
+  pathfinder comment add <workstream-id> --slice <slice-id> --body "..."
+  pathfinder comment list <workstream-id>
+  pathfinder comment resolve <workstream-id> <comment-id>
+  pathfinder review start --base <base-ref>
+  pathfinder review sessions <workstream-id>
+  pathfinder review session <workstream-id> <session-id>
+  pathfinder review create <workstream-id> --slice <slice-id> --summary "..."
+  pathfinder review run --base <base-ref>
+  pathfinder review list <workstream-id>
+  pathfinder review show <workstream-id> <review-id>
+  pathfinder evidence add <workstream-id> --slice <slice-id> --kind <kind> --description "..." [--path ./artifact.txt]
+  pathfinder evidence list <workstream-id>
+  pathfinder git diff [--base <base-ref>]
+  pathfinder git summary --base <base-ref>
+  pathfinder pr generate <workstream-id> [--base <base-ref>]`);
+}
