@@ -48,6 +48,7 @@ State currently lives under:
       plan.md
       slices.json
       comments.json
+      review-sessions.json
       reviews.json
       evidence.json
       pr.md
@@ -65,7 +66,17 @@ The product direction has been re-centered on the original goal:
 4. Export open comments as an agent-actionable feedback queue.
 5. Repeat review, agent follow-up, and refresh until the developer is satisfied.
 
-The next slices should build the review loop before MCP, AI review, Claude/Codex hooks, or remote Git hosting integrations.
+Slices 16-25 built the local review loop: stage-plan import, durable review sessions, structured diffs, inline comments, feedback export, local review server/UI, refresh/stale comment handling, and PR output with review-loop state.
+
+The next slices should make this usable from normal coding agent sessions without the user manually coordinating Pathfinder commands. The core technical decision is:
+
+```bash
+pathfinder agent next --json
+```
+
+is the canonical first command for agents. Repository instructions and optional native command wrappers should teach Codex, Claude Code, OpenCode, and similar tools to ask Pathfinder what to do next instead of inventing a parallel workflow.
+
+MCP, hooks, direct agent invocation, AI review, and remote Git hosting integrations remain out of scope for the next slice set.
 
 ## Progress
 
@@ -96,6 +107,11 @@ The next slices should build the review loop before MCP, AI review, Claude/Codex
 | 23 | done | `docs/slices/23-inline-commenting-ui.md` |
 | 24 | done | `docs/slices/24-review-refresh-and-stale-comments.md` |
 | 25 | done | `docs/slices/25-pr-composer-review-loop.md` |
+| 26 | ready | `docs/slices/26-agent-next-state-machine.md` |
+| 27 | ready | `docs/slices/27-agent-prompt-rendering.md` |
+| 28 | ready | `docs/slices/28-agent-bootstrap-instructions.md` |
+| 29 | ready | `docs/slices/29-native-agent-command-wrappers.md` |
+| 30 | ready | `docs/slices/30-agent-integration-doctor.md` |
 
 Status values:
 
@@ -156,5 +172,13 @@ Next review-loop order:
 23. Inline commenting UI
 24. Review refresh and stale comments
 25. PR composer review loop
+
+Next agent-integration order:
+
+26. Agent next state machine
+27. Agent prompt rendering
+28. Agent bootstrap instructions
+29. Native agent command wrappers
+30. Agent integration doctor
 
 The order can change if a slice doc says it has no dependency on earlier slices.
