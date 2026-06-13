@@ -38,6 +38,9 @@ export interface Slice {
   title: string;
   description: string;
   status: SliceStatus;
+  branchName?: string;
+  baseRef?: string;
+  startedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

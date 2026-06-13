@@ -8,10 +8,12 @@ import {
   Review,
   ReviewComment,
   Slice,
+  SliceStatus,
   Workstream,
   assertNonEmptyText,
   createTimestamp,
   generatePrMarkdown,
+  isSliceStatus,
   nextAvailableId,
   toUrlSafeId
 } from "@pathfinder/core";
@@ -33,6 +35,12 @@ export interface CurrentContext {
 export interface GeneratedPrMarkdown {
   markdown: string;
   path: string;
+}
+
+export interface SliceBranchMetadata {
+  branchName: string;
+  baseRef: string;
+  startedAt: string;
 }
 
 interface SlicesFile {
@@ -170,6 +178,38 @@ export class PathfinderStore {
     const root = await this.requireWorkstreamRoot(workstreamId);
     const slicesFile = await this.readSlices(root);
     return slicesFile.slices;
+  }
+
+  async updateSliceStatus(workstreamId: string, sliceId: string, status: string): Promise<Slice> {
+    if (!isSliceStatus(status)) {
+      throw new PathfinderError(
+        `Invalid slice status '${status}'. Expected one of: proposed, ready, in_progress, review, complete.`
+      );
+    }
+
+    return this.updateSlice(workstreamId, sliceId, (slice) => ({
+      ...slice,
+      status: status satisfies SliceStatus,
+      updatedAt: createTimestamp()
+    }));
+  }
+
+  async setSliceBranchMetadata(
+    workstreamId: string,
+    sliceId: string,
+    metadata: Omit<SliceBranchMetadata, "startedAt"> & { startedAt?: string }
+  ): Promise<Slice> {
+    const branchName = assertNonEmptyText(metadata.branchName, "Branch name");
+    const baseRef = assertNonEmptyText(metadata.baseRef, "Base ref");
+    const startedAt = metadata.startedAt ?? createTimestamp();
+
+    return this.updateSlice(workstreamId, sliceId, (slice) => ({
+      ...slice,
+      branchName,
+      baseRef,
+      startedAt,
+      updatedAt: createTimestamp()
+    }));
   }
 
   async addComment(workstreamId: string, sliceId: string, body: string): Promise<ReviewComment> {
@@ -432,6 +472,25 @@ export class PathfinderStore {
 
   private async readSlices(workstreamRoot: string): Promise<SlicesFile> {
     return readJson<SlicesFile>(path.join(workstreamRoot, "slices.json"));
+  }
+
+  private async updateSlice(
+    workstreamId: string,
+    sliceId: string,
+    update: (slice: Slice) => Slice
+  ): Promise<Slice> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const slicesFile = await this.readSlices(root);
+    const index = slicesFile.slices.findIndex((candidate) => candidate.id === sliceId);
+
+    if (index === -1) {
+      throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    const updated = update(slicesFile.slices[index]);
+    slicesFile.slices[index] = updated;
+    await writeJson(path.join(root, "slices.json"), slicesFile);
+    return updated;
   }
 
   private async readComments(workstreamRoot: string): Promise<CommentsFile> {

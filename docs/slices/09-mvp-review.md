@@ -1,6 +1,6 @@
 # Slice 09: MVP Review Follow-Up
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -136,14 +136,14 @@ Dependency behavior:
 
 ## Acceptance Criteria
 
-- A slice can be marked `complete`.
-- `pathfinder pr generate <workstream-id>` lists completed slices after status updates.
-- `pathfinder git diff --base <base-ref>` shows committed changes from the current branch relative to the merge base with `<base-ref>`.
-- Existing `pathfinder git diff` behavior is either preserved or deliberately replaced with README/test coverage.
-- `pathfinder slice branch <workstream-id> <slice-id> --base <base-ref>` creates/checks out a local branch and records branch metadata.
-- Branch command refuses to run on a dirty working tree with a clear error.
-- Tests cover status updates, base diff behavior, and branch command state behavior where practical.
-- README documents the updated MVP workflow.
+- Done: A slice can be marked `complete`.
+- Done: `pathfinder pr generate <workstream-id>` lists completed slices after status updates.
+- Done: `pathfinder git diff --base <base-ref>` shows committed changes from the current branch relative to the merge base with `<base-ref>`.
+- Done: Existing `pathfinder git diff` working-tree behavior is preserved.
+- Done: `pathfinder slice branch <workstream-id> <slice-id> --base <base-ref>` creates/checks out a local branch and records branch metadata.
+- Done: Branch command refuses to run on a dirty working tree with a clear error.
+- Done: Tests cover status updates, base diff behavior, and branch command state behavior where practical.
+- Done: README documents the updated MVP workflow.
 
 ## Checks
 

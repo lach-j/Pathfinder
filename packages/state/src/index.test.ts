@@ -50,6 +50,43 @@ test("stores plans as markdown and tracks active slices", async () => {
   assert.equal((await store.getActiveSlice())?.slice.title, "Create State");
 });
 
+test("updates slice status and branch metadata in human-readable state", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Slice Lifecycle");
+  const slice = await store.addSlice(workstream.id, "Create Branch", "Track local branch state.");
+
+  const updatedStatus = await store.updateSliceStatus(workstream.id, slice.id, "complete");
+  const updatedBranch = await store.setSliceBranchMetadata(workstream.id, slice.id, {
+    branchName: "pathfinder/slice-lifecycle/create-branch",
+    baseRef: "main",
+    startedAt: "2026-01-01T00:00:00.000Z"
+  });
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", workstream.id, "slices.json"),
+    "utf8"
+  );
+
+  assert.equal(updatedStatus.status, "complete");
+  assert.equal(updatedBranch.branchName, "pathfinder/slice-lifecycle/create-branch");
+  assert.equal(updatedBranch.baseRef, "main");
+  assert.equal(updatedBranch.startedAt, "2026-01-01T00:00:00.000Z");
+  assert.match(stored, /"status": "complete"/);
+  assert.match(stored, /"branchName": "pathfinder\/slice-lifecycle\/create-branch"/);
+});
+
+test("validates slice status updates", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Slice Lifecycle");
+  const slice = await store.addSlice(workstream.id, "Create Branch", "Track local branch state.");
+
+  await assert.rejects(() => store.updateSliceStatus(workstream.id, slice.id, "blocked"), PathfinderError);
+  await assert.rejects(() => store.updateSliceStatus(workstream.id, "missing", "complete"), PathfinderError);
+});
+
 test("returns current context for the active workstream and slice", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);
@@ -177,6 +214,7 @@ test("generates and writes local PR markdown", async () => {
   const slice = await store.addSlice(workstream.id, "First Slice", "Generate markdown.");
   await writeFile(path.join(repo, "plan.md"), "# Plan\n\nShip a PR draft.\n", "utf8");
   await store.setPlanFromFile(workstream.id, path.join(repo, "plan.md"));
+  await store.updateSliceStatus(workstream.id, slice.id, "complete");
   await store.createReview(workstream.id, slice.id, "Manual review passed.");
   await store.addComment(workstream.id, slice.id, "Confirm generated output.");
 
@@ -187,6 +225,7 @@ test("generates and writes local PR markdown", async () => {
   assert.equal(stored, result.markdown);
   assert.match(result.markdown, /## Summary/);
   assert.match(result.markdown, /- Workstream: PR Flow \(`pr-flow`\)/);
+  assert.match(result.markdown, /- First Slice \(`first-slice`\): Generate markdown\./);
   assert.match(result.markdown, /- Review `manual-review-passed` \(open, slice `first-slice`\): Manual review passed\./);
   assert.match(result.markdown, /- Open comment `confirm-generated-output` \(slice `first-slice`\): Confirm generated output\./);
 });

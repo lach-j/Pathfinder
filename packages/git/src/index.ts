@@ -26,10 +26,38 @@ export class GitAdapter {
     return result.stdout;
   }
 
+  async getCommittedDiffAgainstBase(baseRef: string): Promise<string> {
+    await this.requireGitRepository();
+    await this.resolveCommit(baseRef);
+    const mergeBase = (await this.runGit(["merge-base", baseRef, "HEAD"])).stdout.trim();
+    const result = await this.runGit(["diff", `${mergeBase}..HEAD`]);
+    return result.stdout;
+  }
+
+  async hasUncommittedChanges(): Promise<boolean> {
+    await this.requireGitRepository();
+    const result = await this.runGit(["status", "--porcelain"]);
+    return result.stdout.trim().length > 0;
+  }
+
+  async createAndCheckoutBranch(branchName: string, baseRef: string): Promise<void> {
+    await this.requireGitRepository();
+    await this.resolveCommit(baseRef);
+    await this.runGit(["checkout", "-b", branchName, baseRef]);
+  }
+
   private async requireGitRepository(): Promise<void> {
     const result = await this.runGit(["rev-parse", "--is-inside-work-tree"]);
     if (result.stdout.trim() !== "true") {
       throw new PathfinderError("This command must be run inside a Git repository.");
+    }
+  }
+
+  private async resolveCommit(ref: string): Promise<void> {
+    try {
+      await this.runGit(["rev-parse", "--verify", `${ref}^{commit}`]);
+    } catch {
+      throw new PathfinderError(`Base ref '${ref}' was not found or is not a commit.`);
     }
   }
 

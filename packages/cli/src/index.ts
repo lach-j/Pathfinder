@@ -10,6 +10,7 @@ interface OptionMap {
   slice?: string;
   body?: string;
   summary?: string;
+  base?: string;
 }
 
 const store = new PathfinderStore(process.cwd());
@@ -87,8 +88,11 @@ async function run(args: string[]): Promise<void> {
 
 async function runGit(action: string | undefined, args: string[]): Promise<void> {
   if (action === "diff") {
-    expectNoExtraArgs(args);
-    const diff = await new GitAdapter({ cwd: process.cwd() }).getWorkingTreeDiff();
+    const options = parseOptions(args);
+    const git = new GitAdapter({ cwd: process.cwd() });
+    const diff = options.base
+      ? await git.getCommittedDiffAgainstBase(options.base)
+      : await git.getWorkingTreeDiff();
     process.stdout.write(diff);
     return;
   }
@@ -202,6 +206,47 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
+  if (action === "status") {
+    const [workstreamId, sliceId, status, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    requireArgument(sliceId, "slice id");
+    requireArgument(status, "slice status");
+    expectNoExtraArgs(extra);
+    const slice = await store.updateSliceStatus(workstreamId, sliceId, status);
+    console.log(formatSlice(slice));
+    return;
+  }
+
+  if (action === "branch") {
+    const [workstreamId, sliceId, ...optionArgs] = args;
+    requireArgument(workstreamId, "workstream id");
+    requireArgument(sliceId, "slice id");
+    const options = parseOptions(optionArgs);
+    requireOption(options.base, "--base");
+    const slices = await store.listSlices(workstreamId);
+    const slice = slices.find((candidate) => candidate.id === sliceId);
+
+    if (!slice) {
+      throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    const git = new GitAdapter({ cwd: process.cwd() });
+    if (await git.hasUncommittedChanges()) {
+      throw new PathfinderError(
+        "Cannot start a slice branch with uncommitted changes. Commit, stash, or remove local changes first."
+      );
+    }
+
+    const branchName = `pathfinder/${workstreamId}/${sliceId}`;
+    await git.createAndCheckoutBranch(branchName, options.base);
+    const updated = await store.setSliceBranchMetadata(workstreamId, sliceId, {
+      branchName,
+      baseRef: options.base
+    });
+    console.log(`Started branch ${branchName} for slice ${workstreamId}/${updated.id}.`);
+    return;
+  }
+
   if (action === "show-active") {
     expectNoExtraArgs(args);
     const active = await store.getActiveSlice();
@@ -215,7 +260,7 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
-  throw usageError("Unknown slice command. Expected add, list, active, or show-active.");
+  throw usageError("Unknown slice command. Expected add, list, active, status, branch, or show-active.");
 }
 
 async function runComment(action: string | undefined, args: string[]): Promise<void> {
@@ -325,6 +370,8 @@ function parseOptions(args: string[]): OptionMap {
       options.body = value;
     } else if (flag === "--summary") {
       options.summary = value;
+    } else if (flag === "--base") {
+      options.base = value;
     } else {
       throw usageError(`Unknown option '${flag}'.`);
     }
@@ -449,6 +496,8 @@ Usage:
   pathfinder slice add <workstream-id> --title "..." --description "..."
   pathfinder slice list <workstream-id>
   pathfinder slice active <workstream-id> <slice-id>
+  pathfinder slice status <workstream-id> <slice-id> <status>
+  pathfinder slice branch <workstream-id> <slice-id> --base <base-ref>
   pathfinder slice show-active
   pathfinder comment add <workstream-id> --slice <slice-id> --body "..."
   pathfinder comment list <workstream-id>
@@ -456,6 +505,6 @@ Usage:
   pathfinder review create <workstream-id> --slice <slice-id> --summary "..."
   pathfinder review list <workstream-id>
   pathfinder review show <workstream-id> <review-id>
-  pathfinder git diff
+  pathfinder git diff [--base <base-ref>]
   pathfinder pr generate <workstream-id>`);
 }

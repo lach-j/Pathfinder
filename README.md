@@ -56,8 +56,23 @@ Add slices and set the active slice:
 npm exec -- pathfinder slice add add-billing-foundation --title "Create local state" --description "Add filesystem-backed Pathfinder state files."
 npm exec -- pathfinder slice list add-billing-foundation
 npm exec -- pathfinder slice active add-billing-foundation create-local-state
+npm exec -- pathfinder slice status add-billing-foundation create-local-state in_progress
 npm exec -- pathfinder slice show-active
 ```
+
+Start a local branch for a slice from an explicit base ref:
+
+```bash
+npm exec -- pathfinder slice branch add-billing-foundation create-local-state --base main
+```
+
+This creates and checks out:
+
+```text
+pathfinder/<workstream-id>/<slice-id>
+```
+
+The branch command refuses to run when the working tree has uncommitted changes. Commit, stash, or remove local changes first.
 
 Print the current Pathfinder context for humans or agents:
 
@@ -85,6 +100,12 @@ Inspect the current local working tree diff:
 
 ```bash
 npm exec -- pathfinder git diff
+```
+
+Inspect the committed branch diff relative to a local base ref:
+
+```bash
+npm exec -- pathfinder git diff --base main
 ```
 
 Generate a local PR markdown draft:
@@ -122,9 +143,13 @@ npm run lint --if-present
 npm run build
 npm exec -- pathfinder help
 npm exec -- pathfinder current
+npm exec -- pathfinder slice status add-billing-foundation create-local-state complete
+# Requires a clean working tree before running:
+npm exec -- pathfinder slice branch add-billing-foundation create-local-state --base main
 npm exec -- pathfinder review create add-billing-foundation --slice create-local-state --summary "Manual review passed."
 npm exec -- pathfinder review list add-billing-foundation
 npm exec -- pathfinder review show add-billing-foundation manual-review-passed
 npm exec -- pathfinder git diff
+npm exec -- pathfinder git diff --base main
 npm exec -- pathfinder pr generate add-billing-foundation
 ```

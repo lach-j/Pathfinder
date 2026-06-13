@@ -34,6 +34,50 @@ test("returns an empty string when there is no working tree diff", async () => {
   assert.equal(await new GitAdapter({ cwd: repo }).getWorkingTreeDiff(), "");
 });
 
+test("returns committed diff against the merge base of a base ref", async () => {
+  const repo = await createTempRepo();
+  await writeFile(path.join(repo, "tracked.txt"), "base\n", "utf8");
+  await git(repo, ["add", "tracked.txt"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "initial"]);
+  await git(repo, ["checkout", "-b", "feature"]);
+  await writeFile(path.join(repo, "tracked.txt"), "feature\n", "utf8");
+  await git(repo, ["add", "tracked.txt"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "feature"]);
+  await writeFile(path.join(repo, "tracked.txt"), "working tree only\n", "utf8");
+
+  const diff = await new GitAdapter({ cwd: repo }).getCommittedDiffAgainstBase("main");
+
+  assert.match(diff, /-base/);
+  assert.match(diff, /\+feature/);
+  assert.doesNotMatch(diff, /working tree only/);
+});
+
+test("detects dirty state and creates a branch from a base ref", async () => {
+  const repo = await createTempRepo();
+  await writeFile(path.join(repo, "tracked.txt"), "base\n", "utf8");
+  await git(repo, ["add", "tracked.txt"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "initial"]);
+  const adapter = new GitAdapter({ cwd: repo });
+
+  assert.equal(await adapter.hasUncommittedChanges(), false);
+  await writeFile(path.join(repo, "tracked.txt"), "dirty\n", "utf8");
+  assert.equal(await adapter.hasUncommittedChanges(), true);
+  await git(repo, ["checkout", "--", "tracked.txt"]);
+
+  await adapter.createAndCheckoutBranch("pathfinder/workstream/slice", "main");
+
+  assert.equal((await git(repo, ["branch", "--show-current"])).trim(), "pathfinder/workstream/slice");
+});
+
+test("fails clearly when a base ref is invalid", async () => {
+  const repo = await createTempRepo();
+
+  await assert.rejects(
+    () => new GitAdapter({ cwd: repo }).getCommittedDiffAgainstBase("missing"),
+    (error: unknown) => error instanceof PathfinderError && /Base ref 'missing'/.test(error.message)
+  );
+});
+
 test("fails clearly outside a Git repository", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "pathfinder-git-outside-"));
 
@@ -54,7 +98,7 @@ test("fails clearly when Git is unavailable", async () => {
 
 async function createTempRepo(): Promise<string> {
   const repo = await mkdtemp(path.join(os.tmpdir(), "pathfinder-git-"));
-  await git(repo, ["init"]);
+  await git(repo, ["init", "--initial-branch=main"]);
   return repo;
 }
 

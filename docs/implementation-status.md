@@ -61,7 +61,7 @@ State currently lives under:
 | 06 | done | `docs/slices/06-pr-markdown-generation.md` |
 | 07 | done | `docs/slices/07-current-context-command.md` |
 | 08 | done | `docs/slices/08-cli-polish.md` |
-| 09 | ready | `docs/slices/09-mvp-review.md` |
+| 09 | done | `docs/slices/09-mvp-review.md` |
 
 Status values:
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -24,6 +24,8 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder slice add",
     "pathfinder slice list",
     "pathfinder slice active",
+    "pathfinder slice status",
+    "pathfinder slice branch",
     "pathfinder slice show-active",
     "pathfinder comment add",
     "pathfinder comment list",
@@ -32,6 +34,7 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder review list",
     "pathfinder review show",
     "pathfinder git diff",
+    "pathfinder git diff [--base <base-ref>]",
     "pathfinder pr generate"
   ]) {
     assert.match(result.stdout, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -72,6 +75,90 @@ test("reports uninitialised Pathfinder state clearly", async () => {
   );
 });
 
+test("updates slice status and includes completed slices in generated PR markdown", async () => {
+  const repo = await createTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Reorder Report",
+      "--description",
+      "Create a local report for low stock items."
+    ],
+    repo
+  );
+  await runCli(["slice", "status", "inventory-alerts", "add-reorder-report", "complete"], repo);
+  const result = await runCli(["pr", "generate", "inventory-alerts"], repo);
+
+  assert.match(result.stdout, /- Add Reorder Report \(`add-reorder-report`\): Create a local report/);
+});
+
+test("starts a slice branch and records branch metadata", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Reorder Report",
+      "--description",
+      "Create a local report for low stock items."
+    ],
+    repo
+  );
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+
+  await runCli(["slice", "branch", "inventory-alerts", "add-reorder-report", "--base", "main"], repo);
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", "inventory-alerts", "slices.json"),
+    "utf8"
+  );
+
+  assert.equal((await git(repo, ["branch", "--show-current"])).trim(), "pathfinder/inventory-alerts/add-reorder-report");
+  assert.match(stored, /"branchName": "pathfinder\/inventory-alerts\/add-reorder-report"/);
+  assert.match(stored, /"baseRef": "main"/);
+});
+
+test("refuses to start a slice branch with uncommitted changes", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Reorder Report",
+      "--description",
+      "Create a local report for low stock items."
+    ],
+    repo
+  );
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await writeFile(path.join(repo, "dirty.txt"), "dirty\n", "utf8");
+
+  await assert.rejects(
+    () => runCli(["slice", "branch", "inventory-alerts", "add-reorder-report", "--base", "main"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Cannot start a slice branch with uncommitted changes/.test(error.stderr)
+  );
+});
+
 async function runCli(args: string[], cwd = process.cwd()): Promise<{ stdout: string; stderr: string }> {
   return execFileAsync(process.execPath, [cliPath, ...args], { cwd, encoding: "utf8" });
 }
@@ -80,6 +167,20 @@ async function createTempGitRepo(): Promise<string> {
   const repo = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-"));
   await mkdir(path.join(repo, ".git"));
   return repo;
+}
+
+async function createRealTempGitRepo(): Promise<string> {
+  const repo = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-git-"));
+  await git(repo, ["init", "--initial-branch=main"]);
+  await writeFile(path.join(repo, "README.md"), "# Test\n", "utf8");
+  await git(repo, ["add", "README.md"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "initial"]);
+  return repo;
+}
+
+async function git(cwd: string, args: string[]): Promise<string> {
+  const result = await execFileAsync("git", args, { cwd, encoding: "utf8" });
+  return result.stdout;
 }
 
 function isExecError(error: unknown): error is Error & { code: number; stderr: string } {
