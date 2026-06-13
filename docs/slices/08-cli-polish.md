@@ -1,6 +1,6 @@
 # Slice 08: CLI Polish
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -60,4 +60,20 @@ Do not add unrelated product features, UI, MCP, AI behavior, GitHub/GitLab integ
 Run npm run typecheck, npm test, npm run lint --if-present, npm run build, and npm exec -- pathfinder help.
 
 Summarise changed files and manual verification commands.
+```
+
+## Completion Notes
+
+- CLI usage errors now consistently point users to `pathfinder help`.
+- CLI subprocess tests cover help coverage, unknown commands, missing required options, and missing Pathfinder state.
+- The root test command now includes CLI tests.
+
+Checks run:
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+npm exec -- pathfinder help
 ```

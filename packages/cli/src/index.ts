@@ -82,7 +82,7 @@ async function run(args: string[]): Promise<void> {
     return;
   }
 
-  throw new PathfinderError(`Unknown command '${area}'. Run 'pathfinder help' for usage.`);
+  throw usageError(`Unknown command '${area}'.`);
 }
 
 async function runGit(action: string | undefined, args: string[]): Promise<void> {
@@ -93,7 +93,7 @@ async function runGit(action: string | undefined, args: string[]): Promise<void>
     return;
   }
 
-  throw new PathfinderError("Unknown git command. Expected diff.");
+  throw usageError("Unknown git command. Expected diff.");
 }
 
 async function runPr(action: string | undefined, args: string[]): Promise<void> {
@@ -106,7 +106,7 @@ async function runPr(action: string | undefined, args: string[]): Promise<void> 
     return;
   }
 
-  throw new PathfinderError("Unknown pr command. Expected generate.");
+  throw usageError("Unknown pr command. Expected generate.");
 }
 
 async function runWorkstream(action: string | undefined, args: string[]): Promise<void> {
@@ -140,7 +140,7 @@ async function runWorkstream(action: string | undefined, args: string[]): Promis
     return;
   }
 
-  throw new PathfinderError("Unknown workstream command. Expected create, list, or show.");
+  throw usageError("Unknown workstream command. Expected create, list, or show.");
 }
 
 async function runPlan(action: string | undefined, args: string[]): Promise<void> {
@@ -162,7 +162,7 @@ async function runPlan(action: string | undefined, args: string[]): Promise<void
     return;
   }
 
-  throw new PathfinderError("Unknown plan command. Expected set or show.");
+  throw usageError("Unknown plan command. Expected set or show.");
 }
 
 async function runSlice(action: string | undefined, args: string[]): Promise<void> {
@@ -215,7 +215,7 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
-  throw new PathfinderError("Unknown slice command. Expected add, list, active, or show-active.");
+  throw usageError("Unknown slice command. Expected add, list, active, or show-active.");
 }
 
 async function runComment(action: string | undefined, args: string[]): Promise<void> {
@@ -255,7 +255,7 @@ async function runComment(action: string | undefined, args: string[]): Promise<v
     return;
   }
 
-  throw new PathfinderError("Unknown comment command. Expected add, list, or resolve.");
+  throw usageError("Unknown comment command. Expected add, list, or resolve.");
 }
 
 async function runReview(action: string | undefined, args: string[]): Promise<void> {
@@ -295,7 +295,7 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
     return;
   }
 
-  throw new PathfinderError("Unknown review command. Expected create, list, or show.");
+  throw usageError("Unknown review command. Expected create, list, or show.");
 }
 
 function parseOptions(args: string[]): OptionMap {
@@ -306,11 +306,11 @@ function parseOptions(args: string[]): OptionMap {
     const value = args[index + 1];
 
     if (!flag.startsWith("--")) {
-      throw new PathfinderError(`Unexpected argument '${flag}'.`);
+      throw usageError(`Unexpected argument '${flag}'.`);
     }
 
     if (!value || value.startsWith("--")) {
-      throw new PathfinderError(`Missing value for ${flag}.`);
+      throw usageError(`Missing value for ${flag}.`);
     }
 
     if (flag === "--title") {
@@ -326,7 +326,7 @@ function parseOptions(args: string[]): OptionMap {
     } else if (flag === "--summary") {
       options.summary = value;
     } else {
-      throw new PathfinderError(`Unknown option '${flag}'.`);
+      throw usageError(`Unknown option '${flag}'.`);
     }
 
     index += 1;
@@ -415,20 +415,24 @@ function formatPlanExcerpt(planMarkdown: string): string[] {
 
 function requireArgument(value: string | undefined, label: string): asserts value is string {
   if (!value) {
-    throw new PathfinderError(`Missing ${label}.`);
+    throw usageError(`Missing ${label}.`);
   }
 }
 
 function requireOption(value: string | undefined, flag: string): asserts value is string {
   if (!value) {
-    throw new PathfinderError(`Missing required option ${flag}.`);
+    throw usageError(`Missing required option ${flag}.`);
   }
 }
 
 function expectNoExtraArgs(args: string[]): void {
   if (args.length > 0) {
-    throw new PathfinderError(`Unexpected argument '${args[0]}'.`);
+    throw usageError(`Unexpected argument '${args[0]}'.`);
   }
+}
+
+function usageError(message: string): PathfinderError {
+  return new PathfinderError(`${message} Run 'pathfinder help' for usage.`);
 }
 
 function printHelp(): void {
