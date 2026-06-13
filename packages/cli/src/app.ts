@@ -19,6 +19,7 @@ import {
 } from "./formatters.js";
 import { printHelp } from "./help.js";
 import { expectNoExtraArgs, parseOptions, requireArgument, requireOption, usageError } from "./options.js";
+import { serveReviewServer } from "./review-server.js";
 
 const store = new PathfinderStore(process.cwd());
 
@@ -520,6 +521,13 @@ async function runComment(action: string | undefined, args: string[]): Promise<v
 }
 
 async function runReview(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "serve") {
+    const options = parseOptions(args);
+    const port = parsePort(options.port);
+    await serveReviewServer({ port });
+    return;
+  }
+
   if (action === "start") {
     const options = parseOptions(args);
     requireOption(options.base, "--base");
@@ -601,7 +609,20 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
     return;
   }
 
-  throw usageError("Unknown review command. Expected start, sessions, session, run, create, list, or show.");
+  throw usageError("Unknown review command. Expected serve, start, sessions, session, run, create, list, or show.");
+}
+
+function parsePort(value: string | undefined): number {
+  if (value === undefined) {
+    return 4783;
+  }
+
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw usageError("Invalid --port value. Expected an integer between 1 and 65535.");
+  }
+
+  return port;
 }
 
 async function runEvidence(action: string | undefined, args: string[]): Promise<void> {

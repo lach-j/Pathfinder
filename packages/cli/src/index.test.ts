@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { Server } from "node:http";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+
+import { serveReviewServer } from "./review-server.js";
 
 const execFileAsync = promisify(execFile);
 const cliPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "index.js");
@@ -35,6 +38,7 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder comment add",
     "pathfinder comment list",
     "pathfinder comment resolve",
+    "pathfinder review serve [--port 4783]",
     "pathfinder review start --base <base-ref>",
     "pathfinder review sessions",
     "pathfinder review session",
@@ -900,6 +904,93 @@ test("exports useful empty feedback queue output", async () => {
   assert.match(result.stdout, /No open feedback items found\./);
 });
 
+test("serves local review JSON endpoints and mutates comments", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-review-server"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  await runCli(["review", "start", "--base", "main"], repo);
+
+  const server = await serveReviewServer({ cwd: repo, port: 0, silent: true });
+  try {
+    const baseUrl = serverBaseUrl(server);
+    const html = await fetch(`${baseUrl}/`);
+    const current = await jsonFetch(`${baseUrl}/api/current`);
+    const workstreams = await jsonFetch(`${baseUrl}/api/workstreams`);
+    const sessions = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/review-sessions`);
+    const diff = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/review-sessions/review-add-report/diff`);
+    const added = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/comments`, {
+      method: "POST",
+      body: JSON.stringify({
+        body: "Handle the empty case.",
+        sessionId: "review-add-report",
+        filePath: "src/report.ts",
+        lineNumber: 1,
+        side: "new"
+      })
+    });
+    const comments = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/comments?session=review-add-report`);
+    const feedback = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/feedback?session=review-add-report`);
+    const resolved = await jsonFetch(
+      `${baseUrl}/api/workstreams/inventory-alerts/comments/handle-the-empty-case/resolve`,
+      { method: "POST" }
+    );
+    const openComments = await jsonFetch(
+      `${baseUrl}/api/workstreams/inventory-alerts/comments?session=review-add-report&open=true`
+    );
+
+    assert.equal(html.status, 200);
+    assert.match(await html.text(), /Pathfinder review server is running/);
+    assert.equal(current.activeSlice.id, "add-report");
+    assert.equal(workstreams.workstreams[0].id, "inventory-alerts");
+    assert.equal(sessions.sessions[0].id, "review-add-report");
+    assert.equal(diff.session.id, "review-add-report");
+    assert.equal(diff.diff.files[0].path, "src/report.ts");
+    assert.equal(added.comment.id, "handle-the-empty-case");
+    assert.equal(comments.comments.length, 1);
+    assert.match(feedback.markdown, /Handle the empty case\./);
+    assert.equal(resolved.comment.resolved, true);
+    assert.equal(openComments.comments.length, 0);
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("serves JSON errors when Pathfinder state is missing", async () => {
+  const repo = await createRealTempGitRepo();
+  const server = await serveReviewServer({ cwd: repo, port: 0, silent: true });
+
+  try {
+    const response = await fetch(`${serverBaseUrl(server)}/api/current`);
+    const body = await response.json() as { error: string };
+
+    assert.equal(response.status, 400);
+    assert.match(body.error, /Pathfinder state not found/);
+  } finally {
+    await closeServer(server);
+  }
+});
+
 test("reports invalid inline comment session files and lines clearly", async () => {
   const repo = await createRealTempGitRepo();
 
@@ -1124,6 +1215,39 @@ test("generates PR markdown with committed repository summary", async () => {
   assert.match(result.stdout, /- `npm-test-passed` \[test\]: npm test passed/);
   assert.match(result.stdout, /- Open comment `resolve-before-pr` \(slice `add-report`\): Resolve before PR\./);
 });
+
+async function jsonFetch(url: string, init: RequestInit = {}): Promise<any> {
+  const response = await fetch(url, {
+    headers: {
+      "content-type": "application/json",
+      ...(init.headers ?? {})
+    },
+    ...init
+  });
+  const body = await response.json();
+
+  assert.ok(response.ok, JSON.stringify(body));
+  return body;
+}
+
+function serverBaseUrl(server: Server): string {
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  return `http://127.0.0.1:${address.port}`;
+}
+
+async function closeServer(server: Server): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
 
 async function runCli(args: string[], cwd = process.cwd()): Promise<{ stdout: string; stderr: string }> {
   return execFileAsync(process.execPath, [cliPath, ...args], { cwd, encoding: "utf8" });

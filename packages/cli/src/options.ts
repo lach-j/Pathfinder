@@ -8,6 +8,7 @@ export interface OptionMap {
   body?: string;
   summary?: string;
   base?: string;
+  port?: string;
   session?: string;
   line?: string;
   side?: string;
@@ -57,6 +58,8 @@ export function parseOptions(args: string[]): OptionMap {
       options.summary = value;
     } else if (flag === "--base") {
       options.base = value;
+    } else if (flag === "--port") {
+      options.port = value;
     } else if (flag === "--session") {
       options.session = value;
     } else if (flag === "--line") {

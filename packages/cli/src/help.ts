@@ -24,6 +24,7 @@ Usage:
   pathfinder comment add <workstream-id> --session <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
   pathfinder comment list <workstream-id> [--session <session-id>] [--open]
   pathfinder comment resolve <workstream-id> <comment-id>
+  pathfinder review serve [--port 4783]
   pathfinder review start --base <base-ref>
   pathfinder review sessions <workstream-id>
   pathfinder review session <workstream-id> <session-id>

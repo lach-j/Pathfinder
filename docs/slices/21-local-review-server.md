@@ -1,6 +1,6 @@
 # Slice 21: Local Review Server
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -102,6 +102,32 @@ Then open:
 
 ```text
 http://127.0.0.1:4783
+```
+
+## Implementation Notes
+
+- Added `pathfinder review serve [--port 4783]`.
+- Added a Node built-in HTTP server bound to `127.0.0.1` by default.
+- Added a placeholder HTML page at `/`.
+- Added JSON endpoints for current context, workstreams, review sessions, structured session diffs, comments, comment resolution, and feedback queue preview.
+- Reused `PathfinderStore` and `GitAdapter` for state, diff, comment validation, and feedback export behavior.
+- Kept the server local-only with no auth, hosted backend, WebSockets, external API calls, or full UI.
+- Documented the local-only review server and endpoint surface in `README.md`.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke tested the built CLI server:
+
+```bash
+node packages/cli/dist/index.js review serve --port 4783
+Invoke-WebRequest http://127.0.0.1:4783
 ```
 
 ## Suggested Prompt

@@ -141,6 +141,30 @@ npm exec -- pathfinder review session add-billing-foundation review-create-local
 Review sessions are stored under the active workstream and capture the active slice, base ref,
 head ref, head commit, merge base, and changed files for that review pass.
 
+Start the local-only review server for browser-based review tooling:
+
+```bash
+npm exec -- pathfinder review serve
+npm exec -- pathfinder review serve --port 4783
+```
+
+The server binds to `127.0.0.1` and is not a hosted backend. It does not add authentication,
+cloud sync, or external API calls; it only exposes local Pathfinder state and local Git diffs
+from the current repository.
+
+Available JSON endpoints:
+
+```text
+GET  /api/current
+GET  /api/workstreams
+GET  /api/workstreams/:id/review-sessions
+GET  /api/workstreams/:id/review-sessions/:sessionId/diff
+GET  /api/workstreams/:id/comments?session=<session-id>
+POST /api/workstreams/:id/comments
+POST /api/workstreams/:id/comments/:commentId/resolve
+GET  /api/workstreams/:id/feedback?session=<session-id>
+```
+
 Create and inspect local review records for a slice:
 
 ```bash
