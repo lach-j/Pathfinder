@@ -156,6 +156,19 @@ export interface PrMarkdownInput {
   repositorySummary?: RepositorySummary;
 }
 
+export interface ImportedStagePlanStage {
+  stageNumber: number;
+  title: string;
+  heading: string;
+  description: string;
+}
+
+export interface ImportedStagePlan {
+  workstreamTitle: string;
+  markdown: string;
+  stages: ImportedStagePlanStage[];
+}
+
 export class PathfinderError extends Error {
   constructor(message: string) {
     super(message);
@@ -283,6 +296,61 @@ export function findNextActionableSlice(slices: Slice[]): Slice | undefined {
   return [...slices]
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
     .find((slice) => isSliceActionable(slice, slices));
+}
+
+export function parseStagePlanMarkdown(markdown: string): ImportedStagePlan {
+  assertNonEmptyText(markdown, "Stage plan markdown");
+  const source = markdown;
+  const titleMatch = source.match(/^#\s+(.+?)\s*$/m);
+
+  if (!titleMatch) {
+    throw new PathfinderError("Could not import stage plan: missing top-level '# <title>' heading.");
+  }
+
+  const workstreamTitle = normalizeStagePlanTitle(titleMatch[1]);
+  const headingMatches = [...source.matchAll(/^## Stage\s+(\d+):\s+(.+?)\s*$/gm)];
+
+  if (headingMatches.length === 0) {
+    throw new PathfinderError("Could not import stage plan: no '## Stage N:' sections were found.");
+  }
+
+  const seenStageNumbers = new Set<number>();
+  const stages = headingMatches.map((match, index): ImportedStagePlanStage => {
+    const fullMatch = match[0];
+    const stageNumber = Number.parseInt(match[1], 10);
+    const rawTitle = match[2].trim();
+    const bodyStart = (match.index ?? 0) + fullMatch.length;
+    const bodyEnd = headingMatches[index + 1]?.index ?? source.length;
+    const body = source.slice(bodyStart, bodyEnd).trim();
+
+    if (seenStageNumbers.has(stageNumber)) {
+      throw new PathfinderError(`Could not import stage plan: duplicate stage number ${stageNumber}.`);
+    }
+
+    seenStageNumbers.add(stageNumber);
+
+    const title = normalizeStageTitle(rawTitle);
+    if (!title) {
+      throw new PathfinderError(`Could not import stage plan: stage ${stageNumber} is missing a title.`);
+    }
+
+    if (!body) {
+      throw new PathfinderError(`Could not import stage plan: stage ${stageNumber} is missing details.`);
+    }
+
+    return {
+      stageNumber,
+      title,
+      heading: fullMatch,
+      description: [`${fullMatch}`, "", body].join("\n")
+    };
+  });
+
+  return {
+    workstreamTitle,
+    markdown: source,
+    stages: stages.sort((left, right) => left.stageNumber - right.stageNumber)
+  };
 }
 
 export function generateDeterministicReview(input: DeterministicReviewInput): DeterministicReviewResult {
@@ -455,6 +523,17 @@ export function generatePrMarkdown(input: PrMarkdownInput): string {
   ];
 
   return `${lines.join("\n").trimEnd()}\n`;
+}
+
+function normalizeStagePlanTitle(title: string): string {
+  return assertNonEmptyText(title.replace(/\s+-\s+Stage Plan\s*$/i, ""), "Stage plan title");
+}
+
+function normalizeStageTitle(title: string): string {
+  return title
+    .replace(/\s+\[status:\s*[^\]]+\]\s*$/i, "")
+    .replace(/\s+\((?:[^()]*)\)\s*$/u, "")
+    .trim();
 }
 
 function sortSlices(slices: Slice[]): Slice[] {

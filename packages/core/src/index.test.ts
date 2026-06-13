@@ -12,6 +12,7 @@ import {
   isSliceStatus,
   isUrlSafeId,
   nextAvailableId,
+  parseStagePlanMarkdown,
   Slice,
   toUrlSafeId
 } from "./index.js";
@@ -46,6 +47,29 @@ test("finds the first actionable slice by creation time", () => {
   assert.equal(isSliceActionable(slices[1], slices), false);
   assert.equal(isSliceActionable(slices[2], slices), false);
   assert.equal(findNextActionableSlice(slices)?.id, "dependent");
+});
+
+test("parses stored stage plans into a workstream title and stages", () => {
+  const plan = parseStagePlanMarkdown(sampleStagePlan());
+
+  assert.equal(plan.workstreamTitle, "Inventory Alerts");
+  assert.equal(plan.markdown, sampleStagePlan());
+  assert.deepEqual(
+    plan.stages.map((stage) => [stage.stageNumber, stage.title]),
+    [
+      [1, "Add Data Source"],
+      [2, "Add Report"]
+    ]
+  );
+  assert.match(plan.stages[0].description, /^## Stage 1: Add Data Source \(INV-1\) \[status: pending\]/);
+  assert.match(plan.stages[1].description, /\*\*Depends on:\*\* Stage 1 data source\./);
+});
+
+test("rejects stage plans without recognizable stages", () => {
+  assert.throws(
+    () => parseStagePlanMarkdown("# Inventory Alerts - Stage Plan\n\n## Context\nNo stages yet.\n"),
+    /no '## Stage N:' sections/
+  );
 });
 
 test("generates deterministic PR markdown from workstream state", () => {
@@ -453,4 +477,42 @@ function testSlice(
     createdAt,
     updatedAt: createdAt
   };
+}
+
+function sampleStagePlan(): string {
+  return `# Inventory Alerts - Stage Plan
+
+Epic: INV-1
+Originating ticket: INV-2
+Created: 2026-06-13
+
+## Context
+Build local inventory alerts.
+
+## Stages
+
+| Stage | Issue | Title | Status |
+| ----- | ---- | ----- | ------ |
+| 1 | INV-1 | Add Data Source | pending |
+| 2 | INV-2 | Add Report | pending |
+
+---
+
+## Stage 1: Add Data Source (INV-1) [status: pending]
+
+**Scope:** Create local data.
+**Acceptance criteria:** Data loads from disk.
+**Depends on:** None.
+**Commit breakdown:**
+1. Add model
+
+## Stage 2: Add Report (INV-2) [status: pending]
+
+**Scope:** Report reorder candidates.
+**Acceptance criteria:** Report lists low stock.
+**Open items:** Confirm threshold.
+**Depends on:** Stage 1 data source.
+**Commit breakdown:**
+1. Add report
+`;
 }

@@ -53,9 +53,14 @@ npm exec -- pathfinder requirement show add-billing-foundation
 Attach and read a markdown implementation plan:
 
 ```bash
+npm exec -- pathfinder plan import --file ./PLAN.md
 npm exec -- pathfinder plan set add-billing-foundation --file ./plan.md
 npm exec -- pathfinder plan show add-billing-foundation
 ```
+
+`plan import` reads the stored stage-plan markdown shape used by `docs/skills-replacement-examples/plan-stages.md`.
+It creates one workstream from the plan title, stores the source markdown as `plan.md`, and creates one proposed
+slice per `## Stage N:` section while preserving the stage details in each slice description.
 
 Add slices and set the active slice:
 
@@ -195,6 +200,7 @@ npm exec -- pathfinder help
 npm exec -- pathfinder current
 npm exec -- pathfinder requirement set add-billing-foundation --file ./requirements.md
 npm exec -- pathfinder requirement show add-billing-foundation
+npm exec -- pathfinder plan import --file ./PLAN.md
 npm exec -- pathfinder slice status add-billing-foundation create-local-state complete
 npm exec -- pathfinder slice next add-billing-foundation
 # Requires a clean working tree before running:

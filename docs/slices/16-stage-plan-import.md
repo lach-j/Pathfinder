@@ -1,6 +1,6 @@
 # Slice 16: Stage Plan Import
 
-Status: ready
+Status: done
 
 ## Goal
 

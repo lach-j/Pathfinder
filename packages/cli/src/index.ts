@@ -209,6 +209,17 @@ async function runWorkstream(action: string | undefined, args: string[]): Promis
 }
 
 async function runPlan(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "import") {
+    const options = parseOptions(args);
+    requireOption(options.file, "--file");
+    const result = await store.importStagePlanFromFile(options.file);
+    console.log(`Imported workstream: ${result.workstream.id}\t${result.workstream.title}`);
+    for (const slice of result.slices) {
+      console.log(`Imported slice: ${slice.id}\t${slice.title}`);
+    }
+    return;
+  }
+
   if (action === "set") {
     const [workstreamId, ...optionArgs] = args;
     requireArgument(workstreamId, "workstream id");
@@ -227,7 +238,7 @@ async function runPlan(action: string | undefined, args: string[]): Promise<void
     return;
   }
 
-  throw usageError("Unknown plan command. Expected set or show.");
+  throw usageError("Unknown plan command. Expected import, set, or show.");
 }
 
 async function runSlice(action: string | undefined, args: string[]): Promise<void> {
@@ -803,6 +814,7 @@ Usage:
   pathfinder workstream show <id>
   pathfinder requirement set <workstream-id> --file ./requirements.md
   pathfinder requirement show <workstream-id>
+  pathfinder plan import --file ./PLAN.md
   pathfinder plan set <workstream-id> --file ./plan.md
   pathfinder plan show <workstream-id>
   pathfinder slice add <workstream-id> --title "..." --description "..." [--depends-on <slice-id>]

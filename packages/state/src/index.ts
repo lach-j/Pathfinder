@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   DeterministicReviewResult,
   Evidence,
+  ImportedStagePlan,
   PathfinderError,
   Project,
   RepositorySummary,
@@ -21,6 +22,7 @@ import {
   isEvidenceKind,
   isSliceStatus,
   nextAvailableId,
+  parseStagePlanMarkdown,
   toUrlSafeId
 } from "@pathfinder/core";
 
@@ -55,6 +57,12 @@ export interface SliceBranchMetadata {
   branchName: string;
   baseRef: string;
   startedAt: string;
+}
+
+export interface ImportedStagePlanState {
+  plan: ImportedStagePlan;
+  workstream: Workstream;
+  slices: Slice[];
 }
 
 interface SlicesFile {
@@ -186,6 +194,59 @@ export class PathfinderStore {
 
     const content = await readFile(sourcePath, "utf8");
     await writeFile(path.join(root, "plan.md"), content, "utf8");
+  }
+
+  async importStagePlanFromFile(sourceFile: string): Promise<ImportedStagePlanState> {
+    const stateRoot = await this.requireStateRoot();
+    const sourcePath = path.resolve(this.cwd, sourceFile);
+
+    if (!(await exists(sourcePath))) {
+      throw new PathfinderError(`Plan file not found: ${sourceFile}`);
+    }
+
+    const markdown = await readFile(sourcePath, "utf8");
+    const plan = parseStagePlanMarkdown(markdown);
+    const existingIds = await this.listWorkstreamIds();
+    const workstreamId = nextAvailableId(toUrlSafeId(plan.workstreamTitle), existingIds);
+    const workstreamRoot = path.join(stateRoot, "workstreams", workstreamId);
+
+    if (await exists(workstreamRoot)) {
+      throw new PathfinderError(`Workstream '${workstreamId}' already exists.`);
+    }
+
+    const now = createTimestamp();
+    const workstream: Workstream = {
+      id: workstreamId,
+      title: plan.workstreamTitle,
+      createdAt: now,
+      updatedAt: now
+    };
+    const sliceIds: string[] = [];
+    const slices: Slice[] = plan.stages.map((stage) => {
+      const id = nextAvailableId(toUrlSafeId(stage.title), sliceIds);
+      sliceIds.push(id);
+
+      return {
+        id,
+        title: stage.title,
+        description: stage.description,
+        status: "proposed",
+        createdAt: now,
+        updatedAt: now
+      };
+    });
+
+    await mkdir(workstreamRoot, { recursive: false });
+    await writeJson(path.join(workstreamRoot, "workstream.json"), workstream);
+    await writeFile(path.join(workstreamRoot, "requirements.md"), "", "utf8");
+    await writeFile(path.join(workstreamRoot, "plan.md"), plan.markdown, "utf8");
+    await writeJson(path.join(workstreamRoot, "slices.json"), { slices } satisfies SlicesFile);
+    await writeJson(path.join(workstreamRoot, "comments.json"), { comments: [] } satisfies CommentsFile);
+    await writeJson(path.join(workstreamRoot, "reviews.json"), { reviews: [] } satisfies ReviewsFile);
+    await writeJson(path.join(workstreamRoot, "evidence.json"), { evidence: [] } satisfies EvidenceFile);
+    await writeFile(path.join(workstreamRoot, "pr.md"), "", "utf8");
+
+    return { plan, workstream, slices };
   }
 
   async getPlan(workstreamId: string): Promise<string> {

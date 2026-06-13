@@ -80,6 +80,63 @@ test("stores plans as markdown and tracks active slices", async () => {
   assert.equal((await store.getActiveSlice())?.slice.title, "Create State");
 });
 
+test("imports a stored stage plan into workstream, plan, and slices", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const planPath = path.join(repo, "PLAN.md");
+  const markdown = sampleStagePlan();
+  await writeFile(planPath, markdown, "utf8");
+
+  const result = await store.importStagePlanFromFile("./PLAN.md");
+  const storedPlan = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", result.workstream.id, "plan.md"),
+    "utf8"
+  );
+  const slices = await store.listSlices(result.workstream.id);
+
+  assert.equal(result.workstream.id, "inventory-alerts");
+  assert.equal(result.workstream.title, "Inventory Alerts");
+  assert.equal(storedPlan, markdown);
+  assert.deepEqual(
+    slices.map((slice) => [slice.id, slice.title, slice.status]),
+    [
+      ["add-data-source", "Add Data Source", "proposed"],
+      ["add-report", "Add Report", "proposed"]
+    ]
+  );
+  assert.match(slices[0].description, /\*\*Acceptance criteria:\*\* Data loads from disk\./);
+  assert.match(slices[1].description, /\*\*Depends on:\*\* Stage 1 data source\./);
+  assert.equal(slices[1].dependsOnSliceIds, undefined);
+});
+
+test("imports duplicate stage titles with unique slice ids", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  await writeFile(path.join(repo, "PLAN.md"), duplicateTitleStagePlan(), "utf8");
+
+  const result = await store.importStagePlanFromFile("./PLAN.md");
+  const slices = await store.listSlices(result.workstream.id);
+
+  assert.deepEqual(
+    slices.map((slice) => slice.id),
+    ["add-report", "add-report-2", "add-report-3"]
+  );
+});
+
+test("stage plan import validates missing files and failed parses before creating state", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  await writeFile(path.join(repo, "PLAN.md"), "# Inventory Alerts - Stage Plan\n\n## Context\nNo stages.\n", "utf8");
+
+  await assert.rejects(() => store.importStagePlanFromFile("./missing.md"), /Plan file not found/);
+  await assert.rejects(() => store.importStagePlanFromFile("./PLAN.md"), /no '## Stage N:' sections/);
+
+  assert.deepEqual(await store.listWorkstreams(), []);
+});
+
 test("updates slice status and branch metadata in human-readable state", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);
@@ -539,4 +596,62 @@ async function createTempRepo(): Promise<string> {
 async function sortedFiles(directory: string): Promise<string[]> {
   const { readdir } = await import("node:fs/promises");
   return (await readdir(directory)).sort();
+}
+
+function sampleStagePlan(): string {
+  return `# Inventory Alerts - Stage Plan
+
+Epic: INV-1
+Originating ticket: INV-2
+Created: 2026-06-13
+
+## Context
+Build local inventory alerts.
+
+## Stages
+
+| Stage | Issue | Title | Status |
+| ----- | ---- | ----- | ------ |
+| 1 | INV-1 | Add Data Source | pending |
+| 2 | INV-2 | Add Report | pending |
+
+---
+
+## Stage 1: Add Data Source (INV-1) [status: pending]
+
+**Scope:** Create local data.
+**Acceptance criteria:** Data loads from disk.
+**Depends on:** None.
+**Commit breakdown:**
+1. Add model
+
+## Stage 2: Add Report (INV-2) [status: pending]
+
+**Scope:** Report reorder candidates.
+**Acceptance criteria:** Report lists low stock.
+**Open items:** Confirm threshold.
+**Depends on:** Stage 1 data source.
+**Commit breakdown:**
+1. Add report
+`;
+}
+
+function duplicateTitleStagePlan(): string {
+  return `# Duplicate Titles - Stage Plan
+
+## Context
+Exercise duplicate title import.
+
+## Stage 1: Add Report (INV-1) [status: pending]
+
+**Scope:** First report.
+
+## Stage 2: Add Report (INV-2) [status: pending]
+
+**Scope:** Second report.
+
+## Stage 3: Add Report (INV-3) [status: pending]
+
+**Scope:** Third report.
+`;
 }

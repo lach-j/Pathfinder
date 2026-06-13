@@ -21,6 +21,7 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder workstream show",
     "pathfinder requirement set",
     "pathfinder requirement show",
+    "pathfinder plan import",
     "pathfinder plan set",
     "pathfinder plan show",
     "pathfinder slice add",
@@ -68,6 +69,40 @@ test("sets and shows workstream requirements", async () => {
   assert.match(setResult.stdout, /Updated requirements for inventory-alerts\./);
   assert.equal(showResult.stdout, "# Requirements\n\nSend low-stock alerts.\n");
   assert.equal(stored, "# Requirements\n\nSend low-stock alerts.\n");
+});
+
+test("imports a stored stage plan from the CLI", async () => {
+  const repo = await createTempGitRepo();
+  await writeFile(path.join(repo, "PLAN.md"), sampleStagePlan(), "utf8");
+
+  await runCli(["init"], repo);
+  const importResult = await runCli(["plan", "import", "--file", "./PLAN.md"], repo);
+  const workstreams = await runCli(["workstream", "list"], repo);
+  const slices = await runCli(["slice", "list", "inventory-alerts"], repo);
+  const plan = await runCli(["plan", "show", "inventory-alerts"], repo);
+
+  assert.match(importResult.stdout, /Imported workstream: inventory-alerts\tInventory Alerts/);
+  assert.match(importResult.stdout, /Imported slice: add-data-source\tAdd Data Source/);
+  assert.match(importResult.stdout, /Imported slice: add-report\tAdd Report/);
+  assert.match(workstreams.stdout, /inventory-alerts\tInventory Alerts/);
+  assert.match(slices.stdout, /add-data-source\tproposed\tAdd Data Source/);
+  assert.match(slices.stdout, /add-report\tproposed\tAdd Report/);
+  assert.equal(plan.stdout, sampleStagePlan());
+});
+
+test("reports invalid stage plan imports clearly", async () => {
+  const repo = await createTempGitRepo();
+  await writeFile(path.join(repo, "PLAN.md"), "# Inventory Alerts - Stage Plan\n\n## Context\nNo stages.\n", "utf8");
+
+  await runCli(["init"], repo);
+
+  await assert.rejects(
+    () => runCli(["plan", "import", "--file", "./PLAN.md"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: Could not import stage plan: no '## Stage N:' sections were found\./.test(error.stderr)
+  );
 });
 
 test("shows a clear empty-state for missing requirements", async () => {
@@ -703,4 +738,42 @@ function isExecError(error: unknown): error is Error & { code: number; stderr: s
     "stderr" in error &&
     typeof error.stderr === "string"
   );
+}
+
+function sampleStagePlan(): string {
+  return `# Inventory Alerts - Stage Plan
+
+Epic: INV-1
+Originating ticket: INV-2
+Created: 2026-06-13
+
+## Context
+Build local inventory alerts.
+
+## Stages
+
+| Stage | Issue | Title | Status |
+| ----- | ---- | ----- | ------ |
+| 1 | INV-1 | Add Data Source | pending |
+| 2 | INV-2 | Add Report | pending |
+
+---
+
+## Stage 1: Add Data Source (INV-1) [status: pending]
+
+**Scope:** Create local data.
+**Acceptance criteria:** Data loads from disk.
+**Depends on:** None.
+**Commit breakdown:**
+1. Add model
+
+## Stage 2: Add Report (INV-2) [status: pending]
+
+**Scope:** Report reorder candidates.
+**Acceptance criteria:** Report lists low stock.
+**Open items:** Confirm threshold.
+**Depends on:** Stage 1 data source.
+**Commit breakdown:**
+1. Add report
+`;
 }
