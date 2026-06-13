@@ -22,11 +22,11 @@ Implement only the assigned slice.
 
 Use the assigned slice handoff for scope, acceptance criteria, likely files, checks, and smoke tests. You may edit any repository files needed to complete that slice, but do not implement other slices while doing so.
 
-Do not build UI.
-Do not build AI features.
-Do not build MCP.
-Do not build Claude/Codex hooks.
-Do not integrate with GitHub/GitLab.
+Do not build UI unless the assigned slice explicitly asks for local UI work.
+Do not build AI features unless the assigned slice explicitly asks for them.
+Do not build MCP unless the assigned slice explicitly asks for it.
+Do not build Claude/Codex hooks unless the assigned slice explicitly asks for them.
+Do not integrate with GitHub/GitLab unless the assigned slice explicitly asks for it.
 Do not call external APIs.
 Do not add auth, billing, cloud sync, organisations, roles, permissions, or hosted backend assumptions.
 

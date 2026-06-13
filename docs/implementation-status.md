@@ -22,7 +22,9 @@ Use docs/agent-session-prompt.md for slice 3.
 
 Pathfinder is local-first, open-source, filesystem-first, Git-aware, and single-user by default.
 
-Do not add authentication, billing, cloud sync, organisations, roles, hosted backend assumptions, external APIs, UI, MCP, Claude hooks, or AI review unless a slice explicitly asks for it.
+Do not add authentication, billing, cloud sync, organisations, roles, hosted backend assumptions, external APIs, MCP, Claude hooks, or AI review unless a slice explicitly asks for it.
+
+Local UI is now part of the planned MVP, but only in the review-viewer slices. The UI must use reusable core/state/git behavior and must not own business logic.
 
 ## Current Architecture
 
@@ -42,25 +44,28 @@ State currently lives under:
   workstreams/
     <workstream-id>/
       workstream.json
+      requirements.md
       plan.md
       slices.json
       comments.json
       reviews.json
+      evidence.json
       pr.md
 ```
 
 ## Current MVP Direction
 
-Slices 01-09 established a local CLI/state foundation with workstreams, plans, slices, comments, reviews, Git diffs, branch metadata, slice statuses, current context, and PR markdown generation.
+Slices 01-15 established a local CLI/state foundation with workstreams, requirements, plans, slices, comments, reviews, evidence, Git diffs, branch metadata, slice statuses, current context, deterministic review checks, repository summaries, and PR markdown generation.
 
-The next set of slices should deepen the local product workflow before UI, MCP, or AI integrations:
+The product direction has been re-centered on the original goal:
 
-1. Capture requirements as first-class local context.
-2. Model slice dependencies and next-slice selection.
-3. Attach evidence to slices/reviews.
-4. Add local repository intelligence summaries.
-5. Add deterministic review checks.
-6. Improve PR markdown from the richer state.
+1. Replace the stored planning/implementation workflow from `docs/skills-replacement-examples/` with local Pathfinder state.
+2. Create a local GitHub/Bitbucket-style diff review experience for changes against a base branch.
+3. Let the developer leave inline local review comments.
+4. Export open comments as an agent-actionable feedback queue.
+5. Repeat review, agent follow-up, and refresh until the developer is satisfied.
+
+The next slices should build the review loop before MCP, AI review, Claude/Codex hooks, or remote Git hosting integrations.
 
 ## Progress
 
@@ -81,6 +86,16 @@ The next set of slices should deepen the local product workflow before UI, MCP, 
 | 13 | done | `docs/slices/13-repository-intelligence-summary.md` |
 | 14 | done | `docs/slices/14-deterministic-review-checks.md` |
 | 15 | done | `docs/slices/15-pr-composer-v2.md` |
+| 16 | ready | `docs/slices/16-stage-plan-import.md` |
+| 17 | ready | `docs/slices/17-review-session-state.md` |
+| 18 | ready | `docs/slices/18-structured-diff-model.md` |
+| 19 | ready | `docs/slices/19-inline-comment-anchors.md` |
+| 20 | ready | `docs/slices/20-feedback-queue-export.md` |
+| 21 | ready | `docs/slices/21-local-review-server.md` |
+| 22 | ready | `docs/slices/22-read-only-diff-viewer-ui.md` |
+| 23 | ready | `docs/slices/23-inline-commenting-ui.md` |
+| 24 | ready | `docs/slices/24-review-refresh-and-stale-comments.md` |
+| 25 | ready | `docs/slices/25-pr-composer-review-loop.md` |
 
 Status values:
 
@@ -111,21 +126,35 @@ npm run lint --if-present
 
 ## Dependency Order
 
-The safest next order is:
+Completed foundation:
 
-1. Repo hygiene
-2. Comments CLI
-3. Git diff adapter
-4. Review state foundation
-5. PR markdown generation
-6. Current context command
-7. CLI polish
-8. MVP review follow-up
-9. Requirements context
-10. Slice dependencies and next selection
-11. Evidence attachments
-12. Repository intelligence summary
-13. Deterministic review checks
-14. PR composer v2
+01. Stage 1 foundation
+02. Repo hygiene
+03. Comments CLI
+04. Git diff adapter
+05. Review state foundation
+06. PR markdown generation
+07. Current context command
+08. CLI polish
+09. MVP review follow-up
+10. Requirements context
+11. Slice dependencies and next selection
+12. Evidence attachments
+13. Repository intelligence summary
+14. Deterministic review checks
+15. PR composer v2
+
+Next review-loop order:
+
+16. Stage plan import
+17. Review session state
+18. Structured diff model
+19. Inline comment anchors
+20. Feedback queue export
+21. Local review server
+22. Read-only diff viewer UI
+23. Inline commenting UI
+24. Review refresh and stale comments
+25. PR composer review loop
 
 The order can change if a slice doc says it has no dependency on earlier slices.

@@ -37,7 +37,21 @@ Local Review & Validation
 Pull Request
 ```
 
-The primary goal is to help developers transform large requirements into small, reviewable implementation slices while maintaining traceability between requirements, plans, code changes, reviews, and final pull requests.
+The primary goal is to help developers transform large requirements into small, reviewable implementation slices, inspect each slice in a local GitHub/Bitbucket-style diff review UI, leave structured feedback on the changed code, and hand that feedback back to an AI coding agent for bulk follow-up.
+
+Planning is valuable because it creates better review boundaries. The product is not complete until the developer can repeatedly:
+
+```text
+Implement a slice
+    ↓
+Review the local diff visually
+    ↓
+Leave inline feedback
+    ↓
+Ask an agent to address the open feedback
+    ↓
+Review again
+```
 
 ---
 
@@ -51,7 +65,7 @@ Modern AI coding tools have dramatically increased implementation speed, but the
 - Weak planning
 - Difficult reviews
 
-Pathfinder aims to solve these issues by becoming the system of record for implementation intent and execution state.
+Pathfinder aims to solve these issues by becoming the local system of record for implementation intent, execution state, diff review, and unresolved feedback.
 
 Rather than asking AI to implement an entire feature at once, Pathfinder encourages:
 
@@ -164,6 +178,19 @@ without explicit developer intent.
 ---
 
 # Product Goals
+
+## Goal 0
+
+Make local diff review the center of the workflow.
+
+Success indicators:
+
+- A developer can compare local changes against a base branch without reading raw `git diff`.
+- A developer can leave inline comments on files and lines in the local diff.
+- Open comments can be exported as a clear agent action queue.
+- The review and feedback loop can repeat until the developer is satisfied.
+
+---
 
 ## Goal 1
 
@@ -329,6 +356,15 @@ Validation of a slice against:
 - Diff
 - Acceptance criteria
 
+Review is first a local human workflow. AI may assist later, but the MVP should make manual local diff review useful without calling a model.
+
+Review comments should be able to target:
+
+- A whole slice
+- A file
+- A changed line or hunk in a diff
+- The whole workstream
+
 Reviews may be performed by:
 
 - Humans
@@ -430,7 +466,7 @@ AI agents consume this context.
 
 ## Phase 5 - Review
 
-Pathfinder compares:
+Pathfinder opens a local review session for:
 
 ```text
 Plan
@@ -440,7 +476,16 @@ Slice
 Diff
 ```
 
-Produces:
+The developer can:
+
+- Browse changed files against a base ref
+- Inspect unified or side-by-side hunks
+- Add inline comments to changed lines
+- Add file-level or slice-level comments
+- Resolve comments after fixes land
+- Re-run the review against the updated diff
+
+Pathfinder can also produce deterministic local checks:
 
 - Review comments
 - Scope drift warnings
@@ -666,6 +711,20 @@ Inline comments and notes.
 
 ---
 
+## Local Diff Review
+
+Parse Git diffs into stable reviewable structures:
+
+- Changed files
+- Hunks
+- Old and new line numbers
+- Change types
+- Comment anchors
+
+The parsed diff should be reusable by both CLI and UI.
+
+---
+
 ## AI Review
 
 Generated feedback.
@@ -766,6 +825,18 @@ Supports:
 - Scope warnings
 - Resolution tracking
 
+The first version should feel like a small local version of GitHub or Bitbucket pull request review:
+
+- File list
+- Diff statistics
+- Unified diff view first
+- Inline comment threads anchored to changed lines
+- Open/resolved filtering
+- Refresh from base ref
+- Copy/export open feedback for an agent
+
+Side-by-side diff and richer navigation can follow once unified review works.
+
 ---
 
 # AI Agent Integration
@@ -805,6 +876,22 @@ Mark slice complete
 ```
 
 The AI interacts with Pathfinder rather than Git directly.
+
+For the primary feedback loop, the bridge can start as markdown and CLI output:
+
+```text
+Open review comments
+    ↓
+Agent action queue markdown
+    ↓
+Developer provides it to Claude, Codex, Cursor, or another agent
+    ↓
+Agent edits code
+    ↓
+Pathfinder refreshes diff and comment state
+```
+
+MCP and tool-specific hooks are future enhancements, not requirements for the first useful loop.
 
 ---
 
@@ -917,6 +1004,8 @@ Git Diff
 Outputs:
 
 - Review comments
+- Inline comment anchors
+- Agent action queue
 - Scope warnings
 - Missing test warnings
 - Requirement coverage analysis
@@ -1023,6 +1112,27 @@ all validating the same slice.
 
 The first usable version should contain:
 
+- Local state and CLI
+- Git diff adapter
+- Review session state
+- Inline review comments
+- Local diff review UI
+- Agent action queue export
+- PR Composer
+
+The first usable version does not need:
+
+- AI-generated review comments
+- MCP
+- Claude/Codex hooks
+- GitHub/GitLab API integration
+- Auth
+- Cloud sync
+
+Earlier planning and slicing support remains useful, but the MVP should be judged by whether the developer can review local changes and drive the agent feedback loop.
+
+Historical broader components:
+
 - Workspace
 - State Engine
 - Agent Bridge
@@ -1036,11 +1146,14 @@ Key capabilities:
 - Break work into slices
 - Track active implementation state
 - Analyse diffs
-- Generate reviews
+- Review local diffs visually
+- Capture inline feedback
+- Export agent-actionable feedback
+- Refresh review state after fixes
 - Generate PR output
 
 ---
 
 # One-Sentence Product Definition
 
-Pathfinder is a local-first, open-source context and review layer that sits between Git repositories and AI coding agents, helping developers plan work, execute it in reviewable slices, validate implementation quality, and generate pull-request-ready outputs.
+Pathfinder is a local-first, open-source context and review layer that sits between Git repositories and AI coding agents, helping developers plan work, review local diffs visually, turn feedback into agent-actionable tasks, and generate pull-request-ready outputs.
