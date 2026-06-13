@@ -131,6 +131,28 @@ test("validates review workstream, slice, summary, and review ids", async () => 
   await assert.rejects(() => store.getReview(workstream.id, "missing"), PathfinderError);
 });
 
+test("generates and writes local PR markdown", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("PR Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Generate markdown.");
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nShip a PR draft.\n", "utf8");
+  await store.setPlanFromFile(workstream.id, path.join(repo, "plan.md"));
+  await store.createReview(workstream.id, slice.id, "Manual review passed.");
+  await store.addComment(workstream.id, slice.id, "Confirm generated output.");
+
+  const result = await store.generatePrMarkdown(workstream.id);
+  const stored = await readFile(path.join(repo, ".pathfinder", "workstreams", workstream.id, "pr.md"), "utf8");
+
+  assert.equal(result.path, path.join(repo, ".pathfinder", "workstreams", workstream.id, "pr.md"));
+  assert.equal(stored, result.markdown);
+  assert.match(result.markdown, /## Summary/);
+  assert.match(result.markdown, /- Workstream: PR Flow \(`pr-flow`\)/);
+  assert.match(result.markdown, /- Review `manual-review-passed` \(open, slice `first-slice`\): Manual review passed\./);
+  assert.match(result.markdown, /- Open comment `confirm-generated-output` \(slice `first-slice`\): Confirm generated output\./);
+});
+
 test("fails clearly before init", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

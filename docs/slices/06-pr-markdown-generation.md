@@ -1,6 +1,6 @@
 # Slice 06: PR Markdown Generation
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -26,7 +26,7 @@ Expected behavior:
 
 - Reads workstream metadata, plan, slices, comments, and reviews.
 - Writes `.pathfinder/workstreams/<workstream-id>/pr.md`.
-- Prints the generated markdown or the output path. Prefer one behavior and document it.
+- Prints the generated markdown.
 - Uses a simple markdown template:
 
 ```markdown

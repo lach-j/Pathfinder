@@ -70,6 +70,11 @@ async function run(args: string[]): Promise<void> {
     return;
   }
 
+  if (area === "pr") {
+    await runPr(action, rest);
+    return;
+  }
+
   throw new PathfinderError(`Unknown command '${area}'. Run 'pathfinder help' for usage.`);
 }
 
@@ -82,6 +87,19 @@ async function runGit(action: string | undefined, args: string[]): Promise<void>
   }
 
   throw new PathfinderError("Unknown git command. Expected diff.");
+}
+
+async function runPr(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "generate") {
+    const [workstreamId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    expectNoExtraArgs(extra);
+    const result = await store.generatePrMarkdown(workstreamId);
+    process.stdout.write(result.markdown);
+    return;
+  }
+
+  throw new PathfinderError("Unknown pr command. Expected generate.");
 }
 
 async function runWorkstream(action: string | undefined, args: string[]): Promise<void> {
@@ -362,5 +380,6 @@ Usage:
   pathfinder review create <workstream-id> --slice <slice-id> --summary "..."
   pathfinder review list <workstream-id>
   pathfinder review show <workstream-id> <review-id>
-  pathfinder git diff`);
+  pathfinder git diff
+  pathfinder pr generate <workstream-id>`);
 }

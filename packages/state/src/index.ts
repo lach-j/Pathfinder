@@ -11,6 +11,7 @@ import {
   Workstream,
   assertNonEmptyText,
   createTimestamp,
+  generatePrMarkdown,
   nextAvailableId,
   toUrlSafeId
 } from "@pathfinder/core";
@@ -18,6 +19,11 @@ import {
 export interface ActiveSlice {
   workstream: Workstream;
   slice: Slice;
+}
+
+export interface GeneratedPrMarkdown {
+  markdown: string;
+  path: string;
 }
 
 interface SlicesFile {
@@ -238,6 +244,25 @@ export class PathfinderStore {
     }
 
     return review;
+  }
+
+  async generatePrMarkdown(workstreamId: string): Promise<GeneratedPrMarkdown> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const markdown = generatePrMarkdown({
+      workstream: await this.getWorkstream(workstreamId),
+      planMarkdown: await this.getPlan(workstreamId),
+      slices: await this.listSlices(workstreamId),
+      comments: await this.listComments(workstreamId),
+      reviews: await this.listReviews(workstreamId)
+    });
+    const outputPath = path.join(root, "pr.md");
+
+    await writeFile(outputPath, markdown, "utf8");
+
+    return {
+      markdown,
+      path: outputPath
+    };
   }
 
   async resolveComment(workstreamId: string, commentId: string): Promise<ReviewComment> {

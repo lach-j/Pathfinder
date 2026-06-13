@@ -81,6 +81,18 @@ Inspect the current local working tree diff:
 npm exec -- pathfinder git diff
 ```
 
+Generate a local PR markdown draft:
+
+```bash
+npm exec -- pathfinder pr generate add-billing-foundation
+```
+
+This overwrites and prints:
+
+```text
+.pathfinder/workstreams/add-billing-foundation/pr.md
+```
+
 Each workstream is stored as human-readable local files:
 
 ```text
@@ -107,4 +119,5 @@ npm exec -- pathfinder review create add-billing-foundation --slice create-local
 npm exec -- pathfinder review list add-billing-foundation
 npm exec -- pathfinder review show add-billing-foundation manual-review-passed
 npm exec -- pathfinder git diff
+npm exec -- pathfinder pr generate add-billing-foundation
 ```

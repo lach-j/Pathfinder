@@ -70,6 +70,14 @@ export interface Evidence {
   createdAt: string;
 }
 
+export interface PrMarkdownInput {
+  workstream: Workstream;
+  planMarkdown: string;
+  slices: Slice[];
+  comments: ReviewComment[];
+  reviews: Review[];
+}
+
 export class PathfinderError extends Error {
   constructor(message: string) {
     super(message);
@@ -124,4 +132,102 @@ export function nextAvailableId(baseId: string, existingIds: Iterable<string>): 
 
 export function createTimestamp(date = new Date()): string {
   return date.toISOString();
+}
+
+export function generatePrMarkdown(input: PrMarkdownInput): string {
+  const completedSlices = input.slices.filter((slice) => slice.status === "complete");
+  const testEvidence = input.reviews.flatMap((review) =>
+    review.evidence
+      .filter((evidence) => evidence.kind === "test")
+      .map((evidence) => ({ review, evidence }))
+  );
+  const openComments = input.comments.filter((comment) => !comment.resolved);
+  const resolvedComments = input.comments.filter((comment) => comment.resolved);
+
+  const lines = [
+    "## Summary",
+    "",
+    `- Workstream: ${input.workstream.title} (\`${input.workstream.id}\`)`,
+    `- Plan: ${input.planMarkdown.trim() ? "Recorded in Pathfinder." : "No plan recorded."}`,
+    "- Scope: Local Pathfinder workstream output assembled from recorded slices, comments, and reviews.",
+    "",
+    "## Completed Slices",
+    "",
+    ...formatCompletedSlices(completedSlices),
+    "",
+    "## Testing",
+    "",
+    ...formatTesting(testEvidence),
+    "",
+    "## Risks",
+    "",
+    "- No explicit risks are recorded in Pathfinder state yet.",
+    "",
+    "## Review Notes",
+    "",
+    ...formatReviewNotes(input.reviews, openComments, resolvedComments),
+    "",
+    "## Checklist",
+    "",
+    "- [ ] Plan reviewed",
+    "- [ ] Completed slices verified",
+    "- [ ] Tests run or intentionally skipped",
+    "- [ ] Open review comments resolved or accepted",
+    ""
+  ];
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+function formatCompletedSlices(slices: Slice[]): string[] {
+  if (slices.length === 0) {
+    return ["- No completed slices recorded."];
+  }
+
+  return slices.map((slice) => `- ${slice.title} (\`${slice.id}\`): ${slice.description}`);
+}
+
+function formatTesting(testEvidence: Array<{ review: Review; evidence: Evidence }>): string[] {
+  if (testEvidence.length === 0) {
+    return ["- No testing evidence recorded."];
+  }
+
+  return testEvidence.map(({ review, evidence }) => {
+    const pathText = evidence.path ? ` (${evidence.path})` : "";
+    return `- ${evidence.description}${pathText} - review \`${review.id}\``;
+  });
+}
+
+function formatReviewNotes(
+  reviews: Review[],
+  openComments: ReviewComment[],
+  resolvedComments: ReviewComment[]
+): string[] {
+  const lines: string[] = [];
+
+  if (reviews.length === 0) {
+    lines.push("- No review records found.");
+  } else {
+    for (const review of reviews) {
+      lines.push(`- Review \`${review.id}\` (${review.status}, slice \`${review.sliceId}\`): ${review.summary}`);
+    }
+  }
+
+  if (openComments.length === 0) {
+    lines.push("- No open review comments.");
+  } else {
+    for (const comment of openComments) {
+      const sliceText = comment.sliceId ? `slice \`${comment.sliceId}\`` : "workstream";
+      lines.push(`- Open comment \`${comment.id}\` (${sliceText}): ${comment.body}`);
+    }
+  }
+
+  if (resolvedComments.length > 0) {
+    for (const comment of resolvedComments) {
+      const sliceText = comment.sliceId ? `slice \`${comment.sliceId}\`` : "workstream";
+      lines.push(`- Resolved comment \`${comment.id}\` (${sliceText}): ${comment.body}`);
+    }
+  }
+
+  return lines;
 }
