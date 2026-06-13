@@ -473,6 +473,21 @@ test("prints a repository summary for committed changes against a base ref", asy
   assert.doesNotMatch(result.stdout, /working tree only/);
 });
 
+test("prints committed diff against a base ref without working tree changes", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await git(repo, ["checkout", "-b", "feature-diff"]);
+  await writeFile(path.join(repo, "README.md"), "# Test\n\nCommitted change.\n", "utf8");
+  await git(repo, ["add", "README.md"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "feature"]);
+  await writeFile(path.join(repo, "README.md"), "# Test\n\nWorking tree only.\n", "utf8");
+
+  const result = await runCli(["git", "diff", "--base", "main"], repo);
+
+  assert.match(result.stdout, /\+Committed change\./);
+  assert.doesNotMatch(result.stdout, /Working tree only/);
+});
+
 test("reports missing and invalid summary base refs clearly", async () => {
   const repo = await createRealTempGitRepo();
 

@@ -388,6 +388,48 @@ test("runs and stores deterministic reviews for the active slice", async () => {
   assert.match(stored, /npm test passed\./);
 });
 
+test("deterministic review stores only active-slice comments", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const activeSlice = await store.addSlice(workstream.id, "First Slice", "Add review support.");
+  const otherSlice = await store.addSlice(workstream.id, "Other Slice", "Unrelated review feedback.");
+  await store.updateSliceStatus(workstream.id, activeSlice.id, "review");
+  await store.setActiveSlice(workstream.id, activeSlice.id);
+  await store.addComment(workstream.id, activeSlice.id, "Fix active slice.");
+  await store.addComment(workstream.id, otherSlice.id, "Do not include in active review.");
+  await store.addEvidence(workstream.id, activeSlice.id, "test", "npm test passed.");
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n", "utf8");
+  await writeFile(path.join(repo, "requirements.md"), "# Requirements\n", "utf8");
+  await store.setPlanFromFile(workstream.id, path.join(repo, "plan.md"));
+  await store.setRequirementsFromFile(workstream.id, path.join(repo, "requirements.md"));
+
+  const { review } = await store.runDeterministicReview("main", {
+    baseRef: "main",
+    headRef: "feature",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "packages/core/src/index.ts",
+        status: "modified",
+        category: "source"
+      }
+    ]
+  });
+
+  assert.deepEqual(
+    review.comments.map((comment) => comment.id),
+    ["fix-active-slice"]
+  );
+  assert.match(review.summary, /1 warning\(s\)/);
+  assert.match(
+    review.checks?.map((check) => check.message).join("\n") ?? "",
+    /1 unresolved comment\(s\) remain for the active slice/
+  );
+});
+
 test("deterministic review warns without evidence, plan, requirements, or diff", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);
