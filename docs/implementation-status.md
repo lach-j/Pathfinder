@@ -49,6 +49,19 @@ State currently lives under:
       pr.md
 ```
 
+## Current MVP Direction
+
+Slices 01-09 established a local CLI/state foundation with workstreams, plans, slices, comments, reviews, Git diffs, branch metadata, slice statuses, current context, and PR markdown generation.
+
+The next set of slices should deepen the local product workflow before UI, MCP, or AI integrations:
+
+1. Capture requirements as first-class local context.
+2. Model slice dependencies and next-slice selection.
+3. Attach evidence to slices/reviews.
+4. Add local repository intelligence summaries.
+5. Add deterministic review checks.
+6. Improve PR markdown from the richer state.
+
 ## Progress
 
 | Slice | Status | Handoff |
@@ -62,6 +75,12 @@ State currently lives under:
 | 07 | done | `docs/slices/07-current-context-command.md` |
 | 08 | done | `docs/slices/08-cli-polish.md` |
 | 09 | done | `docs/slices/09-mvp-review.md` |
+| 10 | ready | `docs/slices/10-requirements-context.md` |
+| 11 | ready | `docs/slices/11-slice-dependencies-next.md` |
+| 12 | ready | `docs/slices/12-evidence-attachments.md` |
+| 13 | ready | `docs/slices/13-repository-intelligence-summary.md` |
+| 14 | ready | `docs/slices/14-deterministic-review-checks.md` |
+| 15 | ready | `docs/slices/15-pr-composer-v2.md` |
 
 Status values:
 
@@ -102,5 +121,11 @@ The safest next order is:
 6. Current context command
 7. CLI polish
 8. MVP review follow-up
+9. Requirements context
+10. Slice dependencies and next selection
+11. Evidence attachments
+12. Repository intelligence summary
+13. Deterministic review checks
+14. PR composer v2
 
 The order can change if a slice doc says it has no dependency on earlier slices.
