@@ -26,6 +26,7 @@ Usage:
   pathfinder comment resolve <workstream-id> <comment-id>
   pathfinder review serve [--port 4783]
   pathfinder review start --base <base-ref>
+  pathfinder review refresh <workstream-id> <session-id>
   pathfinder review sessions <workstream-id>
   pathfinder review session <workstream-id> <session-id>
   pathfinder review create <workstream-id> --slice <slice-id> --summary "..."

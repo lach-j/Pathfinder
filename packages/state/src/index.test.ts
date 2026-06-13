@@ -728,6 +728,106 @@ test("starts, lists, and gets local review sessions for the active slice", async
   assert.match(stored, /"changedFiles": \[/);
 });
 
+test("refreshes review sessions and marks stale comment anchors", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add session refresh.");
+  await store.setActiveSlice(workstream.id, slice.id);
+  const session = await store.startReviewSession({
+    baseRef: "main",
+    headRef: "feature-before",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "src/report.ts",
+        status: "modified",
+        category: "source"
+      },
+      {
+        path: "src/removed.ts",
+        status: "modified",
+        category: "source"
+      }
+    ]
+  });
+  const originalDiff = structuredDiff([
+    structuredDiffFile("src/report.ts", [1, 2]),
+    structuredDiffFile("src/removed.ts", [1])
+  ]);
+  await store.addComment(workstream.id, {
+    body: "Still current.",
+    target: {
+      type: "line",
+      sessionId: session.id,
+      filePath: "src/report.ts",
+      lineNumber: 1,
+      side: "new"
+    },
+    structuredDiff: originalDiff
+  });
+  await store.addComment(workstream.id, {
+    body: "Line disappeared.",
+    target: {
+      type: "line",
+      sessionId: session.id,
+      filePath: "src/report.ts",
+      lineNumber: 2,
+      side: "new"
+    },
+    structuredDiff: originalDiff
+  });
+  await store.addComment(workstream.id, {
+    body: "File disappeared.",
+    target: {
+      type: "line",
+      sessionId: session.id,
+      filePath: "src/removed.ts",
+      lineNumber: 1,
+      side: "new"
+    },
+    structuredDiff: originalDiff
+  });
+
+  const refreshed = await store.refreshReviewSession(
+    workstream.id,
+    session.id,
+    {
+      baseRef: "main",
+      headRef: "feature-after",
+      headCommit: "def456",
+      mergeBase: "abc000",
+      files: [
+        {
+          path: "src/report.ts",
+          status: "modified",
+          category: "source"
+        }
+      ]
+    },
+    structuredDiff([structuredDiffFile("src/report.ts", [1])])
+  );
+  const comments = await store.listComments(workstream.id, { sessionId: session.id });
+
+  assert.equal(refreshed.session.headRef, "feature-after");
+  assert.equal(refreshed.session.headCommit, "def456");
+  assert.equal(typeof refreshed.session.refreshedAt, "string");
+  assert.deepEqual(
+    comments.map((comment) => [comment.id, comment.anchorStatus]),
+    [
+      ["still-current", "current"],
+      ["line-disappeared", "stale"],
+      ["file-disappeared", "stale"]
+    ]
+  );
+  assert.deepEqual(
+    comments.map((comment) => comment.body),
+    ["Still current.", "Line disappeared.", "File disappeared."]
+  );
+});
+
 test("review sessions require an active slice and validate lookup ids", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);
@@ -946,6 +1046,33 @@ async function createTempRepo(): Promise<string> {
 async function sortedFiles(directory: string): Promise<string[]> {
   const { readdir } = await import("node:fs/promises");
   return (await readdir(directory)).sort();
+}
+
+function structuredDiff(files: ReturnType<typeof structuredDiffFile>[]) {
+  return { files };
+}
+
+function structuredDiffFile(filePath: string, newLineNumbers: number[]) {
+  return {
+    path: filePath,
+    status: "modified" as const,
+    oldPath: filePath,
+    newPath: filePath,
+    hunks: [
+      {
+        header: "@@ -1 +1 @@",
+        oldStart: 1,
+        oldLines: 1,
+        newStart: 1,
+        newLines: newLineNumbers.length,
+        lines: newLineNumbers.map((newLineNumber) => ({
+          kind: "addition" as const,
+          newLineNumber,
+          text: `line ${newLineNumber}`
+        }))
+      }
+    ]
+  };
 }
 
 function sampleStagePlan(): string {

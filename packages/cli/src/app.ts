@@ -538,6 +538,28 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
     return;
   }
 
+  if (action === "refresh") {
+    const [workstreamId, sessionId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    requireArgument(sessionId, "session id");
+    expectNoExtraArgs(extra);
+    const session = await store.getReviewSession(workstreamId, sessionId);
+    const git = new GitAdapter({ cwd: process.cwd() });
+    const repositorySummary = await git.getCommittedSummaryAgainstBase(session.baseRef);
+    const structuredDiff = await git.getStructuredDiffBetweenRefs(repositorySummary.mergeBase, repositorySummary.headCommit);
+    const result = await store.refreshReviewSession(
+      workstreamId,
+      sessionId,
+      repositorySummary,
+      structuredDiff
+    );
+    process.stdout.write(formatReviewSessionSummary(result.session));
+    const staleCount = result.comments.filter((comment) => comment.anchorStatus === "stale").length;
+    const unknownCount = result.comments.filter((comment) => comment.anchorStatus === "unknown").length;
+    console.log(`Anchor status: ${staleCount} stale, ${unknownCount} unknown.`);
+    return;
+  }
+
   if (action === "sessions") {
     const [workstreamId, ...extra] = args;
     requireArgument(workstreamId, "workstream id");
@@ -609,7 +631,7 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
     return;
   }
 
-  throw usageError("Unknown review command. Expected serve, start, sessions, session, run, create, list, or show.");
+  throw usageError("Unknown review command. Expected serve, start, refresh, sessions, session, run, create, list, or show.");
 }
 
 function parsePort(value: string | undefined): number {

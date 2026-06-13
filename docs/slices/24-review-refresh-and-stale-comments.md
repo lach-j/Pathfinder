@@ -1,6 +1,6 @@
 # Slice 24: Review Refresh And Stale Comments
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -85,6 +85,32 @@ Smoke test:
 ```bash
 npm exec -- pathfinder review refresh <workstream-id> <session-id>
 npm exec -- pathfinder comment list <workstream-id> --session <session-id> --open
+```
+
+## Implementation Notes
+
+- Added `pathfinder review refresh <workstream-id> <session-id>`.
+- Refresh reuses the stored session base ref and compares the current committed `HEAD` against the new merge base.
+- Review sessions now store `refreshedAt` after refresh.
+- Existing comments are preserved and session file/line comments receive an `anchorStatus` of `current`, `stale`, or `unknown`.
+- CLI comment output shows `anchor:<status>` when a comment has been assessed.
+- The local review server exposes `POST /api/workstreams/:id/review-sessions/:sessionId/refresh`.
+- The browser review UI has a Refresh button and displays anchor status badges on comments.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke tested:
+
+```bash
+npm exec -- pathfinder review refresh inventory-alerts review-add-report
+npm exec -- pathfinder comment list inventory-alerts --session review-add-report --open
 ```
 
 ## Suggested Prompt

@@ -141,6 +141,18 @@ async function routeWorkstreamRequest(
     return;
   }
 
+  if (method === "POST" && area === "review-sessions" && id && action === "refresh") {
+    const session = await dependencies.store.getReviewSession(workstreamId, id);
+    const repositorySummary = await dependencies.git.getCommittedSummaryAgainstBase(session.baseRef);
+    const diff = await dependencies.git.getStructuredDiffBetweenRefs(
+      repositorySummary.mergeBase,
+      repositorySummary.headCommit
+    );
+    const refreshed = await dependencies.store.refreshReviewSession(workstreamId, id, repositorySummary, diff);
+    writeJson(response, 200, { session: refreshed.session, comments: refreshed.comments, diff });
+    return;
+  }
+
   if (method === "GET" && area === "comments" && !id) {
     writeJson(response, 200, {
       comments: await dependencies.store.listComments(workstreamId, {
@@ -790,6 +802,30 @@ function diffViewerHtml(): string {
         font-weight: 650;
       }
 
+      .anchor-status {
+        border: 1px solid #b58e20;
+        border-radius: 4px;
+        display: inline-block;
+        margin-left: 6px;
+        padding: 1px 5px;
+        text-transform: uppercase;
+      }
+
+      .anchor-current {
+        border-color: #4f8f5b;
+        color: #276d36;
+      }
+
+      .anchor-stale {
+        border-color: #b13a3a;
+        color: #9f2828;
+      }
+
+      .anchor-unknown {
+        border-color: #7d8791;
+        color: #5c6670;
+      }
+
       .comment-body {
         color: #382d05;
         font-size: 13px;
@@ -1034,6 +1070,7 @@ function diffViewerHtml(): string {
                     "<label for=\\"comment-filter\\">Comments</label>" +
                     "<select id=\\"comment-filter\\">" + filterOptions + "</select>" +
                   "</div>" +
+                  "<button class=\\"button\\" type=\\"button\\" id=\\"refresh-review\\">Refresh</button>" +
                 "</div>"
               : "") +
           "</section>" +
@@ -1057,13 +1094,23 @@ function diffViewerHtml(): string {
             renderDiff();
           });
         }
+
+        const refresh = document.querySelector("#refresh-review");
+        if (refresh) {
+          refresh.addEventListener("click", () => {
+            refreshReview().catch((error) => {
+              state.statusMessage = error.message;
+              renderDiff();
+            });
+          });
+        }
       }
 
       function renderDiff() {
         const files = state.diff && Array.isArray(state.diff.files) ? state.diff.files : [];
         if (files.length === 0) {
           renderFileList([]);
-          renderEmpty("No diff", "This review session has no changed files.");
+          renderNoDiff();
           return;
         }
 
@@ -1120,6 +1167,10 @@ function diffViewerHtml(): string {
         }
 
         for (const comment of fileComments) {
+          rows.push(commentRow(comment));
+        }
+
+        for (const comment of staleCommentsForSelectedFile(file, files)) {
           rows.push(commentRow(comment));
         }
 
@@ -1181,10 +1232,13 @@ function diffViewerHtml(): string {
 
       function commentRow(comment) {
         const target = comment.target || {};
-        const targetText = target.type === "line"
-          ? target.side + " line " + target.lineNumber
-          : "file comment";
+        const targetText = commentTargetText(target);
         const resolvedClass = comment.resolved ? " comment-resolved" : "";
+        const anchorStatus = comment.anchorStatus
+          ? "<span class=\\"anchor-status anchor-" + escapeAttribute(comment.anchorStatus) + "\\">" +
+              escapeHtml(comment.anchorStatus) +
+            "</span>"
+          : "";
         return "<tr class=\\"comment-row\\">" +
           "<td class=\\"line-action\\"></td>" +
           "<td class=\\"line-number\\"></td>" +
@@ -1192,7 +1246,7 @@ function diffViewerHtml(): string {
           "<td class=\\"comment-cell\\">" +
             "<div class=\\"comment" + resolvedClass + "\\">" +
               "<div class=\\"comment-header\\">" +
-                "<div class=\\"comment-meta\\">" + escapeHtml(comment.id) + " - " + escapeHtml(targetText) + (comment.resolved ? " - resolved" : "") + "</div>" +
+                "<div class=\\"comment-meta\\">" + escapeHtml(comment.id) + " - " + escapeHtml(targetText) + (comment.resolved ? " - resolved" : "") + anchorStatus + "</div>" +
                 (!comment.resolved ? "<button class=\\"button button-quiet\\" type=\\"button\\" data-resolve-comment=\\"" + escapeAttribute(comment.id) + "\\">Resolve</button>" : "") +
               "</div>" +
               "<div class=\\"comment-body\\">" + escapeHtml(comment.body) + "</div>" +
@@ -1333,6 +1387,29 @@ function diffViewerHtml(): string {
         renderDiff();
       }
 
+      async function refreshReview() {
+        if (!state.current.workstream || !state.session) {
+          return;
+        }
+
+        const payload = await api(
+          "/api/workstreams/" + encodeURIComponent(state.current.workstream.id) +
+          "/review-sessions/" + encodeURIComponent(state.session.id) + "/refresh",
+          { method: "POST" }
+        );
+        state.session = payload.session;
+        state.sessions = state.sessions.map((session) =>
+          session.id === payload.session.id ? payload.session : session
+        );
+        state.diff = payload.diff;
+        state.comments = payload.comments || [];
+        state.selectedPath = firstFilePath(state.diff) || state.selectedPath;
+        state.draftTarget = undefined;
+        state.statusMessage = "Review refreshed.";
+        renderShell();
+        renderDiff();
+      }
+
       function commentsForFile(file) {
         return visibleComments().filter((comment) => {
           const target = comment.target;
@@ -1371,6 +1448,38 @@ function diffViewerHtml(): string {
 
           return line.newLineNumber === target.lineNumber;
         });
+      }
+
+      function staleCommentsForSelectedFile(file, files) {
+        return visibleComments().filter((comment) => {
+          const target = comment.target;
+          if (!target || target.type !== "line" || comment.anchorStatus !== "stale") {
+            return false;
+          }
+
+          if (target.filePath === file.path || target.filePath === file.oldPath || target.filePath === file.previousPath) {
+            return true;
+          }
+
+          const targetFileIsInDiff = files.some((candidate) =>
+            target.filePath === candidate.path ||
+            target.filePath === candidate.oldPath ||
+            target.filePath === candidate.previousPath
+          );
+          return !targetFileIsInDiff && file.path === firstFilePath(state.diff);
+        });
+      }
+
+      function commentTargetText(target) {
+        if (target.type === "line") {
+          return target.filePath + " " + target.side + " line " + target.lineNumber;
+        }
+
+        if (target.type === "file") {
+          return target.filePath + " file comment";
+        }
+
+        return "file comment";
       }
 
       function fileStats(file) {
@@ -1451,6 +1560,26 @@ function diffViewerHtml(): string {
       function renderEmpty(title, message) {
         const pane = document.querySelector("#diff-pane") || app;
         pane.innerHTML = "<div class=\\"empty\\"><strong>" + escapeHtml(title) + "</strong><br>" + escapeHtml(message) + "</div>";
+      }
+
+      function renderNoDiff() {
+        const staleComments = visibleComments().filter((comment) => comment.anchorStatus === "stale");
+        if (staleComments.length === 0) {
+          renderEmpty("No diff", "This review session has no changed files.");
+          return;
+        }
+
+        const pane = document.querySelector("#diff-pane") || app;
+        pane.innerHTML =
+          "<div class=\\"file-heading\\">" +
+            "<div class=\\"file-heading-main\\">" +
+              "<h2>Stale comments</h2>" +
+              "<div class=\\"file-subtitle\\">No changed files remain in this refreshed review session.</div>" +
+            "</div>" +
+          "</div>" +
+          "<table class=\\"diff-table\\" aria-label=\\"Stale review comments\\">" +
+            "<tbody>" + staleComments.map((comment) => commentRow(comment)).join("") + "</tbody>" +
+          "</table>";
       }
 
       function renderError(message) {

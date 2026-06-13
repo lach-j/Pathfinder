@@ -9,6 +9,7 @@ import {
   generateDeterministicReview,
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
+  getReviewCommentAnchorStatus,
   isSliceActionable,
   isSliceStatus,
   isUrlSafeId,
@@ -478,6 +479,71 @@ test("parses unified diffs into files, hunks, and line numbers", () => {
       }
     ]
   });
+});
+
+test("classifies review comment anchors against structured diffs", () => {
+  const diff = parseUnifiedDiff(sampleUnifiedDiff());
+
+  assert.equal(
+    getReviewCommentAnchorStatus(
+      {
+        id: "current-line",
+        target: {
+          type: "line",
+          sessionId: "review-1",
+          filePath: "src/modified.ts",
+          lineNumber: 4,
+          side: "new"
+        },
+        body: "Still here.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:00.000Z"
+      },
+      "review-1",
+      diff
+    ),
+    "current"
+  );
+  assert.equal(
+    getReviewCommentAnchorStatus(
+      {
+        id: "stale-line",
+        target: {
+          type: "line",
+          sessionId: "review-1",
+          filePath: "src/modified.ts",
+          lineNumber: 42,
+          side: "new"
+        },
+        body: "Gone now.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:00.000Z"
+      },
+      "review-1",
+      diff
+    ),
+    "stale"
+  );
+  assert.equal(
+    getReviewCommentAnchorStatus(
+      {
+        id: "other-session",
+        target: {
+          type: "line",
+          sessionId: "review-2",
+          filePath: "src/modified.ts",
+          lineNumber: 4,
+          side: "new"
+        },
+        body: "Different session.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:00.000Z"
+      },
+      "review-1",
+      diff
+    ),
+    "unknown"
+  );
 });
 
 test("generates deterministic review checks with warnings", () => {

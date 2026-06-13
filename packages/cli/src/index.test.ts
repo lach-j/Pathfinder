@@ -40,6 +40,7 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder comment resolve",
     "pathfinder review serve [--port 4783]",
     "pathfinder review start --base <base-ref>",
+    "pathfinder review refresh <workstream-id> <session-id>",
     "pathfinder review sessions",
     "pathfinder review session",
     "pathfinder review create",
@@ -733,6 +734,105 @@ test("starts, lists, and shows a review session against committed branch changes
   assert.match(stored, /"sessions": \[/);
 });
 
+test("refreshes review sessions and reports stale comment anchors", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-refresh"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const first = 1;\nexport const second = 2;\n", "utf8");
+  await writeFile(path.join(repo, "src", "removed.ts"), "export const removed = true;\n", "utf8");
+  await git(repo, ["add", "src"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report files"]);
+  await runCli(["review", "start", "--base", "main"], repo);
+  await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--session",
+      "review-add-report",
+      "--file",
+      "src/report.ts",
+      "--line",
+      "1",
+      "--side",
+      "new",
+      "--body",
+      "Keep this line."
+    ],
+    repo
+  );
+  await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--session",
+      "review-add-report",
+      "--file",
+      "src/report.ts",
+      "--line",
+      "2",
+      "--side",
+      "new",
+      "--body",
+      "This line will move away."
+    ],
+    repo
+  );
+  await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--session",
+      "review-add-report",
+      "--file",
+      "src/removed.ts",
+      "--line",
+      "1",
+      "--side",
+      "new",
+      "--body",
+      "This file will disappear."
+    ],
+    repo
+  );
+  await writeFile(path.join(repo, "src", "report.ts"), "export const first = 1;\n", "utf8");
+  await import("node:fs/promises").then(({ rm }) => rm(path.join(repo, "src", "removed.ts")));
+  await git(repo, ["add", "src"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "address feedback"]);
+
+  const refresh = await runCli(["review", "refresh", "inventory-alerts", "review-add-report"], repo);
+  const comments = await runCli(["comment", "list", "inventory-alerts", "--session", "review-add-report", "--open"], repo);
+  const show = await runCli(["review", "session", "inventory-alerts", "review-add-report"], repo);
+
+  assert.match(refresh.stdout, /Session: review-add-report/);
+  assert.match(refresh.stdout, /Changed files: 1/);
+  assert.match(refresh.stdout, /Anchor status: 2 stale, 0 unknown\./);
+  assert.match(comments.stdout, /keep-this-line\topen\tanchor:current/);
+  assert.match(comments.stdout, /this-line-will-move-away\topen\tanchor:stale/);
+  assert.match(comments.stdout, /this-file-will-disappear\topen\tanchor:stale/);
+  assert.match(show.stdout, /"refreshedAt":/);
+});
+
 test("adds, lists, filters, and resolves file and line comments for a review session", async () => {
   const repo = await createRealTempGitRepo();
 
@@ -950,6 +1050,12 @@ test("serves local review JSON endpoints and mutates comments", async () => {
         side: "new"
       })
     });
+    await git(repo, ["rm", "src/report.ts"]);
+    await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "remove report"]);
+    const refreshed = await jsonFetch(
+      `${baseUrl}/api/workstreams/inventory-alerts/review-sessions/review-add-report/refresh`,
+      { method: "POST" }
+    );
     const comments = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/comments?session=review-add-report`);
     const feedback = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/feedback?session=review-add-report`);
     const resolved = await jsonFetch(
@@ -967,6 +1073,7 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     assert.match(htmlText, /Add file comment/);
     assert.match(htmlText, /Add line comment/);
     assert.match(htmlText, /Resolve/);
+    assert.match(htmlText, /Refresh/);
     assert.match(htmlText, /Open comments/);
     assert.match(htmlText, /Resolved comments/);
     assert.equal(current.activeSlice.id, "add-report");
@@ -975,7 +1082,9 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     assert.equal(diff.session.id, "review-add-report");
     assert.equal(diff.diff.files[0].path, "src/report.ts");
     assert.equal(added.comment.id, "handle-the-empty-case");
+    assert.equal(refreshed.comments[0].anchorStatus, "stale");
     assert.equal(comments.comments.length, 1);
+    assert.equal(comments.comments[0].anchorStatus, "stale");
     assert.match(feedback.markdown, /Handle the empty case\./);
     assert.equal(resolved.comment.resolved, true);
     assert.equal(openComments.comments.length, 0);

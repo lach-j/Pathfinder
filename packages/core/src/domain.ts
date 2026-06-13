@@ -129,6 +129,7 @@ export interface ReviewComment {
   id: string;
   sliceId?: string;
   target?: ReviewCommentTarget;
+  anchorStatus?: ReviewCommentAnchorStatus;
   body: string;
   resolved: boolean;
   createdAt: string;
@@ -136,6 +137,7 @@ export interface ReviewComment {
 }
 
 export type ReviewCommentSide = "old" | "new";
+export type ReviewCommentAnchorStatus = "current" | "stale" | "unknown";
 
 export type ReviewCommentTarget =
   | ReviewCommentSliceTarget
@@ -188,6 +190,7 @@ export interface ReviewSession {
   mergeBase: string;
   changedFiles: RepositorySummaryFile[];
   createdAt: string;
+  refreshedAt?: string;
 }
 
 export interface Evidence {

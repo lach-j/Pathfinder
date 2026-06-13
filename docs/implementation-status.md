@@ -94,7 +94,7 @@ The next slices should build the review loop before MCP, AI review, Claude/Codex
 | 21 | done | `docs/slices/21-local-review-server.md` |
 | 22 | done | `docs/slices/22-read-only-diff-viewer-ui.md` |
 | 23 | done | `docs/slices/23-inline-commenting-ui.md` |
-| 24 | ready | `docs/slices/24-review-refresh-and-stale-comments.md` |
+| 24 | done | `docs/slices/24-review-refresh-and-stale-comments.md` |
 | 25 | ready | `docs/slices/25-pr-composer-review-loop.md` |
 
 Status values:

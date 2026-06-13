@@ -22,6 +22,7 @@ import {
   generateDeterministicReview,
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
+  getReviewCommentAnchorStatus,
   isEvidenceKind,
   isReviewCommentSide,
   isSliceStatus,
@@ -93,6 +94,11 @@ export interface ListCommentsOptions {
 
 export interface ExportFeedbackOptions {
   sessionId?: string;
+}
+
+export interface RefreshedReviewSession {
+  session: ReviewSession;
+  comments: ReviewComment[];
 }
 
 interface SlicesFile {
@@ -579,6 +585,54 @@ export class PathfinderStore {
     const root = await this.requireWorkstreamRoot(workstreamId);
     const sessionsFile = await this.readReviewSessions(root);
     return sessionsFile.sessions;
+  }
+
+  async refreshReviewSession(
+    workstreamId: string,
+    sessionId: string,
+    repositorySummary: RepositorySummary,
+    structuredDiff: StructuredDiff
+  ): Promise<RefreshedReviewSession> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const sessionsFile = await this.readReviewSessions(root);
+    const sessionIndex = sessionsFile.sessions.findIndex((candidate) => candidate.id === sessionId);
+
+    if (sessionIndex === -1) {
+      throw new PathfinderError(`Review session '${sessionId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    const existingSession = sessionsFile.sessions[sessionIndex];
+    const refreshedSession: ReviewSession = {
+      ...existingSession,
+      baseRef: repositorySummary.baseRef,
+      headRef: repositorySummary.headRef,
+      headCommit: repositorySummary.headCommit,
+      mergeBase: repositorySummary.mergeBase,
+      changedFiles: repositorySummary.files,
+      refreshedAt: createTimestamp()
+    };
+    sessionsFile.sessions[sessionIndex] = refreshedSession;
+
+    const commentsFile = await this.readComments(root);
+    const refreshedComments = commentsFile.comments.map((comment) => {
+      if (!commentTargetsSession(comment, sessionId)) {
+        return comment;
+      }
+
+      return {
+        ...comment,
+        anchorStatus: getReviewCommentAnchorStatus(comment, sessionId, structuredDiff)
+      };
+    });
+    commentsFile.comments = refreshedComments;
+
+    await writeJson(path.join(root, "review-sessions.json"), sessionsFile);
+    await writeJson(path.join(root, "comments.json"), commentsFile);
+
+    return {
+      session: refreshedSession,
+      comments: refreshedComments.filter((comment) => commentTargetsSession(comment, sessionId))
+    };
   }
 
   async addEvidence(

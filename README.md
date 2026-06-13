@@ -134,12 +134,16 @@ Start and inspect a durable local review session for the active slice:
 
 ```bash
 npm exec -- pathfinder review start --base main
+npm exec -- pathfinder review refresh add-billing-foundation review-create-local-state
 npm exec -- pathfinder review sessions add-billing-foundation
 npm exec -- pathfinder review session add-billing-foundation review-create-local-state
 ```
 
 Review sessions are stored under the active workstream and capture the active slice, base ref,
 head ref, head commit, merge base, and changed files for that review pass.
+Refreshing a review session re-reads the committed diff for the original base ref against the
+current `HEAD`, updates the stored session metadata, preserves comments, and marks file or line
+comment anchors as `current` or `stale` in CLI and browser comment output.
 
 Start the local-only review server for browser-based review tooling:
 
@@ -167,6 +171,7 @@ GET  /api/current
 GET  /api/workstreams
 GET  /api/workstreams/:id/review-sessions
 GET  /api/workstreams/:id/review-sessions/:sessionId/diff
+POST /api/workstreams/:id/review-sessions/:sessionId/refresh
 GET  /api/workstreams/:id/comments?session=<session-id>
 POST /api/workstreams/:id/comments
 POST /api/workstreams/:id/comments/:commentId/resolve
@@ -287,6 +292,7 @@ npm exec -- pathfinder slice next add-billing-foundation
 # Requires a clean working tree before running:
 npm exec -- pathfinder slice branch add-billing-foundation create-local-state --base main
 npm exec -- pathfinder review start --base main
+npm exec -- pathfinder review refresh add-billing-foundation review-create-local-state
 npm exec -- pathfinder review sessions add-billing-foundation
 npm exec -- pathfinder review session add-billing-foundation review-create-local-state
 npm exec -- pathfinder review create add-billing-foundation --slice create-local-state --summary "Manual review passed."

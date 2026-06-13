@@ -1,5 +1,6 @@
 import {
   ReviewComment,
+  ReviewCommentAnchorStatus,
   ReviewCommentSide,
   ReviewCommentTarget,
   StructuredDiff,
@@ -68,6 +69,28 @@ export function structuredDiffHasLine(
       )
     );
   });
+}
+
+export function getReviewCommentAnchorStatus(
+  comment: ReviewComment,
+  sessionId: string,
+  diff: StructuredDiff
+): ReviewCommentAnchorStatus {
+  const target = comment.target;
+
+  if (!target || (target.type !== "file" && target.type !== "line") || target.sessionId !== sessionId) {
+    return "unknown";
+  }
+
+  if (!structuredDiffHasFile(diff, target.filePath)) {
+    return "stale";
+  }
+
+  if (target.type === "file") {
+    return "current";
+  }
+
+  return structuredDiffHasLine(diff, target.filePath, target.lineNumber, target.side) ? "current" : "stale";
 }
 
 function structuredDiffFileMatches(file: StructuredDiffFile, filePath: string): boolean {
