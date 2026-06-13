@@ -10,4 +10,5 @@ export * from "./planning/stage-plan.js";
 export * from "./diff/structured-diff.js";
 export * from "./review/comment-targets.js";
 export * from "./review/deterministic-review.js";
+export * from "./feedback/markdown.js";
 export * from "./pr/markdown.js";

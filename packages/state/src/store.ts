@@ -20,6 +20,7 @@ import {
   createTimestamp,
   findNextActionableSlice,
   generateDeterministicReview,
+  generateFeedbackQueueMarkdown,
   generatePrMarkdown,
   isEvidenceKind,
   isReviewCommentSide,
@@ -58,6 +59,10 @@ export interface GeneratedPrMarkdown {
   path: string;
 }
 
+export interface FeedbackQueueExport {
+  markdown: string;
+}
+
 export interface DeterministicReviewRecord {
   review: Review;
   result: DeterministicReviewResult;
@@ -84,6 +89,10 @@ export interface AddCommentInput {
 export interface ListCommentsOptions {
   sessionId?: string;
   openOnly?: boolean;
+}
+
+export interface ExportFeedbackOptions {
+  sessionId?: string;
 }
 
 interface SlicesFile {
@@ -683,6 +692,35 @@ export class PathfinderStore {
     return {
       markdown,
       path: outputPath
+    };
+  }
+
+  async exportFeedbackQueue(
+    workstreamId: string,
+    options: ExportFeedbackOptions = {}
+  ): Promise<FeedbackQueueExport> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const workstream = await this.getWorkstream(workstreamId);
+    const slices = await this.listSlices(workstreamId);
+    const activeSlice = workstream.activeSliceId
+      ? slices.find((candidate) => candidate.id === workstream.activeSliceId)
+      : undefined;
+    const session = options.sessionId ? await this.getReviewSession(workstreamId, options.sessionId) : undefined;
+    const comments = await this.listComments(workstreamId, {
+      sessionId: options.sessionId,
+      openOnly: true
+    });
+
+    return {
+      markdown: generateFeedbackQueueMarkdown({
+        workstream,
+        activeSlice,
+        requirementsPath: path.join(root, "requirements.md"),
+        planPath: path.join(root, "plan.md"),
+        session,
+        comments,
+        slices
+      })
     };
   }
 

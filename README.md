@@ -117,6 +117,19 @@ npm exec -- pathfinder comment list add-billing-foundation --session review-crea
 Line anchors validate against the parsed session diff. Use `--side new` for new/context
 line numbers and `--side old` for old/context line numbers.
 
+Export open review feedback as an agent-actionable markdown queue:
+
+```bash
+npm exec -- pathfinder feedback export add-billing-foundation
+npm exec -- pathfinder feedback export add-billing-foundation --session review-create-local-state --file ./.pathfinder-feedback.md
+```
+
+The feedback queue includes the active workstream and slice, local plan and requirements paths,
+review session metadata when scoped with `--session`, and grouped open comments. It is a manual
+bridge for Claude, Codex, Cursor, or another coding agent: paste or attach the markdown, ask the
+agent to address every item while staying scoped to the active slice, then review the refreshed diff.
+Pathfinder does not invoke an AI provider and does not resolve comments automatically.
+
 Start and inspect a durable local review session for the active slice:
 
 ```bash
@@ -254,6 +267,8 @@ npm exec -- pathfinder diff show --base main
 npm exec -- pathfinder diff show --base main --json
 npm exec -- pathfinder diff show --session review-create-local-state
 npm exec -- pathfinder diff show --session review-create-local-state --json
+npm exec -- pathfinder feedback export add-billing-foundation
+npm exec -- pathfinder feedback export add-billing-foundation --session review-create-local-state --file ./.pathfinder-feedback.md
 npm exec -- pathfinder git diff
 npm exec -- pathfinder git diff --base main
 npm exec -- pathfinder git summary --base main

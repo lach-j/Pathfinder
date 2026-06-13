@@ -35,6 +35,7 @@ Usage:
   pathfinder evidence list <workstream-id>
   pathfinder diff show --base <base-ref> [--json]
   pathfinder diff show --session <session-id> [--json]
+  pathfinder feedback export <workstream-id> [--session <session-id>] [--file ./feedback.md]
   pathfinder git diff [--base <base-ref>]
   pathfinder git summary --base <base-ref>
   pathfinder pr generate <workstream-id> [--base <base-ref>]`);

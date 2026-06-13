@@ -234,6 +234,16 @@ export interface PrMarkdownInput {
   repositorySummary?: RepositorySummary;
 }
 
+export interface FeedbackQueueMarkdownInput {
+  workstream: Workstream;
+  activeSlice?: Slice;
+  requirementsPath: string;
+  planPath: string;
+  session?: ReviewSession;
+  comments: ReviewComment[];
+  slices: Slice[];
+}
+
 export interface ImportedStagePlanStage {
   stageNumber: number;
   title: string;

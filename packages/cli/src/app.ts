@@ -1,3 +1,6 @@
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
+
 import { PathfinderError, ReviewCommentTarget, isReviewCommentSide } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { PathfinderStore } from "@pathfinder/state";
@@ -83,6 +86,11 @@ export async function run(args: string[]): Promise<void> {
 
   if (area === "diff") {
     await runDiff(action, rest);
+    return;
+  }
+
+  if (area === "feedback") {
+    await runFeedback(action, rest);
     return;
   }
 
@@ -179,6 +187,29 @@ async function runPr(action: string | undefined, args: string[]): Promise<void> 
   }
 
   throw usageError("Unknown pr command. Expected generate.");
+}
+
+async function runFeedback(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "export") {
+    const [workstreamId, ...optionArgs] = args;
+    requireArgument(workstreamId, "workstream id");
+    const options = parseOptions(optionArgs);
+    const result = await store.exportFeedbackQueue(workstreamId, {
+      sessionId: options.session
+    });
+
+    if (options.file) {
+      const outputPath = path.resolve(process.cwd(), options.file);
+      await writeFile(outputPath, result.markdown, "utf8");
+      console.log(`Wrote feedback queue to ${outputPath}.`);
+      return;
+    }
+
+    process.stdout.write(result.markdown);
+    return;
+  }
+
+  throw usageError("Unknown feedback command. Expected export.");
 }
 
 async function runRequirement(action: string | undefined, args: string[]): Promise<void> {

@@ -1,6 +1,6 @@
 # Slice 20: Feedback Queue Export
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -66,6 +66,30 @@ Expected behavior:
 - Empty open-feedback state produces a useful empty-state message.
 - Tests cover grouped output, session filtering, file writing, and no-comment output.
 - README documents the manual feedback loop.
+
+## Implementation Notes
+
+- Added a reusable core feedback queue markdown generator with deterministic grouping: line comments by file, file comments by file, then slice/workstream comments.
+- Added state export support that includes local requirements and plan paths, active workstream and slice context, and optional review session metadata.
+- Added `pathfinder feedback export <workstream-id> [--session <session-id>] [--file ./feedback.md]`.
+- Kept the bridge explicit and local-only: no AI provider calls, no MCP/hooks, and no automatic comment resolution.
+- Updated README with the manual feedback loop.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke tested:
+
+```bash
+npm exec -- pathfinder feedback export feedback-loop
+npm exec -- pathfinder feedback export feedback-loop --session review-add-export --file ./.pathfinder-feedback.md
+```
 
 ## Checks
 

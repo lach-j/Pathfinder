@@ -7,6 +7,7 @@ import {
   categorizeRepositoryPath,
   findNextActionableSlice,
   generateDeterministicReview,
+  generateFeedbackQueueMarkdown,
   generatePrMarkdown,
   isSliceActionable,
   isSliceStatus,
@@ -288,6 +289,108 @@ test("includes placeholders when PR markdown optional state is empty", () => {
   assert.match(markdown, /- No review records found\./);
   assert.match(markdown, /- No open review comments\./);
   assert.match(markdown, /- No unresolved comments or deterministic review warnings recorded\./);
+});
+
+test("generates grouped feedback queue markdown", () => {
+  const markdown = generateFeedbackQueueMarkdown({
+    workstream: {
+      id: "inventory-alerts",
+      title: "Inventory Alerts",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      activeSliceId: "add-report"
+    },
+    activeSlice: testSlice("add-report", "review", "2026-01-01T00:00:00.000Z"),
+    requirementsPath: "/repo/.pathfinder/workstreams/inventory-alerts/requirements.md",
+    planPath: "/repo/.pathfinder/workstreams/inventory-alerts/plan.md",
+    session: {
+      id: "review-add-report",
+      workstreamId: "inventory-alerts",
+      sliceId: "add-report",
+      baseRef: "main",
+      headRef: "feature-report",
+      headCommit: "abc123",
+      mergeBase: "abc000",
+      changedFiles: [
+        {
+          path: "src/report.ts",
+          status: "modified",
+          category: "source"
+        }
+      ],
+      createdAt: "2026-01-01T00:00:00.000Z"
+    },
+    slices: [testSlice("add-report", "review", "2026-01-01T00:00:00.000Z")],
+    comments: [
+      {
+        id: "file-note",
+        sliceId: "add-report",
+        target: {
+          type: "file",
+          sessionId: "review-add-report",
+          filePath: "src/report.ts"
+        },
+        body: "Review this file.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:03.000Z"
+      },
+      {
+        id: "line-note",
+        sliceId: "add-report",
+        target: {
+          type: "line",
+          sessionId: "review-add-report",
+          filePath: "src/report.ts",
+          lineNumber: 12,
+          side: "new"
+        },
+        body: "Handle the empty case.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:02.000Z"
+      },
+      {
+        id: "slice-note",
+        sliceId: "add-report",
+        body: "Add tests.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:01.000Z"
+      },
+      {
+        id: "resolved-note",
+        sliceId: "add-report",
+        body: "Already handled.",
+        resolved: true,
+        createdAt: "2026-01-01T00:00:00.000Z"
+      }
+    ]
+  });
+
+  assert.match(markdown, /# Pathfinder Feedback Queue/);
+  assert.match(markdown, /- Workstream: Inventory Alerts \(`inventory-alerts`\)/);
+  assert.match(markdown, /- Active slice: add-report \(`add-report`, review\)/);
+  assert.match(markdown, /- Session: `review-add-report`/);
+  assert.match(markdown, /### Line Comments[\s\S]*#### src\/report\.ts[\s\S]*`line-note`/);
+  assert.match(markdown, /### File Comments[\s\S]*`file-note`/);
+  assert.match(markdown, /### Slice And Workstream Comments[\s\S]*`slice-note`/);
+  assert.doesNotMatch(markdown, /resolved-note/);
+});
+
+test("feedback queue markdown has a useful empty state", () => {
+  const markdown = generateFeedbackQueueMarkdown({
+    workstream: {
+      id: "empty",
+      title: "Empty",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    },
+    requirementsPath: "/repo/.pathfinder/workstreams/empty/requirements.md",
+    planPath: "/repo/.pathfinder/workstreams/empty/plan.md",
+    comments: [],
+    slices: []
+  });
+
+  assert.match(markdown, /No open feedback items found\./);
+  assert.match(markdown, /Re-run review or add comments/);
 });
 
 test("classifies repository paths conservatively", () => {
