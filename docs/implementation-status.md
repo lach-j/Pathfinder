@@ -78,7 +78,7 @@ The next set of slices should deepen the local product workflow before UI, MCP, 
 | 10 | done | `docs/slices/10-requirements-context.md` |
 | 11 | done | `docs/slices/11-slice-dependencies-next.md` |
 | 12 | done | `docs/slices/12-evidence-attachments.md` |
-| 13 | ready | `docs/slices/13-repository-intelligence-summary.md` |
+| 13 | done | `docs/slices/13-repository-intelligence-summary.md` |
 | 14 | ready | `docs/slices/14-deterministic-review-checks.md` |
 | 15 | ready | `docs/slices/15-pr-composer-v2.md` |
 

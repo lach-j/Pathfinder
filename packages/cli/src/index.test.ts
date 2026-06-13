@@ -41,6 +41,7 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder evidence list",
     "pathfinder git diff",
     "pathfinder git diff [--base <base-ref>]",
+    "pathfinder git summary --base <base-ref>",
     "pathfinder pr generate"
   ]) {
     assert.match(result.stdout, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -444,6 +445,49 @@ test("refuses to start a slice branch with uncommitted changes", async () => {
       isExecError(error) &&
       error.code === 1 &&
       /Cannot start a slice branch with uncommitted changes/.test(error.stderr)
+  );
+});
+
+test("prints a repository summary for committed changes against a base ref", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await git(repo, ["checkout", "-b", "feature-summary"]);
+  await mkdir(path.join(repo, "src"));
+  await mkdir(path.join(repo, "docs"));
+  await writeFile(path.join(repo, "src", "index.ts"), "export const value = 1;\n", "utf8");
+  await writeFile(path.join(repo, "docs", "summary.md"), "# Summary\n", "utf8");
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "feature"]);
+  await writeFile(path.join(repo, "src", "index.ts"), "working tree only\n", "utf8");
+
+  const result = await runCli(["git", "summary", "--base", "main"], repo);
+
+  assert.match(result.stdout, /# Repository Summary/);
+  assert.match(result.stdout, /Base ref: main/);
+  assert.match(result.stdout, /Head ref: feature-summary/);
+  assert.match(result.stdout, /Changed files: 2/);
+  assert.match(result.stdout, /Added: 2/);
+  assert.match(result.stdout, /- A\tdocumentation\tdocs\/summary\.md/);
+  assert.match(result.stdout, /- A\tsource\tsrc\/index\.ts/);
+  assert.doesNotMatch(result.stdout, /working tree only/);
+});
+
+test("reports missing and invalid summary base refs clearly", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await assert.rejects(
+    () => runCli(["git", "summary"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: Missing required option --base\. Run 'pathfinder help' for usage\./.test(error.stderr)
+  );
+  await assert.rejects(
+    () => runCli(["git", "summary", "--base", "missing"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: Base ref 'missing' was not found or is not a commit\./.test(error.stderr)
   );
 });
 

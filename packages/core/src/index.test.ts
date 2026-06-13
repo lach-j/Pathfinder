@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   PathfinderError,
   assertNonEmptyText,
+  categorizeRepositoryPath,
   findNextActionableSlice,
   generatePrMarkdown,
   isSliceActionable,
@@ -169,6 +170,17 @@ test("generates useful PR markdown when optional state is empty", () => {
   assert.match(markdown, /- No testing evidence recorded\./);
   assert.match(markdown, /- No review records found\./);
   assert.match(markdown, /- No open review comments\./);
+});
+
+test("classifies repository paths conservatively", () => {
+  assert.equal(categorizeRepositoryPath("packages/core/src/index.ts"), "source");
+  assert.equal(categorizeRepositoryPath("packages/core/src/index.test.ts"), "test");
+  assert.equal(categorizeRepositoryPath("docs/slices/13-repository-intelligence-summary.md"), "documentation");
+  assert.equal(categorizeRepositoryPath("README.md"), "documentation");
+  assert.equal(categorizeRepositoryPath("package.json"), "configuration");
+  assert.equal(categorizeRepositoryPath(".github/workflows/test.yml"), "configuration");
+  assert.equal(categorizeRepositoryPath(".pathfinder/workstreams/demo/slices.json"), "state");
+  assert.equal(categorizeRepositoryPath("assets/logo.png"), "other");
 });
 
 function testSlice(

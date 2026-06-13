@@ -1,6 +1,6 @@
 # Slice 13: Repository Intelligence Summary
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -73,6 +73,14 @@ Prefer also exposing a reusable core/git data shape for future review and PR gen
 - Clear errors for missing/invalid base refs.
 - README documents the command.
 
+## Implementation Summary
+
+- Added reusable repository summary and file category types in core.
+- Added deterministic repository path classification for test, documentation, source, configuration, state, and other files.
+- Added Git summary collection from merge-base to `HEAD` using `git diff --name-status --find-renames`.
+- Added `pathfinder git summary --base <base-ref>` CLI output with changed file counts and per-file categories.
+- Documented the command in `README.md`.
+
 ## Checks
 
 ```bash
@@ -82,6 +90,8 @@ npm run lint --if-present
 npm run build
 ```
 
+Completed for this slice.
+
 Smoke test:
 
 ```bash
@@ -89,6 +99,8 @@ git checkout -b pathfinder/test-summary
 # make and commit a small source/doc/test change
 npm exec -- pathfinder git summary --base main
 ```
+
+Completed in a temporary Git repository with committed source and documentation changes.
 
 ## Suggested Prompt
 

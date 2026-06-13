@@ -2,7 +2,13 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { PathfinderError } from "@pathfinder/core";
+import {
+  PathfinderError,
+  RepositoryChangeStatus,
+  RepositorySummary,
+  RepositorySummaryFile,
+  categorizeRepositoryPath
+} from "@pathfinder/core";
 
 const execFileAsync = promisify(execFile);
 
@@ -32,6 +38,24 @@ export class GitAdapter {
     const mergeBase = (await this.runGit(["merge-base", baseRef, "HEAD"])).stdout.trim();
     const result = await this.runGit(["diff", `${mergeBase}..HEAD`]);
     return result.stdout;
+  }
+
+  async getCommittedSummaryAgainstBase(baseRef: string): Promise<RepositorySummary> {
+    await this.requireGitRepository();
+    await this.resolveCommit(baseRef);
+    const mergeBase = (await this.runGit(["merge-base", baseRef, "HEAD"])).stdout.trim();
+    const headCommit = (await this.runGit(["rev-parse", "--short", "HEAD"])).stdout.trim();
+    const branchName = (await this.runGit(["rev-parse", "--abbrev-ref", "HEAD"])).stdout.trim();
+    const nameStatus = (await this.runGit(["diff", "--name-status", "--find-renames", `${mergeBase}..HEAD`]))
+      .stdout;
+
+    return {
+      baseRef,
+      headRef: branchName === "HEAD" ? headCommit : branchName,
+      headCommit,
+      mergeBase,
+      files: parseNameStatus(nameStatus)
+    };
   }
 
   async hasUncommittedChanges(): Promise<boolean> {
@@ -101,4 +125,55 @@ function hasStderr(error: unknown): error is { stderr: string } {
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
+}
+
+export function parseNameStatus(output: string): RepositorySummaryFile[] {
+  return output
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0)
+    .map((line) => {
+      const [statusCode, firstPath, secondPath] = line.split("\t");
+      const status = parseChangeStatus(statusCode);
+
+      if ((status === "renamed" || status === "copied") && secondPath) {
+        return {
+          path: secondPath,
+          previousPath: firstPath,
+          status,
+          category: categorizeRepositoryPath(secondPath)
+        };
+      }
+
+      return {
+        path: firstPath,
+        status,
+        category: categorizeRepositoryPath(firstPath)
+      };
+    });
+}
+
+function parseChangeStatus(statusCode: string): RepositoryChangeStatus {
+  const status = statusCode.charAt(0);
+
+  if (status === "A") {
+    return "added";
+  }
+
+  if (status === "M") {
+    return "modified";
+  }
+
+  if (status === "D") {
+    return "deleted";
+  }
+
+  if (status === "R") {
+    return "renamed";
+  }
+
+  if (status === "C") {
+    return "copied";
+  }
+
+  return "other";
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -8,7 +8,7 @@ import { promisify } from "node:util";
 
 import { PathfinderError } from "@pathfinder/core";
 
-import { GitAdapter } from "./index.js";
+import { GitAdapter, parseNameStatus } from "./index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -50,6 +50,112 @@ test("returns committed diff against the merge base of a base ref", async () => 
   assert.match(diff, /-base/);
   assert.match(diff, /\+feature/);
   assert.doesNotMatch(diff, /working tree only/);
+});
+
+test("parses Git name-status output into categorized files", () => {
+  assert.deepEqual(
+    parseNameStatus(
+      [
+        "A\tpackages/core/src/index.ts",
+        "M\tREADME.md",
+        "D\tpackage.json",
+        "R100\tdocs/old.md\tdocs/new.md",
+        "C100\tpackages/core/src/index.ts\tpackages/core/src/copy.test.ts"
+      ].join("\n")
+    ),
+    [
+      {
+        path: "packages/core/src/index.ts",
+        status: "added",
+        category: "source"
+      },
+      {
+        path: "README.md",
+        status: "modified",
+        category: "documentation"
+      },
+      {
+        path: "package.json",
+        status: "deleted",
+        category: "configuration"
+      },
+      {
+        path: "docs/new.md",
+        previousPath: "docs/old.md",
+        status: "renamed",
+        category: "documentation"
+      },
+      {
+        path: "packages/core/src/copy.test.ts",
+        previousPath: "packages/core/src/index.ts",
+        status: "copied",
+        category: "test"
+      }
+    ]
+  );
+});
+
+test("returns a committed repository summary against the merge base of a base ref", async () => {
+  const repo = await createTempRepo();
+  await mkdir(path.join(repo, "docs"));
+  await writeFile(path.join(repo, "README.md"), "# Test\n", "utf8");
+  await writeFile(path.join(repo, "delete-me.txt"), "delete\n", "utf8");
+  await writeFile(path.join(repo, "docs", "old.md"), "# Old\n", "utf8");
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "initial"]);
+  await git(repo, ["checkout", "-b", "feature"]);
+
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "index.ts"), "export const value = 1;\n", "utf8");
+  await writeFile(path.join(repo, "README.md"), "# Test\n\nUpdated.\n", "utf8");
+  await rm(path.join(repo, "delete-me.txt"));
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "first changes"]);
+  await rename(path.join(repo, "docs", "old.md"), path.join(repo, "docs", "new.md"));
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "rename docs"]);
+  await writeFile(path.join(repo, "src", "index.ts"), "working tree only\n", "utf8");
+
+  const summary = await new GitAdapter({ cwd: repo }).getCommittedSummaryAgainstBase("main");
+
+  assert.equal(summary.baseRef, "main");
+  assert.equal(summary.headRef, "feature");
+  assert.match(summary.headCommit, /^[a-f0-9]+$/);
+  assert.equal(summary.files.length, 4);
+  assert.deepEqual(
+    summary.files.map((file) => ({
+      path: file.path,
+      previousPath: file.previousPath,
+      status: file.status,
+      category: file.category
+    })),
+    [
+      {
+        path: "README.md",
+        previousPath: undefined,
+        status: "modified",
+        category: "documentation"
+      },
+      {
+        path: "delete-me.txt",
+        previousPath: undefined,
+        status: "deleted",
+        category: "documentation"
+      },
+      {
+        path: "docs/new.md",
+        previousPath: "docs/old.md",
+        status: "renamed",
+        category: "documentation"
+      },
+      {
+        path: "src/index.ts",
+        previousPath: undefined,
+        status: "added",
+        category: "source"
+      }
+    ]
+  );
 });
 
 test("detects dirty state and creates a branch from a base ref", async () => {

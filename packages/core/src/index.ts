@@ -24,6 +24,40 @@ export const evidenceKinds: readonly EvidenceKind[] = [
   "other"
 ];
 
+export type RepositoryFileCategory =
+  | "test"
+  | "documentation"
+  | "source"
+  | "configuration"
+  | "state"
+  | "other";
+
+export const repositoryFileCategories: readonly RepositoryFileCategory[] = [
+  "test",
+  "documentation",
+  "source",
+  "configuration",
+  "state",
+  "other"
+];
+
+export type RepositoryChangeStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | "other";
+
+export interface RepositorySummaryFile {
+  path: string;
+  previousPath?: string;
+  status: RepositoryChangeStatus;
+  category: RepositoryFileCategory;
+}
+
+export interface RepositorySummary {
+  baseRef: string;
+  headRef: string;
+  headCommit: string;
+  mergeBase: string;
+  files: RepositorySummaryFile[];
+}
+
 export interface Project {
   schemaVersion: 1;
   name: string;
@@ -108,6 +142,60 @@ export function isSliceStatus(value: string): value is SliceStatus {
 
 export function isEvidenceKind(value: string): value is EvidenceKind {
   return evidenceKinds.includes(value as EvidenceKind);
+}
+
+export function categorizeRepositoryPath(filePath: string): RepositoryFileCategory {
+  const normalized = filePath.replace(/\\/g, "/");
+  const lower = normalized.toLowerCase();
+  const segments = lower.split("/");
+  const fileName = segments.at(-1) ?? lower;
+
+  if (segments.includes(".pathfinder")) {
+    return "state";
+  }
+
+  if (
+    segments.includes("test") ||
+    segments.includes("tests") ||
+    segments.includes("__tests__") ||
+    /\.(test|spec)\.[cm]?[jt]sx?$/.test(fileName)
+  ) {
+    return "test";
+  }
+
+  if (
+    segments.includes("docs") ||
+    fileName === "readme.md" ||
+    fileName === "changelog.md" ||
+    fileName === "license" ||
+    fileName.endsWith(".md") ||
+    fileName.endsWith(".mdx") ||
+    fileName.endsWith(".txt")
+  ) {
+    return "documentation";
+  }
+
+  if (
+    fileName === "package.json" ||
+    fileName === "package-lock.json" ||
+    fileName === "tsconfig.json" ||
+    fileName.endsWith(".config.js") ||
+    fileName.endsWith(".config.cjs") ||
+    fileName.endsWith(".config.mjs") ||
+    fileName.endsWith(".config.ts") ||
+    fileName.endsWith(".json") ||
+    fileName.endsWith(".yml") ||
+    fileName.endsWith(".yaml") ||
+    fileName.startsWith(".")
+  ) {
+    return "configuration";
+  }
+
+  if (/\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|c|cc|cpp|h|hpp|cs|rb|php|swift|kt)$/.test(fileName)) {
+    return "source";
+  }
+
+  return "other";
 }
 
 export function assertNonEmptyText(value: string, label: string): string {

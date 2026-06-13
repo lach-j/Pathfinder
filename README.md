@@ -131,6 +131,14 @@ Inspect the committed branch diff relative to a local base ref:
 npm exec -- pathfinder git diff --base main
 ```
 
+Summarise committed branch changes relative to a local base ref:
+
+```bash
+npm exec -- pathfinder git summary --base main
+```
+
+This prints the merge-base summary for `main..HEAD`, including changed file counts, added/modified/deleted/renamed counts, and conservative per-file categories (`test`, `documentation`, `source`, `configuration`, `state`, or `other`).
+
 Generate a local PR markdown draft:
 
 ```bash
@@ -181,5 +189,6 @@ npm exec -- pathfinder evidence add add-billing-foundation --slice create-local-
 npm exec -- pathfinder evidence list add-billing-foundation
 npm exec -- pathfinder git diff
 npm exec -- pathfinder git diff --base main
+npm exec -- pathfinder git summary --base main
 npm exec -- pathfinder pr generate add-billing-foundation
 ```

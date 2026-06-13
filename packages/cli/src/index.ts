@@ -1,5 +1,13 @@
 #!/usr/bin/env node
-import { Evidence, PathfinderError, Review, ReviewComment, Slice } from "@pathfinder/core";
+import {
+  Evidence,
+  PathfinderError,
+  RepositoryChangeStatus,
+  RepositorySummary,
+  Review,
+  ReviewComment,
+  Slice
+} from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { CurrentContext, PathfinderStore } from "@pathfinder/state";
 
@@ -110,7 +118,16 @@ async function runGit(action: string | undefined, args: string[]): Promise<void>
     return;
   }
 
-  throw usageError("Unknown git command. Expected diff.");
+  if (action === "summary") {
+    const options = parseOptions(args);
+    requireOption(options.base, "--base");
+    const git = new GitAdapter({ cwd: process.cwd() });
+    const summary = await git.getCommittedSummaryAgainstBase(options.base);
+    process.stdout.write(formatRepositorySummary(summary));
+    return;
+  }
+
+  throw usageError("Unknown git command. Expected diff or summary.");
 }
 
 async function runPr(action: string | undefined, args: string[]): Promise<void> {
@@ -513,6 +530,80 @@ function formatEvidence(evidence: Evidence): string {
   return `${evidence.id}\t${evidence.kind}\t${evidence.sliceId}\t${evidence.description}${pathText}`;
 }
 
+function formatRepositorySummary(summary: RepositorySummary): string {
+  const counts = countRepositoryStatuses(summary.files);
+  const lines = [
+    "# Repository Summary",
+    "",
+    `Base ref: ${summary.baseRef}`,
+    `Head ref: ${summary.headRef}`,
+    `Head commit: ${summary.headCommit}`,
+    `Merge base: ${summary.mergeBase}`,
+    `Changed files: ${summary.files.length}`,
+    `Added: ${counts.added}`,
+    `Modified: ${counts.modified}`,
+    `Deleted: ${counts.deleted}`,
+    `Renamed: ${counts.renamed}`,
+    ""
+  ];
+
+  if (summary.files.length === 0) {
+    lines.push("No committed file changes found.");
+    return `${lines.join("\n")}\n`;
+  }
+
+  lines.push("## Files");
+  lines.push("");
+
+  for (const file of summary.files) {
+    const pathText = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
+    lines.push(`- ${formatChangeStatus(file.status)}\t${file.category}\t${pathText}`);
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function countRepositoryStatuses(files: RepositorySummary["files"]): Record<RepositoryChangeStatus, number> {
+  return files.reduce<Record<RepositoryChangeStatus, number>>(
+    (counts, file) => ({
+      ...counts,
+      [file.status]: counts[file.status] + 1
+    }),
+    {
+      added: 0,
+      modified: 0,
+      deleted: 0,
+      renamed: 0,
+      copied: 0,
+      other: 0
+    }
+  );
+}
+
+function formatChangeStatus(status: RepositoryChangeStatus): string {
+  if (status === "added") {
+    return "A";
+  }
+
+  if (status === "modified") {
+    return "M";
+  }
+
+  if (status === "deleted") {
+    return "D";
+  }
+
+  if (status === "renamed") {
+    return "R";
+  }
+
+  if (status === "copied") {
+    return "C";
+  }
+
+  return "?";
+}
+
 function formatCurrentContext(context: CurrentContext): string {
   const lines = ["# Pathfinder Current Context", ""];
 
@@ -647,5 +738,6 @@ Usage:
   pathfinder evidence add <workstream-id> --slice <slice-id> --kind <kind> --description "..." [--path ./artifact.txt]
   pathfinder evidence list <workstream-id>
   pathfinder git diff [--base <base-ref>]
+  pathfinder git summary --base <base-ref>
   pathfinder pr generate <workstream-id>`);
 }
