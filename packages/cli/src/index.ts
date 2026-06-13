@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { PathfinderError, ReviewComment, Slice } from "@pathfinder/core";
+import { PathfinderError, Review, ReviewComment, Slice } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { PathfinderStore } from "@pathfinder/state";
 
@@ -9,6 +9,7 @@ interface OptionMap {
   file?: string;
   slice?: string;
   body?: string;
+  summary?: string;
 }
 
 const store = new PathfinderStore(process.cwd());
@@ -56,6 +57,11 @@ async function run(args: string[]): Promise<void> {
 
   if (area === "comment") {
     await runComment(action, rest);
+    return;
+  }
+
+  if (area === "review") {
+    await runReview(action, rest);
     return;
   }
 
@@ -227,6 +233,46 @@ async function runComment(action: string | undefined, args: string[]): Promise<v
   throw new PathfinderError("Unknown comment command. Expected add, list, or resolve.");
 }
 
+async function runReview(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "create") {
+    const [workstreamId, ...optionArgs] = args;
+    requireArgument(workstreamId, "workstream id");
+    const options = parseOptions(optionArgs);
+    requireOption(options.slice, "--slice");
+    requireOption(options.summary, "--summary");
+    const review = await store.createReview(workstreamId, options.slice, options.summary);
+    console.log(formatReview(review));
+    return;
+  }
+
+  if (action === "list") {
+    const [workstreamId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    expectNoExtraArgs(extra);
+    const reviews = await store.listReviews(workstreamId);
+    if (reviews.length === 0) {
+      console.log("No reviews found.");
+      return;
+    }
+    for (const review of reviews) {
+      console.log(formatReview(review));
+    }
+    return;
+  }
+
+  if (action === "show") {
+    const [workstreamId, reviewId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    requireArgument(reviewId, "review id");
+    expectNoExtraArgs(extra);
+    const review = await store.getReview(workstreamId, reviewId);
+    console.log(JSON.stringify(review, null, 2));
+    return;
+  }
+
+  throw new PathfinderError("Unknown review command. Expected create, list, or show.");
+}
+
 function parseOptions(args: string[]): OptionMap {
   const options: OptionMap = {};
 
@@ -252,6 +298,8 @@ function parseOptions(args: string[]): OptionMap {
       options.slice = value;
     } else if (flag === "--body") {
       options.body = value;
+    } else if (flag === "--summary") {
+      options.summary = value;
     } else {
       throw new PathfinderError(`Unknown option '${flag}'.`);
     }
@@ -270,6 +318,10 @@ function formatComment(comment: ReviewComment): string {
   const status = comment.resolved ? "resolved" : "open";
   const slice = comment.sliceId ?? "-";
   return `${comment.id}\t${status}\t${slice}\t${comment.body}`;
+}
+
+function formatReview(review: Review): string {
+  return `${review.id}\t${review.status}\t${review.sliceId}\t${review.summary}`;
 }
 
 function requireArgument(value: string | undefined, label: string): asserts value is string {
@@ -307,5 +359,8 @@ Usage:
   pathfinder comment add <workstream-id> --slice <slice-id> --body "..."
   pathfinder comment list <workstream-id>
   pathfinder comment resolve <workstream-id> <comment-id>
+  pathfinder review create <workstream-id> --slice <slice-id> --summary "..."
+  pathfinder review list <workstream-id>
+  pathfinder review show <workstream-id> <review-id>
   pathfinder git diff`);
 }

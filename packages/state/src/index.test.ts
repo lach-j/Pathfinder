@@ -92,6 +92,45 @@ test("validates comment workstream, slice, body, and resolution state", async ()
   await assert.rejects(() => store.resolveComment(workstream.id, comment.id), PathfinderError);
 });
 
+test("creates, lists, and gets local review records", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add review support.");
+
+  const first = await store.createReview(workstream.id, slice.id, "Manual review passed.");
+  const second = await store.createReview(workstream.id, slice.id, "Manual review passed.");
+  const reviews = await store.listReviews(workstream.id);
+  const storedFile = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", workstream.id, "reviews.json"),
+    "utf8"
+  );
+
+  assert.equal(first.id, "manual-review-passed");
+  assert.equal(second.id, "manual-review-passed-2");
+  assert.equal(reviews.length, 2);
+  assert.equal(reviews[0]?.status, "open");
+  assert.deepEqual(reviews[0]?.comments, []);
+  assert.deepEqual(reviews[0]?.evidence, []);
+  assert.equal((await store.getReview(workstream.id, first.id)).summary, "Manual review passed.");
+  assert.match(storedFile, /"reviews": \[/);
+  assert.match(storedFile, /\n    \{/);
+});
+
+test("validates review workstream, slice, summary, and review ids", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add review support.");
+
+  await assert.rejects(() => store.createReview("missing", slice.id, "Summary"), PathfinderError);
+  await assert.rejects(() => store.createReview(workstream.id, "missing", "Summary"), PathfinderError);
+  await assert.rejects(() => store.createReview(workstream.id, slice.id, " "), PathfinderError);
+  await assert.rejects(() => store.getReview(workstream.id, "missing"), PathfinderError);
+});
+
 test("fails clearly before init", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

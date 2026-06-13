@@ -1,6 +1,6 @@
 # Slice 05: Review State Foundation
 
-Status: ready
+Status: done
 
 ## Goal
 

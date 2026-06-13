@@ -67,6 +67,14 @@ npm exec -- pathfinder comment list add-billing-foundation
 npm exec -- pathfinder comment resolve add-billing-foundation needs-tests
 ```
 
+Create and inspect local review records for a slice:
+
+```bash
+npm exec -- pathfinder review create add-billing-foundation --slice create-local-state --summary "Manual review passed."
+npm exec -- pathfinder review list add-billing-foundation
+npm exec -- pathfinder review show add-billing-foundation manual-review-passed
+```
+
 Inspect the current local working tree diff:
 
 ```bash
@@ -95,5 +103,8 @@ npm test
 npm run lint --if-present
 npm run build
 npm exec -- pathfinder help
+npm exec -- pathfinder review create add-billing-foundation --slice create-local-state --summary "Manual review passed."
+npm exec -- pathfinder review list add-billing-foundation
+npm exec -- pathfinder review show add-billing-foundation manual-review-passed
 npm exec -- pathfinder git diff
 ```

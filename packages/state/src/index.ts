@@ -191,6 +191,55 @@ export class PathfinderStore {
     return commentsFile.comments;
   }
 
+  async createReview(workstreamId: string, sliceId: string, summary: string): Promise<Review> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const cleanSummary = assertNonEmptyText(summary, "Review summary");
+    const slices = await this.listSlices(workstreamId);
+    const slice = slices.find((candidate) => candidate.id === sliceId);
+
+    if (!slice) {
+      throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    const reviewsFile = await this.readReviews(root);
+    const id = nextAvailableId(
+      toUrlSafeId(cleanSummary),
+      reviewsFile.reviews.map((review) => review.id)
+    );
+    const now = createTimestamp();
+    const review: Review = {
+      id,
+      sliceId,
+      status: "open",
+      summary: cleanSummary,
+      comments: [],
+      evidence: [],
+      createdAt: now,
+      updatedAt: now
+    };
+
+    reviewsFile.reviews.push(review);
+    await writeJson(path.join(root, "reviews.json"), reviewsFile);
+    return review;
+  }
+
+  async listReviews(workstreamId: string): Promise<Review[]> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const reviewsFile = await this.readReviews(root);
+    return reviewsFile.reviews;
+  }
+
+  async getReview(workstreamId: string, reviewId: string): Promise<Review> {
+    const reviews = await this.listReviews(workstreamId);
+    const review = reviews.find((candidate) => candidate.id === reviewId);
+
+    if (!review) {
+      throw new PathfinderError(`Review '${reviewId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    return review;
+  }
+
   async resolveComment(workstreamId: string, commentId: string): Promise<ReviewComment> {
     const root = await this.requireWorkstreamRoot(workstreamId);
     const commentsFile = await this.readComments(root);
@@ -309,6 +358,10 @@ export class PathfinderStore {
 
   private async readComments(workstreamRoot: string): Promise<CommentsFile> {
     return readJson<CommentsFile>(path.join(workstreamRoot, "comments.json"));
+  }
+
+  private async readReviews(workstreamRoot: string): Promise<ReviewsFile> {
+    return readJson<ReviewsFile>(path.join(workstreamRoot, "reviews.json"));
   }
 }
 
