@@ -55,7 +55,7 @@ State currently lives under:
 | 01 | done | `docs/slices/01-stage-1-foundation.md` |
 | 02 | done | `docs/slices/02-repo-hygiene.md` |
 | 03 | done | `docs/slices/03-comments-cli.md` |
-| 04 | ready | `docs/slices/04-git-diff-adapter.md` |
+| 04 | done | `docs/slices/04-git-diff-adapter.md` |
 | 05 | ready | `docs/slices/05-review-state-foundation.md` |
 | 06 | ready | `docs/slices/06-pr-markdown-generation.md` |
 | 07 | ready | `docs/slices/07-current-context-command.md` |

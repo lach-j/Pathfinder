@@ -67,6 +67,12 @@ npm exec -- pathfinder comment list add-billing-foundation
 npm exec -- pathfinder comment resolve add-billing-foundation needs-tests
 ```
 
+Inspect the current local working tree diff:
+
+```bash
+npm exec -- pathfinder git diff
+```
+
 Each workstream is stored as human-readable local files:
 
 ```text
@@ -89,4 +95,5 @@ npm test
 npm run lint --if-present
 npm run build
 npm exec -- pathfinder help
+npm exec -- pathfinder git diff
 ```

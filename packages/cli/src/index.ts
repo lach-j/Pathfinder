@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { PathfinderError, ReviewComment, Slice } from "@pathfinder/core";
+import { GitAdapter } from "@pathfinder/git";
 import { PathfinderStore } from "@pathfinder/state";
 
 interface OptionMap {
@@ -58,7 +59,23 @@ async function run(args: string[]): Promise<void> {
     return;
   }
 
+  if (area === "git") {
+    await runGit(action, rest);
+    return;
+  }
+
   throw new PathfinderError(`Unknown command '${area}'. Run 'pathfinder help' for usage.`);
+}
+
+async function runGit(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "diff") {
+    expectNoExtraArgs(args);
+    const diff = await new GitAdapter({ cwd: process.cwd() }).getWorkingTreeDiff();
+    process.stdout.write(diff);
+    return;
+  }
+
+  throw new PathfinderError("Unknown git command. Expected diff.");
 }
 
 async function runWorkstream(action: string | undefined, args: string[]): Promise<void> {
@@ -289,5 +306,6 @@ Usage:
   pathfinder slice show-active
   pathfinder comment add <workstream-id> --slice <slice-id> --body "..."
   pathfinder comment list <workstream-id>
-  pathfinder comment resolve <workstream-id> <comment-id>`);
+  pathfinder comment resolve <workstream-id> <comment-id>
+  pathfinder git diff`);
 }

@@ -12,6 +12,9 @@
       "@pathfinder/core": [
         "packages/core/src/index.ts"
       ],
+      "@pathfinder/git": [
+        "packages/git/src/index.ts"
+      ],
       "@pathfinder/state": [
         "packages/state/src/index.ts"
       ]
@@ -21,6 +24,9 @@
   "references": [
     {
       "path": "packages/core"
+    },
+    {
+      "path": "packages/git"
     },
     {
       "path": "packages/state"

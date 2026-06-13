@@ -1,6 +1,6 @@
 # Slice 04: Git Diff Adapter
 
-Status: ready
+Status: done
 
 ## Goal
 

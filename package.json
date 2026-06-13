@@ -9,13 +9,14 @@
   },
   "workspaces": [
     "packages/core",
+    "packages/git",
     "packages/state",
     "packages/cli"
   ],
   "scripts": {
-    "build": "tsc -b packages/core packages/state packages/cli",
+    "build": "tsc -b packages/core packages/git packages/state packages/cli",
     "typecheck": "tsc -b --pretty false",
-    "test": "npm run build && node --test packages/core/dist/*.test.js packages/state/dist/*.test.js"
+    "test": "npm run build && node --test packages/core/dist/*.test.js packages/git/dist/*.test.js packages/state/dist/*.test.js"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",

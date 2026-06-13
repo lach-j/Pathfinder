@@ -9,6 +9,7 @@
   "types": "./dist/index.d.ts",
   "dependencies": {
     "@pathfinder/core": "0.1.0",
+    "@pathfinder/git": "0.1.0",
     "@pathfinder/state": "0.1.0"
   }
 }
