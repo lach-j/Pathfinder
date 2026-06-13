@@ -729,6 +729,9 @@ export class PathfinderStore {
     repositorySummary?: RepositorySummary
   ): Promise<GeneratedPrMarkdown> {
     const root = await this.requireWorkstreamRoot(workstreamId);
+    const stateRoot = await this.requireStateRoot();
+    const conventionalFeedbackPath = path.join(path.dirname(stateRoot), ".pathfinder-feedback.md");
+    const feedbackQueuePath = (await exists(conventionalFeedbackPath)) ? ".pathfinder-feedback.md" : undefined;
     const markdown = generatePrMarkdown({
       workstream: await this.getWorkstream(workstreamId),
       requirementsMarkdown: await this.getRequirements(workstreamId),
@@ -736,8 +739,10 @@ export class PathfinderStore {
       slices: await this.listSlices(workstreamId),
       comments: await this.listComments(workstreamId),
       reviews: await this.listReviews(workstreamId),
+      reviewSessions: await this.listReviewSessions(workstreamId),
       evidence: await this.listEvidence(workstreamId),
-      repositorySummary
+      repositorySummary,
+      feedbackQueuePath
     });
     const outputPath = path.join(root, "pr.md");
 

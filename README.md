@@ -254,9 +254,10 @@ This overwrites and prints:
 
 The PR draft is assembled from local Pathfinder state. It includes the workstream, requirements
 excerpt, plan excerpt, completed and remaining slices, slice dependencies, evidence grouped by
-slice/review, review notes, unresolved comments, risks, and a checklist. When `--base` is supplied,
-Pathfinder also includes a committed repository summary for `<base-ref>..HEAD` using the local
-merge base.
+slice/review, review notes, review session metadata, local feedback grouped by open/resolved/stale
+comments, exported feedback queue path when `./.pathfinder-feedback.md` exists, review-loop risks,
+and a checklist. When `--base` is supplied, Pathfinder also includes a committed repository summary
+for `<base-ref>..HEAD` using the local merge base.
 
 Each workstream is stored as human-readable local files:
 

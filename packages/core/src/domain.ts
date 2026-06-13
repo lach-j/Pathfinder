@@ -233,8 +233,10 @@ export interface PrMarkdownInput {
   slices: Slice[];
   comments: ReviewComment[];
   reviews: Review[];
+  reviewSessions?: ReviewSession[];
   evidence?: Evidence[];
   repositorySummary?: RepositorySummary;
+  feedbackQueuePath?: string;
 }
 
 export interface FeedbackQueueMarkdownInput {

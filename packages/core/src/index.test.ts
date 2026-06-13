@@ -111,6 +111,37 @@ test("generates deterministic PR markdown from workstream state", () => {
         body: "Needs docs.",
         resolved: false,
         createdAt: "2026-01-01T00:00:00.000Z"
+      },
+      {
+        id: "empty-case-fixed",
+        sliceId: "create-state",
+        target: {
+          type: "line",
+          sessionId: "review-create-state",
+          filePath: "packages/core/src/index.ts",
+          lineNumber: 12,
+          side: "new"
+        },
+        anchorStatus: "current",
+        body: "Handle the empty case.",
+        resolved: true,
+        createdAt: "2026-01-01T00:00:01.000Z",
+        resolvedAt: "2026-01-01T00:00:03.000Z"
+      },
+      {
+        id: "stale-inline",
+        sliceId: "create-state",
+        target: {
+          type: "line",
+          sessionId: "review-create-state",
+          filePath: "packages/core/src/index.ts",
+          lineNumber: 99,
+          side: "new"
+        },
+        anchorStatus: "stale",
+        body: "This line moved after refresh.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:02.000Z"
       }
     ],
     reviews: [
@@ -131,6 +162,26 @@ test("generates deterministic PR markdown from workstream state", () => {
         ],
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    reviewSessions: [
+      {
+        id: "review-create-state",
+        workstreamId: "billing-foundation",
+        sliceId: "create-state",
+        baseRef: "main",
+        headRef: "feature-billing",
+        headCommit: "abc123",
+        mergeBase: "abc000",
+        changedFiles: [
+          {
+            path: "packages/core/src/index.ts",
+            status: "modified",
+            category: "source"
+          }
+        ],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        refreshedAt: "2026-01-01T00:00:04.000Z"
       }
     ],
     evidence: [
@@ -160,7 +211,8 @@ test("generates deterministic PR markdown from workstream state", () => {
           category: "source"
         }
       ]
-    }
+    },
+    feedbackQueuePath: ".pathfinder-feedback.md"
   });
 
   assert.equal(
@@ -215,10 +267,37 @@ Create the first billing slice.
 
 - Review \`manual-review\` (complete, slice \`create-state\`): Manual review passed.
 - Open comment \`needs-docs\` (slice \`create-state\`): Needs docs.
+- Open comment \`stale-inline\` (session review-create-state file packages/core/src/index.ts new line 99): This line moved after refresh.
+- Resolved comment \`empty-case-fixed\` (session review-create-state file packages/core/src/index.ts new line 12): Handle the empty case.
+
+## Review Sessions
+
+- Session \`review-create-state\` for slice \`create-state\`: base \`main\`, head \`feature-billing\`, head commit \`abc123\`, merge base \`abc000\`, changed files 1, created 2026-01-01T00:00:00.000Z, refreshed 2026-01-01T00:00:04.000Z.
+  - M source: packages/core/src/index.ts
+
+## Local Review Feedback
+
+### Open Comments
+
+- \`needs-docs\` (open; slice \`create-state\`): Needs docs.
+- \`stale-inline\` (open, anchor stale; session review-create-state file packages/core/src/index.ts new line 99): This line moved after refresh.
+
+### Resolved Comments
+
+- \`empty-case-fixed\` (resolved, anchor current, resolved 2026-01-01T00:00:03.000Z; session review-create-state file packages/core/src/index.ts new line 12): Handle the empty case.
+
+### Stale Or Unknown Anchors
+
+- \`stale-inline\` (open, anchor stale; session review-create-state file packages/core/src/index.ts new line 99): This line moved after refresh.
+
+## Agent Feedback Queue
+
+- Exported feedback queue: \`.pathfinder-feedback.md\`
 
 ## Risks
 
-- 1 unresolved review comment(s) remain.
+- 2 unresolved review comment(s) remain.
+- 1 stale or unknown review comment anchor(s) need review.
 
 ## Checklist
 
@@ -226,6 +305,8 @@ Create the first billing slice.
 - [ ] Plan reviewed
 - [ ] Completed slices verified
 - [ ] Testing evidence reviewed
+- [ ] Local diff reviewed in Pathfinder
+- [ ] Agent feedback queue addressed
 - [ ] Open review comments resolved or accepted
 - [ ] Changed files reviewed against slice scope
 `
@@ -289,7 +370,12 @@ test("includes placeholders when PR markdown optional state is empty", () => {
   assert.match(markdown, /- No testing evidence recorded\./);
   assert.match(markdown, /- No review records found\./);
   assert.match(markdown, /- No open review comments\./);
-  assert.match(markdown, /- No unresolved comments or deterministic review warnings recorded\./);
+  assert.match(markdown, /- No local review sessions recorded\./);
+  assert.match(markdown, /- No open local review comments\./);
+  assert.match(markdown, /- No resolved local review comments\./);
+  assert.match(markdown, /- No stale or unknown comment anchors recorded\./);
+  assert.match(markdown, /- No exported feedback queue file found\./);
+  assert.match(markdown, /- No unresolved comments, stale anchors, or deterministic review warnings recorded\./);
 });
 
 test("generates grouped feedback queue markdown", () => {

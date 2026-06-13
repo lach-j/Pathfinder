@@ -1,6 +1,6 @@
 # Slice 25: PR Composer Review Loop
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -65,6 +65,23 @@ Expected PR output additions:
 - Empty session/comment state produces useful placeholder text.
 - Output remains deterministic.
 - Tests cover markdown generation with sessions and inline comments.
+
+## Implementation Notes
+
+- Extended PR markdown generation with Review Sessions, Local Review Feedback, and Agent Feedback Queue sections.
+- Local feedback is grouped by open comments, resolved comments, and stale or unknown anchors.
+- Inline targets reuse the existing readable file and line target descriptions.
+- Risk output now counts unresolved comments and stale or unknown anchors.
+- Checklist output now includes local diff review and agent feedback queue follow-up.
+- `pathfinder pr generate` passes persisted review sessions and detects `./.pathfinder-feedback.md` when present.
+- Added core and CLI coverage for review sessions, inline feedback, resolved comments, exported queue paths, and empty placeholders.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+```
 
 ## Checks
 

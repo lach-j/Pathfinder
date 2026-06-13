@@ -1280,6 +1280,7 @@ test("generates PR markdown with committed repository summary", async () => {
   );
   await runCli(["slice", "status", "inventory-alerts", "add-data-source", "complete"], repo);
   await runCli(["slice", "status", "inventory-alerts", "add-report", "review"], repo);
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
   await runCli(
     [
       "evidence",
@@ -1313,6 +1314,30 @@ test("generates PR markdown with committed repository summary", async () => {
   await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
   await git(repo, ["add", "src/report.ts"]);
   await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  await runCli(["review", "start", "--base", "main"], repo);
+  await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--session",
+      "review-add-report",
+      "--file",
+      "src/report.ts",
+      "--line",
+      "1",
+      "--side",
+      "new",
+      "--body",
+      "Handle empty report data."
+    ],
+    repo
+  );
+  await runCli(["comment", "resolve", "inventory-alerts", "resolve-before-pr"], repo);
+  await runCli(
+    ["feedback", "export", "inventory-alerts", "--session", "review-add-report", "--file", "./.pathfinder-feedback.md"],
+    repo
+  );
 
   const result = await runCli(["pr", "generate", "inventory-alerts", "--base", "main"], repo);
   const stored = await readFile(
@@ -1330,7 +1355,14 @@ test("generates PR markdown with committed repository summary", async () => {
   assert.match(result.stdout, /- Head ref: `feature-pr`/);
   assert.match(result.stdout, /- A source: src\/report\.ts/);
   assert.match(result.stdout, /- `npm-test-passed` \[test\]: npm test passed/);
-  assert.match(result.stdout, /- Open comment `resolve-before-pr` \(slice `add-report`\): Resolve before PR\./);
+  assert.match(result.stdout, /## Review Sessions/);
+  assert.match(result.stdout, /- Session `review-add-report` for slice `add-report`: base `main`, head `feature-pr`/);
+  assert.match(result.stdout, /## Local Review Feedback/);
+  assert.match(result.stdout, /- `handle-empty-report-data` \(open; session review-add-report file src\/report\.ts new line 1\): Handle empty report data\./);
+  assert.match(result.stdout, /- `resolve-before-pr` \(resolved, resolved .*; slice `add-report`\): Resolve before PR\./);
+  assert.match(result.stdout, /## Agent Feedback Queue/);
+  assert.match(result.stdout, /- Exported feedback queue: `.pathfinder-feedback\.md`/);
+  assert.match(result.stdout, /- 1 unresolved review comment\(s\) remain\./);
 });
 
 async function jsonFetch(url: string, init: RequestInit = {}): Promise<any> {

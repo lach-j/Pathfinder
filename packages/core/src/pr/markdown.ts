@@ -5,6 +5,7 @@ import {
   RepositorySummary,
   Review,
   ReviewComment,
+  ReviewSession,
   Slice
 } from "../domain.js";
 import { countRepositoryCategories } from "../repository.js";
@@ -16,8 +17,12 @@ export function generatePrMarkdown(input: PrMarkdownInput): string {
   const remainingSlices = slices.filter((slice) => slice.status !== "complete");
   const evidence = sortEvidence(input.evidence ?? []);
   const reviews = sortReviews(input.reviews);
+  const reviewSessions = sortReviewSessions(input.reviewSessions ?? []);
   const openComments = sortComments(input.comments.filter((comment) => !comment.resolved));
   const resolvedComments = sortComments(input.comments.filter((comment) => comment.resolved));
+  const staleComments = sortComments(
+    input.comments.filter((comment) => comment.anchorStatus === "stale" || comment.anchorStatus === "unknown")
+  );
 
   const lines = [
     "## Summary",
@@ -53,9 +58,21 @@ export function generatePrMarkdown(input: PrMarkdownInput): string {
     "",
     ...formatReviewNotes(reviews, openComments, resolvedComments),
     "",
+    "## Review Sessions",
+    "",
+    ...formatReviewSessions(reviewSessions),
+    "",
+    "## Local Review Feedback",
+    "",
+    ...formatLocalReviewFeedback(openComments, resolvedComments, staleComments),
+    "",
+    "## Agent Feedback Queue",
+    "",
+    ...formatAgentFeedbackQueue(input.feedbackQueuePath),
+    "",
     "## Risks",
     "",
-    ...formatRisks(openComments, reviews),
+    ...formatRisks(openComments, staleComments, reviews),
     "",
     "## Checklist",
     "",
@@ -63,6 +80,8 @@ export function generatePrMarkdown(input: PrMarkdownInput): string {
     "- [ ] Plan reviewed",
     "- [ ] Completed slices verified",
     "- [ ] Testing evidence reviewed",
+    "- [ ] Local diff reviewed in Pathfinder",
+    "- [ ] Agent feedback queue addressed",
     "- [ ] Open review comments resolved or accepted",
     "- [ ] Changed files reviewed against slice scope",
     ""
@@ -92,11 +111,90 @@ function sortReviews(reviews: Review[]): Review[] {
   });
 }
 
+function sortReviewSessions(sessions: ReviewSession[]): ReviewSession[] {
+  return [...sessions].sort((left, right) => {
+    const createdComparison = left.createdAt.localeCompare(right.createdAt);
+    return createdComparison === 0 ? left.id.localeCompare(right.id) : createdComparison;
+  });
+}
+
 function sortEvidence(evidence: Evidence[]): Evidence[] {
   return [...evidence].sort((left, right) => {
     const createdComparison = left.createdAt.localeCompare(right.createdAt);
     return createdComparison === 0 ? left.id.localeCompare(right.id) : createdComparison;
   });
+}
+
+function formatReviewSessions(sessions: ReviewSession[]): string[] {
+  if (sessions.length === 0) {
+    return ["- No local review sessions recorded."];
+  }
+
+  const lines: string[] = [];
+  for (const session of sessions) {
+    lines.push(
+      `- Session \`${session.id}\` for slice \`${session.sliceId}\`: base \`${session.baseRef}\`, head \`${session.headRef}\`, head commit \`${session.headCommit}\`, merge base \`${session.mergeBase}\`, changed files ${session.changedFiles.length}, created ${session.createdAt}${session.refreshedAt ? `, refreshed ${session.refreshedAt}` : ""}.`
+    );
+
+    const files = [...session.changedFiles].sort((left, right) => {
+      const leftPath = left.previousPath ? `${left.previousPath} -> ${left.path}` : left.path;
+      const rightPath = right.previousPath ? `${right.previousPath} -> ${right.path}` : right.path;
+      return leftPath.localeCompare(rightPath);
+    });
+
+    for (const file of files) {
+      const pathText = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
+      lines.push(`  - ${formatRepositoryStatus(file.status)} ${file.category}: ${pathText}`);
+    }
+  }
+
+  return lines;
+}
+
+function formatLocalReviewFeedback(
+  openComments: ReviewComment[],
+  resolvedComments: ReviewComment[],
+  staleComments: ReviewComment[]
+): string[] {
+  const lines: string[] = [];
+
+  lines.push("### Open Comments", "");
+  if (openComments.length === 0) {
+    lines.push("- No open local review comments.");
+  } else {
+    lines.push(...openComments.map((comment) => formatFeedbackComment(comment)));
+  }
+
+  lines.push("", "### Resolved Comments", "");
+  if (resolvedComments.length === 0) {
+    lines.push("- No resolved local review comments.");
+  } else {
+    lines.push(...resolvedComments.map((comment) => formatFeedbackComment(comment)));
+  }
+
+  lines.push("", "### Stale Or Unknown Anchors", "");
+  if (staleComments.length === 0) {
+    lines.push("- No stale or unknown comment anchors recorded.");
+  } else {
+    lines.push(...staleComments.map((comment) => formatFeedbackComment(comment)));
+  }
+
+  return lines;
+}
+
+function formatFeedbackComment(comment: ReviewComment): string {
+  const status = comment.resolved ? "resolved" : "open";
+  const anchor = comment.anchorStatus ? `, anchor ${comment.anchorStatus}` : "";
+  const resolvedAt = comment.resolvedAt ? `, resolved ${comment.resolvedAt}` : "";
+  return `- \`${comment.id}\` (${status}${anchor}${resolvedAt}; ${formatCommentTarget(comment)}): ${comment.body}`;
+}
+
+function formatAgentFeedbackQueue(feedbackQueuePath: string | undefined): string[] {
+  if (feedbackQueuePath) {
+    return [`- Exported feedback queue: \`${feedbackQueuePath}\``];
+  }
+
+  return ["- No exported feedback queue file found. Run `pathfinder feedback export <workstream-id> --file ./.pathfinder-feedback.md` if an agent handoff is needed."];
 }
 
 function formatMarkdownSection(markdown: string, label: string): string[] {
@@ -264,20 +362,24 @@ function formatCommentTarget(comment: ReviewComment): string {
   return describeReviewCommentTarget(comment).replace(/^slice (.+)$/, "slice `$1`");
 }
 
-function formatRisks(openComments: ReviewComment[], reviews: Review[]): string[] {
+function formatRisks(openComments: ReviewComment[], staleComments: ReviewComment[], reviews: Review[]): string[] {
   const warningCount = reviews.reduce(
     (total, review) => total + (review.checks ?? []).filter((check) => check.severity === "warning").length,
     0
   );
 
-  if (openComments.length === 0 && warningCount === 0) {
-    return ["- No unresolved comments or deterministic review warnings recorded."];
+  if (openComments.length === 0 && staleComments.length === 0 && warningCount === 0) {
+    return ["- No unresolved comments, stale anchors, or deterministic review warnings recorded."];
   }
 
   const lines: string[] = [];
 
   if (openComments.length > 0) {
     lines.push(`- ${openComments.length} unresolved review comment(s) remain.`);
+  }
+
+  if (staleComments.length > 0) {
+    lines.push(`- ${staleComments.length} stale or unknown review comment anchor(s) need review.`);
   }
 
   if (warningCount > 0) {
