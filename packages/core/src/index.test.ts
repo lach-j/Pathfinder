@@ -4,10 +4,13 @@ import test from "node:test";
 import {
   PathfinderError,
   assertNonEmptyText,
+  findNextActionableSlice,
   generatePrMarkdown,
+  isSliceActionable,
   isSliceStatus,
   isUrlSafeId,
   nextAvailableId,
+  Slice,
   toUrlSafeId
 } from "./index.js";
 
@@ -27,6 +30,20 @@ test("validates required text and slice statuses", () => {
   assert.equal(isSliceStatus("in_progress"), true);
   assert.equal(isSliceStatus("blocked"), false);
   assert.throws(() => assertNonEmptyText(" ", "Title"), PathfinderError);
+});
+
+test("finds the first actionable slice by creation time", () => {
+  const slices: Slice[] = [
+    testSlice("dependent", "ready", "2026-01-03T00:00:00.000Z", ["foundation"]),
+    testSlice("foundation", "complete", "2026-01-01T00:00:00.000Z"),
+    testSlice("blocked", "proposed", "2026-01-02T00:00:00.000Z", ["missing"]),
+    testSlice("later", "proposed", "2026-01-04T00:00:00.000Z")
+  ];
+
+  assert.equal(isSliceActionable(slices[0], slices), true);
+  assert.equal(isSliceActionable(slices[1], slices), false);
+  assert.equal(isSliceActionable(slices[2], slices), false);
+  assert.equal(findNextActionableSlice(slices)?.id, "dependent");
 });
 
 test("generates deterministic PR markdown from workstream state", () => {
@@ -141,3 +158,20 @@ test("generates useful PR markdown when optional state is empty", () => {
   assert.match(markdown, /- No review records found\./);
   assert.match(markdown, /- No open review comments\./);
 });
+
+function testSlice(
+  id: string,
+  status: Slice["status"],
+  createdAt: string,
+  dependsOnSliceIds?: string[]
+): Slice {
+  return {
+    id,
+    title: id,
+    description: id,
+    status,
+    ...(dependsOnSliceIds ? { dependsOnSliceIds } : {}),
+    createdAt,
+    updatedAt: createdAt
+  };
+}

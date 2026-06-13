@@ -1,6 +1,33 @@
 # Slice 11: Slice Dependencies And Next Selection
 
-Status: ready
+Status: done
+
+## Implementation Summary
+
+- Added optional `dependsOnSliceIds` metadata to slices.
+- Added dependency validation for creation and post-creation updates.
+- Added `pathfinder slice depend` and `pathfinder slice next`.
+- Included dependencies in slice output.
+- Documented dependency-aware workflow in `README.md`.
+
+## Checks Run
+
+- `npm run typecheck`
+- `npm test`
+- `npm run lint --if-present`
+- `npm run build`
+
+## Smoke Test
+
+```bash
+npm exec -- pathfinder init
+npm exec -- pathfinder workstream create --title "Inventory alerts"
+npm exec -- pathfinder slice add inventory-alerts --title "Add data source" --description "Create local inventory data."
+npm exec -- pathfinder slice add inventory-alerts --title "Add report" --description "Report reorder candidates." --depends-on add-data-source
+npm exec -- pathfinder slice next inventory-alerts
+npm exec -- pathfinder slice status inventory-alerts add-data-source complete
+npm exec -- pathfinder slice next inventory-alerts
+```
 
 ## Goal
 

@@ -26,6 +26,8 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder slice add",
     "pathfinder slice list",
     "pathfinder slice active",
+    "pathfinder slice depend",
+    "pathfinder slice next",
     "pathfinder slice status",
     "pathfinder slice branch",
     "pathfinder slice show-active",
@@ -158,6 +160,115 @@ test("updates slice status and includes completed slices in generated PR markdow
   const result = await runCli(["pr", "generate", "inventory-alerts"], repo);
 
   assert.match(result.stdout, /- Add Reorder Report \(`add-reorder-report`\): Create a local report/);
+});
+
+test("adds dependencies and selects the next actionable slice", async () => {
+  const repo = await createTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Data Source",
+      "--description",
+      "Create local inventory data."
+    ],
+    repo
+  );
+  const addDependent = await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates.",
+      "--depends-on",
+      "add-data-source"
+    ],
+    repo
+  );
+  const list = await runCli(["slice", "list", "inventory-alerts"], repo);
+  const firstNext = await runCli(["slice", "next", "inventory-alerts"], repo);
+  await runCli(["slice", "status", "inventory-alerts", "add-data-source", "complete"], repo);
+  const secondNext = await runCli(["slice", "next", "inventory-alerts"], repo);
+
+  assert.match(addDependent.stdout, /add-report\tproposed\tAdd Report\tdepends-on:add-data-source/);
+  assert.match(list.stdout, /add-report\tproposed\tAdd Report\tdepends-on:add-data-source/);
+  assert.match(firstNext.stdout, /add-data-source\tproposed\tAdd Data Source/);
+  assert.match(secondNext.stdout, /add-report\tproposed\tAdd Report\tdepends-on:add-data-source/);
+  assert.match(secondNext.stdout, /pathfinder slice active inventory-alerts add-report/);
+});
+
+test("adds dependencies after creation and reports duplicate dependency errors", async () => {
+  const repo = await createTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Data Source",
+      "--description",
+      "Create local inventory data."
+    ],
+    repo
+  );
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+
+  const result = await runCli(["slice", "depend", "inventory-alerts", "add-report", "add-data-source"], repo);
+
+  assert.match(result.stdout, /add-report\tproposed\tAdd Report\tdepends-on:add-data-source/);
+  await assert.rejects(
+    () => runCli(["slice", "depend", "inventory-alerts", "add-report", "add-data-source"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Error: Slice 'add-report' already depends on 'add-data-source'\./.test(error.stderr)
+  );
+});
+
+test("reports when no slice is actionable", async () => {
+  const repo = await createTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Done Slice",
+      "--description",
+      "Already done."
+    ],
+    repo
+  );
+  await runCli(["slice", "status", "inventory-alerts", "done-slice", "complete"], repo);
+
+  const result = await runCli(["slice", "next", "inventory-alerts"], repo);
+
+  assert.match(result.stdout, /No actionable slices found\./);
 });
 
 test("starts a slice branch and records branch metadata", async () => {

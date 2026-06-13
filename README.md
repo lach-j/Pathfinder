@@ -61,11 +61,17 @@ Add slices and set the active slice:
 
 ```bash
 npm exec -- pathfinder slice add add-billing-foundation --title "Create local state" --description "Add filesystem-backed Pathfinder state files."
+npm exec -- pathfinder slice add add-billing-foundation --title "Add state tests" --description "Cover filesystem state behavior." --depends-on create-local-state
+npm exec -- pathfinder slice depend add-billing-foundation add-state-tests create-local-state
 npm exec -- pathfinder slice list add-billing-foundation
+npm exec -- pathfinder slice next add-billing-foundation
 npm exec -- pathfinder slice active add-billing-foundation create-local-state
 npm exec -- pathfinder slice status add-billing-foundation create-local-state in_progress
 npm exec -- pathfinder slice show-active
 ```
+
+`slice next` prints the first proposed or ready slice whose dependencies are complete, ordered by creation time.
+Dependencies are local to the workstream and are stored in `slices.json`.
 
 Start a local branch for a slice from an explicit base ref:
 
@@ -154,6 +160,7 @@ npm exec -- pathfinder current
 npm exec -- pathfinder requirement set add-billing-foundation --file ./requirements.md
 npm exec -- pathfinder requirement show add-billing-foundation
 npm exec -- pathfinder slice status add-billing-foundation create-local-state complete
+npm exec -- pathfinder slice next add-billing-foundation
 # Requires a clean working tree before running:
 npm exec -- pathfinder slice branch add-billing-foundation create-local-state --base main
 npm exec -- pathfinder review create add-billing-foundation --slice create-local-state --summary "Manual review passed."

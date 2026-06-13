@@ -97,6 +97,66 @@ test("updates slice status and branch metadata in human-readable state", async (
   assert.match(stored, /"branchName": "pathfinder\/slice-lifecycle\/create-branch"/);
 });
 
+test("stores slice dependencies and selects the next actionable slice", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Dependencies");
+  const first = await store.addSlice(workstream.id, "Add Data Source", "Create local data.");
+  const second = await store.addSlice(workstream.id, "Add Report", "Report reorder candidates.", [
+    first.id
+  ]);
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", workstream.id, "slices.json"),
+    "utf8"
+  );
+
+  assert.deepEqual(second.dependsOnSliceIds, [first.id]);
+  assert.match(stored, /"dependsOnSliceIds": \[/);
+  assert.equal((await store.getNextSlice(workstream.id))?.id, first.id);
+
+  await store.updateSliceStatus(workstream.id, first.id, "complete");
+
+  assert.equal((await store.getNextSlice(workstream.id))?.id, second.id);
+});
+
+test("adds slice dependencies after creation", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Dependencies");
+  const first = await store.addSlice(workstream.id, "Add Data Source", "Create local data.");
+  const second = await store.addSlice(workstream.id, "Add Report", "Report reorder candidates.");
+
+  const updated = await store.addSliceDependency(workstream.id, second.id, first.id);
+
+  assert.deepEqual(updated.dependsOnSliceIds, [first.id]);
+});
+
+test("validates slice dependencies", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Dependencies");
+  const first = await store.addSlice(workstream.id, "Add Data Source", "Create local data.");
+  const second = await store.addSlice(workstream.id, "Add Report", "Report reorder candidates.");
+
+  await assert.rejects(
+    () => store.addSlice(workstream.id, "Invalid", "Missing dependency.", ["missing"]),
+    PathfinderError
+  );
+  await assert.rejects(() => store.addSliceDependency(workstream.id, second.id, second.id), PathfinderError);
+  await assert.rejects(() => store.addSliceDependency(workstream.id, second.id, "missing"), PathfinderError);
+
+  await store.addSliceDependency(workstream.id, second.id, first.id);
+
+  await assert.rejects(() => store.addSliceDependency(workstream.id, second.id, first.id), PathfinderError);
+  await assert.rejects(
+    () => store.addSlice(workstream.id, "Duplicate", "Duplicate dependency.", [first.id, first.id]),
+    PathfinderError
+  );
+});
+
 test("validates slice status updates", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

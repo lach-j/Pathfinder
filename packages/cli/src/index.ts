@@ -11,6 +11,7 @@ interface OptionMap {
   body?: string;
   summary?: string;
   base?: string;
+  dependsOn?: string[];
 }
 
 const store = new PathfinderStore(process.cwd());
@@ -208,7 +209,7 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     const options = parseOptions(optionArgs);
     requireOption(options.title, "--title");
     requireOption(options.description, "--description");
-    const slice = await store.addSlice(workstreamId, options.title, options.description);
+    const slice = await store.addSlice(workstreamId, options.title, options.description, options.dependsOn ?? []);
     console.log(formatSlice(slice));
     return;
   }
@@ -235,6 +236,34 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     expectNoExtraArgs(extra);
     const active = await store.setActiveSlice(workstreamId, sliceId);
     console.log(`Active slice: ${active.workstream.id}/${active.slice.id}`);
+    return;
+  }
+
+  if (action === "depend") {
+    const [workstreamId, sliceId, dependencySliceId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    requireArgument(sliceId, "slice id");
+    requireArgument(dependencySliceId, "dependency slice id");
+    expectNoExtraArgs(extra);
+    const slice = await store.addSliceDependency(workstreamId, sliceId, dependencySliceId);
+    console.log(formatSlice(slice));
+    return;
+  }
+
+  if (action === "next") {
+    const [workstreamId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    expectNoExtraArgs(extra);
+    const slice = await store.getNextSlice(workstreamId);
+
+    if (!slice) {
+      console.log("No actionable slices found. Proposed or ready slices may be blocked by incomplete dependencies.");
+      return;
+    }
+
+    console.log(formatSlice(slice));
+    console.log(`Set active: pathfinder slice active ${workstreamId} ${slice.id}`);
+    console.log(`Start branch: pathfinder slice branch ${workstreamId} ${slice.id} --base <base-ref>`);
     return;
   }
 
@@ -292,7 +321,7 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
-  throw usageError("Unknown slice command. Expected add, list, active, status, branch, or show-active.");
+  throw usageError("Unknown slice command. Expected add, list, active, depend, next, status, branch, or show-active.");
 }
 
 async function runComment(action: string | undefined, args: string[]): Promise<void> {
@@ -404,6 +433,8 @@ function parseOptions(args: string[]): OptionMap {
       options.summary = value;
     } else if (flag === "--base") {
       options.base = value;
+    } else if (flag === "--depends-on") {
+      options.dependsOn = [...(options.dependsOn ?? []), value];
     } else {
       throw usageError(`Unknown option '${flag}'.`);
     }
@@ -415,7 +446,8 @@ function parseOptions(args: string[]): OptionMap {
 }
 
 function formatSlice(slice: Slice): string {
-  return `${slice.id}\t${slice.status}\t${slice.title}`;
+  const dependencies = slice.dependsOnSliceIds?.length ? `\tdepends-on:${slice.dependsOnSliceIds.join(",")}` : "";
+  return `${slice.id}\t${slice.status}\t${slice.title}${dependencies}`;
 }
 
 function formatComment(comment: ReviewComment): string {
@@ -532,9 +564,11 @@ Usage:
   pathfinder requirement show <workstream-id>
   pathfinder plan set <workstream-id> --file ./plan.md
   pathfinder plan show <workstream-id>
-  pathfinder slice add <workstream-id> --title "..." --description "..."
+  pathfinder slice add <workstream-id> --title "..." --description "..." [--depends-on <slice-id>]
   pathfinder slice list <workstream-id>
   pathfinder slice active <workstream-id> <slice-id>
+  pathfinder slice depend <workstream-id> <slice-id> <dependency-slice-id>
+  pathfinder slice next <workstream-id>
   pathfinder slice status <workstream-id> <slice-id> <status>
   pathfinder slice branch <workstream-id> <slice-id> --base <base-ref>
   pathfinder slice show-active

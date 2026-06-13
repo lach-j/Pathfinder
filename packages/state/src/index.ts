@@ -12,6 +12,7 @@ import {
   Workstream,
   assertNonEmptyText,
   createTimestamp,
+  findNextActionableSlice,
   generatePrMarkdown,
   isSliceStatus,
   nextAvailableId,
@@ -176,7 +177,12 @@ export class PathfinderStore {
     return readFile(path.join(root, "plan.md"), "utf8");
   }
 
-  async addSlice(workstreamId: string, title: string, description: string): Promise<Slice> {
+  async addSlice(
+    workstreamId: string,
+    title: string,
+    description: string,
+    dependsOnSliceIds: string[] = []
+  ): Promise<Slice> {
     const root = await this.requireWorkstreamRoot(workstreamId);
     const cleanTitle = assertNonEmptyText(title, "Slice title");
     const cleanDescription = assertNonEmptyText(description, "Slice description");
@@ -185,12 +191,14 @@ export class PathfinderStore {
       toUrlSafeId(cleanTitle),
       slicesFile.slices.map((slice) => slice.id)
     );
+    const dependencies = validateDependencies(workstreamId, slicesFile.slices, id, dependsOnSliceIds);
     const now = createTimestamp();
     const slice: Slice = {
       id,
       title: cleanTitle,
       description: cleanDescription,
       status: "proposed",
+      ...(dependencies.length > 0 ? { dependsOnSliceIds: dependencies } : {}),
       createdAt: now,
       updatedAt: now
     };
@@ -204,6 +212,38 @@ export class PathfinderStore {
     const root = await this.requireWorkstreamRoot(workstreamId);
     const slicesFile = await this.readSlices(root);
     return slicesFile.slices;
+  }
+
+  async addSliceDependency(
+    workstreamId: string,
+    sliceId: string,
+    dependencySliceId: string
+  ): Promise<Slice> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const slicesFile = await this.readSlices(root);
+    const index = slicesFile.slices.findIndex((candidate) => candidate.id === sliceId);
+
+    if (index === -1) {
+      throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    const dependencies = validateDependencies(workstreamId, slicesFile.slices, sliceId, [
+      ...(slicesFile.slices[index].dependsOnSliceIds ?? []),
+      dependencySliceId
+    ]);
+    const updated: Slice = {
+      ...slicesFile.slices[index],
+      dependsOnSliceIds: dependencies,
+      updatedAt: createTimestamp()
+    };
+
+    slicesFile.slices[index] = updated;
+    await writeJson(path.join(root, "slices.json"), slicesFile);
+    return updated;
+  }
+
+  async getNextSlice(workstreamId: string): Promise<Slice | undefined> {
+    return findNextActionableSlice(await this.listSlices(workstreamId));
   }
 
   async updateSliceStatus(workstreamId: string, sliceId: string, status: string): Promise<Slice> {
@@ -583,4 +623,37 @@ async function readJson<T>(filePath: string): Promise<T> {
 
 async function writeJson(filePath: string, value: unknown): Promise<void> {
   await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+function validateDependencies(
+  workstreamId: string,
+  slices: Slice[],
+  sliceId: string,
+  dependencySliceIds: string[]
+): string[] {
+  const seen = new Set<string>();
+  const dependencies: string[] = [];
+
+  for (const rawDependencyId of dependencySliceIds) {
+    const dependencyId = assertNonEmptyText(rawDependencyId, "Dependency slice id");
+
+    if (dependencyId === sliceId) {
+      throw new PathfinderError(`Slice '${sliceId}' cannot depend on itself.`);
+    }
+
+    if (!slices.some((slice) => slice.id === dependencyId)) {
+      throw new PathfinderError(
+        `Dependency slice '${dependencyId}' was not found in workstream '${workstreamId}'.`
+      );
+    }
+
+    if (seen.has(dependencyId)) {
+      throw new PathfinderError(`Slice '${sliceId}' already depends on '${dependencyId}'.`);
+    }
+
+    seen.add(dependencyId);
+    dependencies.push(dependencyId);
+  }
+
+  return dependencies;
 }
