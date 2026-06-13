@@ -29,6 +29,7 @@ Do not add authentication, billing, cloud sync, organisations, roles, hosted bac
 ```text
 packages/
   core/   domain types and validation
+  git/    local Git adapter
   state/  filesystem persistence under .pathfinder/
   cli/    command-line interface
 ```
@@ -60,6 +61,7 @@ State currently lives under:
 | 06 | done | `docs/slices/06-pr-markdown-generation.md` |
 | 07 | done | `docs/slices/07-current-context-command.md` |
 | 08 | done | `docs/slices/08-cli-polish.md` |
+| 09 | ready | `docs/slices/09-mvp-review.md` |
 
 Status values:
 
@@ -99,5 +101,6 @@ The safest next order is:
 5. PR markdown generation
 6. Current context command
 7. CLI polish
+8. MVP review follow-up
 
 The order can change if a slice doc says it has no dependency on earlier slices.
