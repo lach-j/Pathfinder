@@ -35,6 +35,7 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder comment list",
     "pathfinder comment resolve",
     "pathfinder review create",
+    "pathfinder review run --base <base-ref>",
     "pathfinder review list",
     "pathfinder review show",
     "pathfinder evidence add",
@@ -489,6 +490,80 @@ test("reports missing and invalid summary base refs clearly", async () => {
       error.code === 1 &&
       /Error: Base ref 'missing' was not found or is not a commit\./.test(error.stderr)
   );
+});
+
+test("runs a deterministic review against committed branch changes", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await writeFile(path.join(repo, "requirements.md"), "# Requirements\n\nReport reorder candidates.\n", "utf8");
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd a local report.\n", "utf8");
+  await runCli(["requirement", "set", "inventory-alerts", "--file", "./requirements.md"], repo);
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await runCli(["slice", "status", "inventory-alerts", "add-report", "in_progress"], repo);
+  await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--slice",
+      "add-report",
+      "--body",
+      "Confirm docs mention the report."
+    ],
+    repo
+  );
+  await runCli(
+    [
+      "evidence",
+      "add",
+      "inventory-alerts",
+      "--slice",
+      "add-report",
+      "--kind",
+      "test",
+      "--description",
+      "npm test passed"
+    ],
+    repo
+  );
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-review"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+
+  const result = await runCli(["review", "run", "--base", "main"], repo);
+  const list = await runCli(["review", "list", "inventory-alerts"], repo);
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", "inventory-alerts", "reviews.json"),
+    "utf8"
+  );
+
+  assert.match(result.stdout, /# Pathfinder Deterministic Review/);
+  assert.match(result.stdout, /Review: deterministic-review/);
+  assert.match(result.stdout, /Base ref: main/);
+  assert.match(result.stdout, /- \[warning\] 1 unresolved comment\(s\) remain for the active slice\./);
+  assert.match(result.stdout, /- npm-test-passed \[test\]: npm test passed/);
+  assert.match(result.stdout, /- A\tsource\tsrc\/report\.ts/);
+  assert.match(list.stdout, /deterministic-review\topen\tadd-report\tDeterministic review against main: 1 warning\(s\)\./);
+  assert.match(stored, /"checks": \[/);
 });
 
 async function runCli(args: string[], cwd = process.cwd()): Promise<{ stdout: string; stderr: string }> {

@@ -6,6 +6,7 @@ import {
   assertNonEmptyText,
   categorizeRepositoryPath,
   findNextActionableSlice,
+  generateDeterministicReview,
   generatePrMarkdown,
   isSliceActionable,
   isSliceStatus,
@@ -181,6 +182,104 @@ test("classifies repository paths conservatively", () => {
   assert.equal(categorizeRepositoryPath(".github/workflows/test.yml"), "configuration");
   assert.equal(categorizeRepositoryPath(".pathfinder/workstreams/demo/slices.json"), "state");
   assert.equal(categorizeRepositoryPath("assets/logo.png"), "other");
+});
+
+test("generates deterministic review checks with warnings", () => {
+  const result = generateDeterministicReview({
+    baseRef: "main",
+    workstream: {
+      id: "inventory-alerts",
+      title: "Inventory Alerts",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    },
+    activeSlice: testSlice("add-report", "proposed", "2026-01-01T00:00:00.000Z"),
+    planMarkdown: "",
+    requirementsMarkdown: "",
+    unresolvedComments: [
+      {
+        id: "needs-tests",
+        sliceId: "add-report",
+        body: "Needs tests.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    evidence: [],
+    repositorySummary: {
+      baseRef: "main",
+      headRef: "feature",
+      headCommit: "abc123",
+      mergeBase: "abc000",
+      files: []
+    }
+  });
+
+  assert.equal(result.status, "open");
+  assert.match(result.summary, /7 warning\(s\)/);
+  assert.deepEqual(
+    result.checks.filter((check) => check.severity === "warning").map((check) => check.message),
+    [
+      "Active slice status is proposed; expected in_progress, review, or complete.",
+      "No committed diff found against main.",
+      "No source, test, documentation, or configuration files changed in the committed diff.",
+      "1 unresolved comment(s) remain for the active slice.",
+      "No evidence recorded for the active slice.",
+      "Plan is empty.",
+      "Requirements are empty."
+    ]
+  );
+});
+
+test("generates passing deterministic review checks with category summary", () => {
+  const result = generateDeterministicReview({
+    baseRef: "main",
+    workstream: {
+      id: "inventory-alerts",
+      title: "Inventory Alerts",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    },
+    activeSlice: testSlice("add-report", "review", "2026-01-01T00:00:00.000Z"),
+    planMarkdown: "# Plan",
+    requirementsMarkdown: "# Requirements",
+    unresolvedComments: [],
+    evidence: [
+      {
+        id: "npm-test",
+        sliceId: "add-report",
+        kind: "test",
+        description: "npm test",
+        createdAt: "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    repositorySummary: {
+      baseRef: "main",
+      headRef: "feature",
+      headCommit: "abc123",
+      mergeBase: "abc000",
+      files: [
+        {
+          path: "src/index.ts",
+          status: "added",
+          category: "source"
+        },
+        {
+          path: "src/index.test.ts",
+          status: "added",
+          category: "test"
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.status, "complete");
+  assert.match(result.summary, /0 warning\(s\)/);
+  assert.equal(result.checks.every((check) => check.severity === "info"), true);
+  assert.match(
+    result.checks.map((check) => check.message).join("\n"),
+    /Changed categories: source 1, test 1/
+  );
 });
 
 function testSlice(

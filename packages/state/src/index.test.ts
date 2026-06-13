@@ -341,6 +341,78 @@ test("creates, lists, and gets local review records", async () => {
   assert.match(storedFile, /\n    \{/);
 });
 
+test("runs and stores deterministic reviews for the active slice", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const planPath = path.join(repo, "plan.md");
+  const requirementsPath = path.join(repo, "requirements.md");
+  await writeFile(planPath, "# Plan\n\nAdd deterministic checks.\n", "utf8");
+  await writeFile(requirementsPath, "# Requirements\n\nReview local branch changes.\n", "utf8");
+  await store.setPlanFromFile(workstream.id, planPath);
+  await store.setRequirementsFromFile(workstream.id, requirementsPath);
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add review support.");
+  await store.updateSliceStatus(workstream.id, slice.id, "in_progress");
+  await store.setActiveSlice(workstream.id, slice.id);
+  await store.addComment(workstream.id, slice.id, "Needs docs.");
+  await store.addEvidence(workstream.id, slice.id, "test", "npm test passed.");
+
+  const { review, result } = await store.runDeterministicReview("main", {
+    baseRef: "main",
+    headRef: "feature",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "packages/core/src/index.ts",
+        status: "modified",
+        category: "source"
+      }
+    ]
+  });
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", workstream.id, "reviews.json"),
+    "utf8"
+  );
+
+  assert.equal(review.id, "deterministic-review");
+  assert.equal(review.sliceId, slice.id);
+  assert.equal(review.status, "open");
+  assert.match(review.summary, /1 warning\(s\)/);
+  assert.equal(review.comments.length, 1);
+  assert.equal(review.evidence.length, 1);
+  assert.equal(review.checks?.length, result.checks.length);
+  assert.match(stored, /"checks": \[/);
+  assert.match(stored, /Needs docs\./);
+  assert.match(stored, /npm test passed\./);
+});
+
+test("deterministic review warns without evidence, plan, requirements, or diff", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add review support.");
+  await store.setActiveSlice(workstream.id, slice.id);
+
+  const { review } = await store.runDeterministicReview("main", {
+    baseRef: "main",
+    headRef: "feature",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: []
+  });
+
+  assert.equal(review.status, "open");
+  assert.match(review.summary, /6 warning\(s\)/);
+  assert.equal(review.evidence.length, 0);
+  assert.match(
+    review.checks?.map((check) => check.message).join("\n") ?? "",
+    /No evidence recorded for the active slice/
+  );
+});
+
 test("validates review workstream, slice, summary, and review ids", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

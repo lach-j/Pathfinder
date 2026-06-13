@@ -109,6 +109,16 @@ npm exec -- pathfinder review list add-billing-foundation
 npm exec -- pathfinder review show add-billing-foundation manual-review-passed
 ```
 
+Run deterministic local review checks against the active slice and committed branch diff:
+
+```bash
+npm exec -- pathfinder review run --base main
+```
+
+This records a review under the active workstream and prints a checklist covering slice status,
+committed diff presence, changed file categories, unresolved comments, evidence, plan, and
+requirements. It is deterministic local review only; it does not call AI services or external APIs.
+
 Attach and list local evidence for a slice:
 
 ```bash
@@ -183,6 +193,7 @@ npm exec -- pathfinder slice next add-billing-foundation
 # Requires a clean working tree before running:
 npm exec -- pathfinder slice branch add-billing-foundation create-local-state --base main
 npm exec -- pathfinder review create add-billing-foundation --slice create-local-state --summary "Manual review passed."
+npm exec -- pathfinder review run --base main
 npm exec -- pathfinder review list add-billing-foundation
 npm exec -- pathfinder review show add-billing-foundation manual-review-passed
 npm exec -- pathfinder evidence add add-billing-foundation --slice create-local-state --kind test --description "npm test passed"

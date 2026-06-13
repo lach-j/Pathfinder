@@ -3,9 +3,11 @@ import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promi
 import path from "node:path";
 
 import {
+  DeterministicReviewResult,
   Evidence,
   PathfinderError,
   Project,
+  RepositorySummary,
   Review,
   ReviewComment,
   Slice,
@@ -14,6 +16,7 @@ import {
   assertNonEmptyText,
   createTimestamp,
   findNextActionableSlice,
+  generateDeterministicReview,
   generatePrMarkdown,
   isEvidenceKind,
   isSliceStatus,
@@ -41,6 +44,11 @@ export interface CurrentContext {
 export interface GeneratedPrMarkdown {
   markdown: string;
   path: string;
+}
+
+export interface DeterministicReviewRecord {
+  review: Review;
+  result: DeterministicReviewResult;
 }
 
 export interface SliceBranchMetadata {
@@ -350,6 +358,56 @@ export class PathfinderStore {
     reviewsFile.reviews.push(review);
     await writeJson(path.join(root, "reviews.json"), reviewsFile);
     return review;
+  }
+
+  async runDeterministicReview(
+    baseRef: string,
+    repositorySummary: RepositorySummary
+  ): Promise<DeterministicReviewRecord> {
+    const active = await this.getActiveSlice();
+
+    if (!active) {
+      throw new PathfinderError("No active slice set. Use 'pathfinder slice active <workstream-id> <slice-id>' first.");
+    }
+
+    const root = await this.requireWorkstreamRoot(active.workstream.id);
+    const comments = (await this.listComments(active.workstream.id)).filter((comment) => !comment.resolved);
+    const evidence = (await this.listEvidence(active.workstream.id)).filter(
+      (item) => item.sliceId === active.slice.id
+    );
+    const result = generateDeterministicReview({
+      baseRef,
+      workstream: active.workstream,
+      activeSlice: active.slice,
+      planMarkdown: await this.getPlan(active.workstream.id),
+      requirementsMarkdown: await this.getRequirements(active.workstream.id),
+      unresolvedComments: comments,
+      evidence,
+      repositorySummary
+    });
+
+    const reviewsFile = await this.readReviews(root);
+    const id = nextAvailableId(
+      "deterministic-review",
+      reviewsFile.reviews.map((review) => review.id)
+    );
+    const now = createTimestamp();
+    const review: Review = {
+      id,
+      sliceId: active.slice.id,
+      status: result.status,
+      summary: result.summary,
+      comments: comments.filter((comment) => !comment.sliceId || comment.sliceId === active.slice.id),
+      evidence,
+      checks: result.checks,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    reviewsFile.reviews.push(review);
+    await writeJson(path.join(root, "reviews.json"), reviewsFile);
+
+    return { review, result };
   }
 
   async listReviews(workstreamId: string): Promise<Review[]> {

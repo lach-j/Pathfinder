@@ -5,6 +5,7 @@ import {
   RepositoryChangeStatus,
   RepositorySummary,
   Review,
+  ReviewCheck,
   ReviewComment,
   Slice
 } from "@pathfinder/core";
@@ -389,6 +390,16 @@ async function runComment(action: string | undefined, args: string[]): Promise<v
 }
 
 async function runReview(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "run") {
+    const options = parseOptions(args);
+    requireOption(options.base, "--base");
+    const git = new GitAdapter({ cwd: process.cwd() });
+    const repositorySummary = await git.getCommittedSummaryAgainstBase(options.base);
+    const result = await store.runDeterministicReview(options.base, repositorySummary);
+    process.stdout.write(formatDeterministicReview(result.review, repositorySummary));
+    return;
+  }
+
   if (action === "create") {
     const [workstreamId, ...optionArgs] = args;
     requireArgument(workstreamId, "workstream id");
@@ -425,7 +436,7 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
     return;
   }
 
-  throw usageError("Unknown review command. Expected create, list, or show.");
+  throw usageError("Unknown review command. Expected run, create, list, or show.");
 }
 
 async function runEvidence(action: string | undefined, args: string[]): Promise<void> {
@@ -523,6 +534,76 @@ function formatComment(comment: ReviewComment): string {
 
 function formatReview(review: Review): string {
   return `${review.id}\t${review.status}\t${review.sliceId}\t${review.summary}`;
+}
+
+function formatDeterministicReview(review: Review, repositorySummary: RepositorySummary): string {
+  const lines = [
+    "# Pathfinder Deterministic Review",
+    "",
+    `Review: ${review.id}`,
+    `Status: ${review.status}`,
+    `Slice: ${review.sliceId}`,
+    `Base ref: ${repositorySummary.baseRef}`,
+    `Head ref: ${repositorySummary.headRef}`,
+    `Head commit: ${repositorySummary.headCommit}`,
+    `Merge base: ${repositorySummary.mergeBase}`,
+    "",
+    "## Checks",
+    "",
+    ...formatReviewChecks(review.checks ?? []),
+    "",
+    "## Unresolved Comments",
+    "",
+    ...formatReviewComments(review.comments),
+    "",
+    "## Evidence",
+    "",
+    ...formatReviewEvidence(review.evidence),
+    "",
+    "## Changed Files",
+    "",
+    ...formatReviewFiles(repositorySummary)
+  ];
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatReviewChecks(checks: ReviewCheck[]): string[] {
+  if (checks.length === 0) {
+    return ["- [info] No deterministic checks recorded."];
+  }
+
+  return checks.map((check) => `- [${check.severity}] ${check.message}`);
+}
+
+function formatReviewComments(comments: ReviewComment[]): string[] {
+  if (comments.length === 0) {
+    return ["No unresolved comments for the active slice."];
+  }
+
+  return comments.map((comment) => `- ${comment.id}: ${comment.body}`);
+}
+
+function formatReviewEvidence(evidence: Evidence[]): string[] {
+  if (evidence.length === 0) {
+    return ["No evidence recorded for the active slice."];
+  }
+
+  return evidence.map((item) => {
+    const pathText = item.path ? ` (${item.path})` : "";
+    return `- ${item.id} [${item.kind}]: ${item.description}${pathText}`;
+  });
+}
+
+function formatReviewFiles(summary: RepositorySummary): string[] {
+  if (summary.files.length === 0) {
+    return ["No committed file changes found."];
+  }
+
+  return summary.files.map((file) => {
+    const pathText = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
+    return `- ${formatChangeStatus(file.status)}\t${file.category}\t${pathText}`;
+  });
 }
 
 function formatEvidence(evidence: Evidence): string {
@@ -733,6 +814,7 @@ Usage:
   pathfinder comment list <workstream-id>
   pathfinder comment resolve <workstream-id> <comment-id>
   pathfinder review create <workstream-id> --slice <slice-id> --summary "..."
+  pathfinder review run --base <base-ref>
   pathfinder review list <workstream-id>
   pathfinder review show <workstream-id> <review-id>
   pathfinder evidence add <workstream-id> --slice <slice-id> --kind <kind> --description "..." [--path ./artifact.txt]
