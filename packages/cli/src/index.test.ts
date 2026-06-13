@@ -964,6 +964,11 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     assert.match(htmlText, /Pathfinder Review/);
     assert.match(htmlText, /id="app"/);
     assert.match(htmlText, /Changed files/);
+    assert.match(htmlText, /Add file comment/);
+    assert.match(htmlText, /Add line comment/);
+    assert.match(htmlText, /Resolve/);
+    assert.match(htmlText, /Open comments/);
+    assert.match(htmlText, /Resolved comments/);
     assert.equal(current.activeSlice.id, "add-report");
     assert.equal(workstreams.workstreams[0].id, "inventory-alerts");
     assert.equal(sessions.sessions[0].id, "review-add-report");

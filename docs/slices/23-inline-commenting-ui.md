@@ -1,6 +1,6 @@
 # Slice 23: Inline Commenting UI
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -73,6 +73,38 @@ Smoke test:
 ```bash
 npm exec -- pathfinder review serve --port 4783
 npm exec -- pathfinder comment list <workstream-id> --session <session-id>
+```
+
+## Implementation Notes
+
+- Added file-level and line-level comment creation controls to the local diff viewer.
+- Added per-line comment affordances on reviewable diff rows, with inline forms that save through the existing local comment API.
+- Added resolve buttons for open comments and live comment refresh after add/resolve without restarting the server.
+- Added all/open/resolved comment filtering in the browser while still fetching persisted local state from `.pathfinder/`.
+- Kept the implementation dependency-light inside the local review server UI; no auth, hosted backend, external APIs, AI review, threaded replies, editing, or stale remapping were added.
+- Updated README documentation and server regression coverage for the new browser controls.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Browser smoke tested with a disposable local Git repository and real review session:
+
+```bash
+npm exec -- pathfinder review serve --port 4783
+```
+
+Verified `http://127.0.0.1:4783` can add an inline line comment, add a file-level
+comment, resolve a comment, filter comments, and reflect the resulting comments
+through:
+
+```bash
+npm exec -- pathfinder comment list inventory-alerts --session review-add-report
 ```
 
 ## Suggested Prompt

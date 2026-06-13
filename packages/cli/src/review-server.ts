@@ -377,6 +377,7 @@ function diffViewerHtml(): string {
         --selected: #e7f0ff;
         --comment: #fff7d8;
         --comment-border: #d8b23f;
+        --focus: #285f9f;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
@@ -391,7 +392,8 @@ function diffViewerHtml(): string {
       }
 
       button,
-      select {
+      select,
+      textarea {
         font: inherit;
       }
 
@@ -446,7 +448,25 @@ function diffViewerHtml(): string {
         min-width: 260px;
       }
 
-      .session-control label {
+      .review-controls {
+        display: flex;
+        gap: 12px;
+        align-items: end;
+        flex-wrap: wrap;
+        justify-content: end;
+      }
+
+      .control {
+        display: grid;
+        gap: 6px;
+        min-width: 190px;
+      }
+
+      .session-control {
+        min-width: 260px;
+      }
+
+      .control label {
         color: var(--muted);
         font-size: 12px;
       }
@@ -458,6 +478,23 @@ function diffViewerHtml(): string {
         background: #fff;
         color: var(--text);
         padding: 8px 10px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 84px;
+        resize: vertical;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        padding: 8px 10px;
+        color: var(--text);
+      }
+
+      textarea:focus,
+      select:focus,
+      button:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
       }
 
       .layout {
@@ -565,6 +602,14 @@ function diffViewerHtml(): string {
         border: 1px solid var(--border);
         border-radius: 8px 8px 0 0;
         padding: 12px 14px;
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: start;
+      }
+
+      .file-heading-main {
+        min-width: 0;
         display: grid;
         gap: 3px;
       }
@@ -578,6 +623,42 @@ function diffViewerHtml(): string {
       .file-heading .file-subtitle {
         color: var(--muted);
         font-size: 12px;
+      }
+
+      .button {
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--text);
+        padding: 7px 10px;
+        font-size: 13px;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      .button:hover {
+        background: var(--panel-soft);
+      }
+
+      .button-primary {
+        border-color: #285f9f;
+        background: #285f9f;
+        color: #fff;
+      }
+
+      .button-primary:hover {
+        background: #1e4d82;
+      }
+
+      .button-quiet {
+        border-color: transparent;
+        background: transparent;
+        color: var(--muted);
+      }
+
+      .button-quiet:hover {
+        background: var(--panel-soft);
+        color: var(--text);
       }
 
       .diff-table {
@@ -595,6 +676,37 @@ function diffViewerHtml(): string {
       .diff-table td {
         vertical-align: top;
         border-top: 1px solid #edf0f3;
+      }
+
+      .line-action {
+        width: 42px;
+        padding: 2px 4px;
+        background: var(--panel-soft);
+        text-align: center;
+        user-select: none;
+      }
+
+      .comment-button {
+        width: 28px;
+        height: 26px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1;
+        opacity: 0;
+      }
+
+      tr:hover .comment-button,
+      .comment-button:focus-visible {
+        opacity: 1;
+      }
+
+      .comment-button:hover {
+        border-color: var(--border-strong);
+        background: #fff;
+        color: var(--text);
       }
 
       .line-number {
@@ -620,6 +732,7 @@ function diffViewerHtml(): string {
       }
 
       .line-addition .code,
+      .line-addition .line-action,
       .line-addition .line-number {
         background: var(--added);
       }
@@ -629,6 +742,7 @@ function diffViewerHtml(): string {
       }
 
       .line-deletion .code,
+      .line-deletion .line-action,
       .line-deletion .line-number {
         background: var(--deleted);
       }
@@ -638,7 +752,10 @@ function diffViewerHtml(): string {
       }
 
       .line-metadata .code,
-      .hunk-row .code {
+      .line-metadata .line-action,
+      .hunk-row .code,
+      .hunk-row .line-action,
+      .hunk-row .line-number {
         background: var(--metadata);
         color: var(--muted);
       }
@@ -657,7 +774,14 @@ function diffViewerHtml(): string {
         border-left: 3px solid var(--comment-border);
         padding-left: 10px;
         display: grid;
-        gap: 3px;
+        gap: 7px;
+      }
+
+      .comment-header {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        align-items: center;
       }
 
       .comment-meta {
@@ -675,6 +799,34 @@ function diffViewerHtml(): string {
 
       .comment-resolved {
         opacity: 0.68;
+      }
+
+      .comment-form-row td {
+        background: #fffdf2;
+        border-top: 1px solid var(--comment-border);
+      }
+
+      .comment-form {
+        display: grid;
+        gap: 8px;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+
+      .comment-form-title {
+        color: #72590b;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .comment-form-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .status-text {
+        color: var(--muted);
+        font-size: 12px;
       }
 
       .empty,
@@ -701,6 +853,15 @@ function diffViewerHtml(): string {
           min-width: 0;
         }
 
+        .review-controls {
+          justify-content: stretch;
+        }
+
+        .control {
+          min-width: 0;
+          flex: 1 1 180px;
+        }
+
         .layout {
           grid-template-columns: 1fr;
         }
@@ -720,8 +881,17 @@ function diffViewerHtml(): string {
           padding-inline: 5px;
         }
 
+        .line-action {
+          width: 34px;
+          padding-inline: 2px;
+        }
+
         .code {
           padding-inline: 7px;
+        }
+
+        .file-heading {
+          display: grid;
         }
       }
     </style>
@@ -744,7 +914,10 @@ function diffViewerHtml(): string {
         session: undefined,
         diff: undefined,
         comments: [],
-        selectedPath: undefined
+        selectedPath: undefined,
+        commentFilter: "all",
+        draftTarget: undefined,
+        statusMessage: ""
       };
 
       init().catch((error) => {
@@ -783,21 +956,32 @@ function diffViewerHtml(): string {
           "/api/workstreams/" + encodeURIComponent(workstreamId) +
           "/review-sessions/" + encodeURIComponent(sessionId) + "/diff"
         );
-        const commentsPayload = await api(
-          "/api/workstreams/" + encodeURIComponent(workstreamId) +
-          "/comments?session=" + encodeURIComponent(sessionId)
-        );
+        const commentsPayload = await fetchComments(workstreamId, sessionId);
 
         state.session = diffPayload.session;
         state.diff = diffPayload.diff;
         state.comments = commentsPayload.comments || [];
         state.selectedPath = firstFilePath(state.diff) || undefined;
+        state.draftTarget = undefined;
         renderShell();
         renderDiff();
       }
 
-      async function api(path) {
-        const response = await fetch(path, { headers: { "accept": "application/json" } });
+      async function fetchComments(workstreamId, sessionId) {
+        return api(
+          "/api/workstreams/" + encodeURIComponent(workstreamId) +
+          "/comments?session=" + encodeURIComponent(sessionId)
+        );
+      }
+
+      async function api(path, init) {
+        const response = await fetch(path, {
+          headers: {
+            "accept": "application/json",
+            ...(init && init.body ? { "content-type": "application/json" } : {})
+          },
+          ...(init || {})
+        });
         const text = await response.text();
         let body;
         try {
@@ -824,6 +1008,14 @@ function diffViewerHtml(): string {
             escapeHtml(session.id) + " - " + escapeHtml(session.baseRef) + " to " + escapeHtml(session.headRef) +
             "</option>";
         }).join("");
+        const filterOptions = [
+          ["all", "All comments"],
+          ["open", "Open comments"],
+          ["resolved", "Resolved comments"]
+        ].map(([value, label]) => {
+          const selected = state.commentFilter === value ? " selected" : "";
+          return "<option value=\\"" + value + "\\"" + selected + ">" + label + "</option>";
+        }).join("");
 
         app.innerHTML =
           "<section class=\\"topbar\\">" +
@@ -833,9 +1025,15 @@ function diffViewerHtml(): string {
               "<div class=\\"slice\\">" + escapeHtml(sliceText) + "</div>" +
             "</div>" +
             (state.sessions.length > 0
-              ? "<div class=\\"session-control\\">" +
-                  "<label for=\\"session-select\\">Review session</label>" +
-                  "<select id=\\"session-select\\">" + sessionOptions + "</select>" +
+              ? "<div class=\\"review-controls\\">" +
+                  "<div class=\\"control session-control\\">" +
+                    "<label for=\\"session-select\\">Review session</label>" +
+                    "<select id=\\"session-select\\">" + sessionOptions + "</select>" +
+                  "</div>" +
+                  "<div class=\\"control\\">" +
+                    "<label for=\\"comment-filter\\">Comments</label>" +
+                    "<select id=\\"comment-filter\\">" + filterOptions + "</select>" +
+                  "</div>" +
                 "</div>"
               : "") +
           "</section>" +
@@ -848,6 +1046,15 @@ function diffViewerHtml(): string {
         if (select) {
           select.addEventListener("change", () => {
             selectSession(select.value).catch((error) => renderError(error.message));
+          });
+        }
+
+        const filter = document.querySelector("#comment-filter");
+        if (filter) {
+          filter.addEventListener("change", () => {
+            state.commentFilter = filter.value;
+            state.draftTarget = undefined;
+            renderDiff();
           });
         }
       }
@@ -908,6 +1115,10 @@ function diffViewerHtml(): string {
         const stats = fileStats(file);
         const rows = [];
 
+        if (draftMatchesFile(file)) {
+          rows.push(commentFormRow(file));
+        }
+
         for (const comment of fileComments) {
           rows.push(commentRow(comment));
         }
@@ -915,6 +1126,7 @@ function diffViewerHtml(): string {
         for (const hunk of file.hunks || []) {
           rows.push(
             "<tr class=\\"hunk-row\\">" +
+              "<td class=\\"line-action\\"></td>" +
               "<td class=\\"line-number\\"></td>" +
               "<td class=\\"line-number\\"></td>" +
               "<td class=\\"code\\">" + escapeHtml(hunk.header) + "</td>" +
@@ -923,6 +1135,9 @@ function diffViewerHtml(): string {
 
           for (const line of hunk.lines || []) {
             rows.push(diffLineRow(line));
+            if (draftMatchesLine(file, line)) {
+              rows.push(commentFormRow(file));
+            }
             for (const comment of commentsForLine(file, line)) {
               rows.push(commentRow(comment));
             }
@@ -931,21 +1146,33 @@ function diffViewerHtml(): string {
 
         pane.innerHTML =
           "<div class=\\"file-heading\\">" +
-            "<h2>" + escapeHtml(file.path) + "</h2>" +
-            "<div class=\\"file-subtitle\\">" + escapeHtml(file.status || "modified") +
-              " - +" + stats.additions + " -" + stats.deletions +
-              (state.session ? " - " + escapeHtml(state.session.baseRef) + " to " + escapeHtml(state.session.headRef) : "") +
+            "<div class=\\"file-heading-main\\">" +
+              "<h2>" + escapeHtml(file.path) + "</h2>" +
+              "<div class=\\"file-subtitle\\">" + escapeHtml(file.status || "modified") +
+                " - +" + stats.additions + " -" + stats.deletions +
+                (state.session ? " - " + escapeHtml(state.session.baseRef) + " to " + escapeHtml(state.session.headRef) : "") +
+              "</div>" +
+              (state.statusMessage ? "<div class=\\"status-text\\">" + escapeHtml(state.statusMessage) + "</div>" : "") +
             "</div>" +
+            "<button class=\\"button\\" type=\\"button\\" id=\\"file-comment-button\\">Add file comment</button>" +
           "</div>" +
           "<table class=\\"diff-table\\" aria-label=\\"Unified diff for " + escapeAttribute(file.path) + "\\">" +
             "<tbody>" + (rows.join("") || emptyDiffRows()) + "</tbody>" +
           "</table>";
+
+        bindSelectedFileActions(file);
       }
 
       function diffLineRow(line) {
         const oldNumber = line.oldLineNumber || "";
         const newNumber = line.newLineNumber || "";
+        const target = lineCommentTarget(line);
+        const action = target
+          ? "<button class=\\"comment-button\\" type=\\"button\\" title=\\"Add line comment\\" aria-label=\\"Add line comment\\" " +
+              "data-comment-side=\\"" + escapeAttribute(target.side) + "\\" data-comment-line=\\"" + escapeAttribute(String(target.lineNumber)) + "\\">+</button>"
+          : "";
         return "<tr class=\\"line-" + escapeAttribute(line.kind) + "\\">" +
+          "<td class=\\"line-action\\">" + action + "</td>" +
           "<td class=\\"line-number\\">" + escapeHtml(String(oldNumber)) + "</td>" +
           "<td class=\\"line-number\\">" + escapeHtml(String(newNumber)) + "</td>" +
           "<td class=\\"code\\"><span class=\\"prefix\\">" + escapeHtml(linePrefix(line.kind)) + "</span>" + escapeHtml(line.text || "") + "</td>" +
@@ -959,25 +1186,175 @@ function diffViewerHtml(): string {
           : "file comment";
         const resolvedClass = comment.resolved ? " comment-resolved" : "";
         return "<tr class=\\"comment-row\\">" +
+          "<td class=\\"line-action\\"></td>" +
           "<td class=\\"line-number\\"></td>" +
           "<td class=\\"line-number\\"></td>" +
           "<td class=\\"comment-cell\\">" +
             "<div class=\\"comment" + resolvedClass + "\\">" +
-              "<div class=\\"comment-meta\\">" + escapeHtml(comment.id) + " - " + escapeHtml(targetText) + (comment.resolved ? " - resolved" : "") + "</div>" +
+              "<div class=\\"comment-header\\">" +
+                "<div class=\\"comment-meta\\">" + escapeHtml(comment.id) + " - " + escapeHtml(targetText) + (comment.resolved ? " - resolved" : "") + "</div>" +
+                (!comment.resolved ? "<button class=\\"button button-quiet\\" type=\\"button\\" data-resolve-comment=\\"" + escapeAttribute(comment.id) + "\\">Resolve</button>" : "") +
+              "</div>" +
               "<div class=\\"comment-body\\">" + escapeHtml(comment.body) + "</div>" +
             "</div>" +
           "</td>" +
         "</tr>";
       }
 
+      function commentFormRow(file) {
+        const target = state.draftTarget || {};
+        const title = target.type === "line"
+          ? "Add comment on " + target.side + " line " + target.lineNumber
+          : "Add file comment";
+        return "<tr class=\\"comment-form-row\\">" +
+          "<td class=\\"line-action\\"></td>" +
+          "<td class=\\"line-number\\"></td>" +
+          "<td class=\\"line-number\\"></td>" +
+          "<td class=\\"comment-cell\\">" +
+            "<form class=\\"comment-form\\" id=\\"comment-form\\">" +
+              "<div class=\\"comment-form-title\\">" + escapeHtml(title) + "</div>" +
+              "<textarea id=\\"comment-body\\" name=\\"body\\" required placeholder=\\"Write review feedback...\\"></textarea>" +
+              "<div class=\\"comment-form-actions\\">" +
+                "<button class=\\"button button-quiet\\" type=\\"button\\" id=\\"cancel-comment\\">Cancel</button>" +
+                "<button class=\\"button button-primary\\" type=\\"submit\\">Save comment</button>" +
+              "</div>" +
+            "</form>" +
+          "</td>" +
+        "</tr>";
+      }
+
+      function bindSelectedFileActions(file) {
+        const fileButton = document.querySelector("#file-comment-button");
+        if (fileButton) {
+          fileButton.addEventListener("click", () => {
+            state.draftTarget = {
+              type: "file",
+              sessionId: state.session.id,
+              filePath: file.path
+            };
+            state.statusMessage = "";
+            renderSelectedFile(file);
+          });
+        }
+
+        document.querySelectorAll("[data-comment-line]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.draftTarget = {
+              type: "line",
+              sessionId: state.session.id,
+              filePath: file.path,
+              side: button.getAttribute("data-comment-side"),
+              lineNumber: Number(button.getAttribute("data-comment-line"))
+            };
+            state.statusMessage = "";
+            renderSelectedFile(file);
+          });
+        });
+
+        document.querySelectorAll("[data-resolve-comment]").forEach((button) => {
+          button.addEventListener("click", () => {
+            resolveComment(button.getAttribute("data-resolve-comment")).catch((error) => {
+              state.statusMessage = error.message;
+              renderSelectedFile(file);
+            });
+          });
+        });
+
+        const cancel = document.querySelector("#cancel-comment");
+        if (cancel) {
+          cancel.addEventListener("click", () => {
+            state.draftTarget = undefined;
+            renderSelectedFile(file);
+          });
+        }
+
+        const form = document.querySelector("#comment-form");
+        if (form) {
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const textarea = document.querySelector("#comment-body");
+            addComment(textarea ? textarea.value : "").catch((error) => {
+              state.statusMessage = error.message;
+              renderSelectedFile(file);
+            });
+          });
+          const textarea = document.querySelector("#comment-body");
+          if (textarea) {
+            textarea.focus();
+          }
+        }
+      }
+
+      async function addComment(body) {
+        if (!state.current.workstream || !state.session || !state.draftTarget) {
+          return;
+        }
+
+        const target = state.draftTarget;
+        const payload = target.type === "line"
+          ? {
+              body,
+              sessionId: target.sessionId,
+              filePath: target.filePath,
+              lineNumber: target.lineNumber,
+              side: target.side
+            }
+          : {
+              body,
+              sessionId: target.sessionId,
+              filePath: target.filePath
+            };
+        await api("/api/workstreams/" + encodeURIComponent(state.current.workstream.id) + "/comments", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        state.draftTarget = undefined;
+        state.statusMessage = "Comment saved.";
+        await refreshComments();
+      }
+
+      async function resolveComment(commentId) {
+        if (!state.current.workstream || !state.session || !commentId) {
+          return;
+        }
+
+        await api(
+          "/api/workstreams/" + encodeURIComponent(state.current.workstream.id) +
+          "/comments/" + encodeURIComponent(commentId) + "/resolve",
+          { method: "POST" }
+        );
+        state.statusMessage = "Comment resolved.";
+        await refreshComments();
+      }
+
+      async function refreshComments() {
+        const commentsPayload = await fetchComments(state.current.workstream.id, state.session.id);
+        state.comments = commentsPayload.comments || [];
+        renderDiff();
+      }
+
       function commentsForFile(file) {
-        return state.comments.filter((comment) => {
+        return visibleComments().filter((comment) => {
           const target = comment.target;
           if (!target || (target.type !== "file" && target.type !== "line")) {
             return false;
           }
 
           return target.filePath === file.path || target.filePath === file.oldPath || target.filePath === file.previousPath;
+        });
+      }
+
+      function visibleComments() {
+        return state.comments.filter((comment) => {
+          if (state.commentFilter === "open") {
+            return !comment.resolved;
+          }
+
+          if (state.commentFilter === "resolved") {
+            return Boolean(comment.resolved);
+          }
+
+          return true;
         });
       }
 
@@ -1011,6 +1388,36 @@ function diffViewerHtml(): string {
         return stats;
       }
 
+      function lineCommentTarget(line) {
+        if (line.newLineNumber) {
+          return { side: "new", lineNumber: line.newLineNumber };
+        }
+
+        if (line.oldLineNumber) {
+          return { side: "old", lineNumber: line.oldLineNumber };
+        }
+
+        return undefined;
+      }
+
+      function draftMatchesFile(file) {
+        const target = state.draftTarget;
+        return target && target.type === "file" && target.filePath === file.path;
+      }
+
+      function draftMatchesLine(file, line) {
+        const target = state.draftTarget;
+        if (!target || target.type !== "line" || target.filePath !== file.path) {
+          return false;
+        }
+
+        if (target.side === "old") {
+          return line.oldLineNumber === target.lineNumber;
+        }
+
+        return line.newLineNumber === target.lineNumber;
+      }
+
       function firstFilePath(diff) {
         return diff && diff.files && diff.files[0] ? diff.files[0].path : undefined;
       }
@@ -1038,7 +1445,7 @@ function diffViewerHtml(): string {
       }
 
       function emptyDiffRows() {
-        return "<tr><td class=\\"line-number\\"></td><td class=\\"line-number\\"></td><td class=\\"code\\">No hunks for this file.</td></tr>";
+        return "<tr><td class=\\"line-action\\"></td><td class=\\"line-number\\"></td><td class=\\"line-number\\"></td><td class=\\"code\\">No hunks for this file.</td></tr>";
       }
 
       function renderEmpty(title, message) {
