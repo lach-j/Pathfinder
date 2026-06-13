@@ -157,6 +157,65 @@ export class PathfinderStore {
     return slicesFile.slices;
   }
 
+  async addComment(workstreamId: string, sliceId: string, body: string): Promise<ReviewComment> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const cleanBody = assertNonEmptyText(body, "Comment body");
+    const slices = await this.listSlices(workstreamId);
+    const slice = slices.find((candidate) => candidate.id === sliceId);
+
+    if (!slice) {
+      throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    const commentsFile = await this.readComments(root);
+    const id = nextAvailableId(
+      toUrlSafeId(cleanBody),
+      commentsFile.comments.map((comment) => comment.id)
+    );
+    const comment: ReviewComment = {
+      id,
+      sliceId,
+      body: cleanBody,
+      resolved: false,
+      createdAt: createTimestamp()
+    };
+
+    commentsFile.comments.push(comment);
+    await writeJson(path.join(root, "comments.json"), commentsFile);
+    return comment;
+  }
+
+  async listComments(workstreamId: string): Promise<ReviewComment[]> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const commentsFile = await this.readComments(root);
+    return commentsFile.comments;
+  }
+
+  async resolveComment(workstreamId: string, commentId: string): Promise<ReviewComment> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const commentsFile = await this.readComments(root);
+    const comment = commentsFile.comments.find((candidate) => candidate.id === commentId);
+
+    if (!comment) {
+      throw new PathfinderError(`Comment '${commentId}' was not found in workstream '${workstreamId}'.`);
+    }
+
+    if (comment.resolved) {
+      throw new PathfinderError(`Comment '${commentId}' is already resolved.`);
+    }
+
+    const resolved: ReviewComment = {
+      ...comment,
+      resolved: true,
+      resolvedAt: createTimestamp()
+    };
+    commentsFile.comments = commentsFile.comments.map((candidate) =>
+      candidate.id === commentId ? resolved : candidate
+    );
+    await writeJson(path.join(root, "comments.json"), commentsFile);
+    return resolved;
+  }
+
   async setActiveSlice(workstreamId: string, sliceId: string): Promise<ActiveSlice> {
     const stateRoot = await this.requireStateRoot();
     const root = await this.requireWorkstreamRoot(workstreamId);
@@ -246,6 +305,10 @@ export class PathfinderStore {
 
   private async readSlices(workstreamRoot: string): Promise<SlicesFile> {
     return readJson<SlicesFile>(path.join(workstreamRoot, "slices.json"));
+  }
+
+  private async readComments(workstreamRoot: string): Promise<CommentsFile> {
+    return readJson<CommentsFile>(path.join(workstreamRoot, "comments.json"));
   }
 }
 

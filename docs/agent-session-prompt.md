@@ -14,7 +14,7 @@ Read these files first:
 3. README.md
 4. docs/implementation-status.md
 
-From docs/implementation-status.md, find the row for slice <SLICE_NUMBER> and read only that assigned handoff file under docs/slices/.
+From docs/implementation-status.md, find the row for slice <SLICE_NUMBER>. If the number is not zero-padded, match the equivalent zero-padded row, for example `3` matches `03`. Then read only that assigned handoff file under docs/slices/.
 
 Restate the current slice goal before editing.
 

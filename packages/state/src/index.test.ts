@@ -50,6 +50,48 @@ test("stores plans as markdown and tracks active slices", async () => {
   assert.equal((await store.getActiveSlice())?.slice.title, "Create State");
 });
 
+test("adds, lists, and resolves review comments", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add comment support.");
+
+  const first = await store.addComment(workstream.id, slice.id, "Needs tests.");
+  const second = await store.addComment(workstream.id, slice.id, "Needs tests.");
+  const commentsBeforeResolve = await store.listComments(workstream.id);
+
+  assert.equal(first.id, "needs-tests");
+  assert.equal(second.id, "needs-tests-2");
+  assert.equal(commentsBeforeResolve.length, 2);
+  assert.equal(commentsBeforeResolve[0]?.resolved, false);
+
+  const resolved = await store.resolveComment(workstream.id, first.id);
+  const commentsAfterResolve = await store.listComments(workstream.id);
+
+  assert.equal(resolved.resolved, true);
+  assert.equal(typeof resolved.resolvedAt, "string");
+  assert.equal(commentsAfterResolve[0]?.resolved, true);
+  assert.equal(commentsAfterResolve[0]?.resolvedAt, resolved.resolvedAt);
+});
+
+test("validates comment workstream, slice, body, and resolution state", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add comment support.");
+  const comment = await store.addComment(workstream.id, slice.id, "Needs tests.");
+
+  await assert.rejects(() => store.addComment("missing", slice.id, "Body"), PathfinderError);
+  await assert.rejects(() => store.addComment(workstream.id, "missing", "Body"), PathfinderError);
+  await assert.rejects(() => store.addComment(workstream.id, slice.id, " "), PathfinderError);
+  await assert.rejects(() => store.resolveComment(workstream.id, "missing"), PathfinderError);
+
+  await store.resolveComment(workstream.id, comment.id);
+  await assert.rejects(() => store.resolveComment(workstream.id, comment.id), PathfinderError);
+});
+
 test("fails clearly before init", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

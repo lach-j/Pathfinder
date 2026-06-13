@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-import { PathfinderError, Slice } from "@pathfinder/core";
+import { PathfinderError, ReviewComment, Slice } from "@pathfinder/core";
 import { PathfinderStore } from "@pathfinder/state";
 
 interface OptionMap {
   title?: string;
   description?: string;
   file?: string;
+  slice?: string;
+  body?: string;
 }
 
 const store = new PathfinderStore(process.cwd());
@@ -48,6 +50,11 @@ async function run(args: string[]): Promise<void> {
 
   if (area === "slice") {
     await runSlice(action, rest);
+    return;
+  }
+
+  if (area === "comment") {
+    await runComment(action, rest);
     return;
   }
 
@@ -163,6 +170,46 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
   throw new PathfinderError("Unknown slice command. Expected add, list, active, or show-active.");
 }
 
+async function runComment(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "add") {
+    const [workstreamId, ...optionArgs] = args;
+    requireArgument(workstreamId, "workstream id");
+    const options = parseOptions(optionArgs);
+    requireOption(options.slice, "--slice");
+    requireOption(options.body, "--body");
+    const comment = await store.addComment(workstreamId, options.slice, options.body);
+    console.log(formatComment(comment));
+    return;
+  }
+
+  if (action === "list") {
+    const [workstreamId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    expectNoExtraArgs(extra);
+    const comments = await store.listComments(workstreamId);
+    if (comments.length === 0) {
+      console.log("No comments found.");
+      return;
+    }
+    for (const comment of comments) {
+      console.log(formatComment(comment));
+    }
+    return;
+  }
+
+  if (action === "resolve") {
+    const [workstreamId, commentId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    requireArgument(commentId, "comment id");
+    expectNoExtraArgs(extra);
+    const comment = await store.resolveComment(workstreamId, commentId);
+    console.log(`Resolved comment: ${comment.id}`);
+    return;
+  }
+
+  throw new PathfinderError("Unknown comment command. Expected add, list, or resolve.");
+}
+
 function parseOptions(args: string[]): OptionMap {
   const options: OptionMap = {};
 
@@ -184,6 +231,10 @@ function parseOptions(args: string[]): OptionMap {
       options.description = value;
     } else if (flag === "--file") {
       options.file = value;
+    } else if (flag === "--slice") {
+      options.slice = value;
+    } else if (flag === "--body") {
+      options.body = value;
     } else {
       throw new PathfinderError(`Unknown option '${flag}'.`);
     }
@@ -196,6 +247,12 @@ function parseOptions(args: string[]): OptionMap {
 
 function formatSlice(slice: Slice): string {
   return `${slice.id}\t${slice.status}\t${slice.title}`;
+}
+
+function formatComment(comment: ReviewComment): string {
+  const status = comment.resolved ? "resolved" : "open";
+  const slice = comment.sliceId ?? "-";
+  return `${comment.id}\t${status}\t${slice}\t${comment.body}`;
 }
 
 function requireArgument(value: string | undefined, label: string): asserts value is string {
@@ -229,5 +286,8 @@ Usage:
   pathfinder slice add <workstream-id> --title "..." --description "..."
   pathfinder slice list <workstream-id>
   pathfinder slice active <workstream-id> <slice-id>
-  pathfinder slice show-active`);
+  pathfinder slice show-active
+  pathfinder comment add <workstream-id> --slice <slice-id> --body "..."
+  pathfinder comment list <workstream-id>
+  pathfinder comment resolve <workstream-id> <comment-id>`);
 }

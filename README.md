@@ -59,6 +59,14 @@ npm exec -- pathfinder slice active add-billing-foundation create-local-state
 npm exec -- pathfinder slice show-active
 ```
 
+Add, list, and resolve local review comments for a slice:
+
+```bash
+npm exec -- pathfinder comment add add-billing-foundation --slice create-local-state --body "Needs tests."
+npm exec -- pathfinder comment list add-billing-foundation
+npm exec -- pathfinder comment resolve add-billing-foundation needs-tests
+```
+
 Each workstream is stored as human-readable local files:
 
 ```text

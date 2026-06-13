@@ -1,6 +1,6 @@
 # Slice 03: Comments CLI
 
-Status: ready
+Status: done
 
 ## Goal
 
