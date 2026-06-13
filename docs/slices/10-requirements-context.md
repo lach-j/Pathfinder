@@ -1,6 +1,6 @@
 # Slice 10: Requirements Context
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -69,6 +69,14 @@ Expected behavior:
 - `pathfinder current` includes requirements location or a short excerpt if that fits existing output cleanly.
 - Tests cover creating, setting, showing, and missing-file behavior.
 - README documents requirements before plan setup.
+
+## Completion Notes
+
+- Added `requirements.md` initialization for new workstreams.
+- Added filesystem-backed requirements set/show helpers that preserve markdown exactly and treat legacy missing files as empty.
+- Added `pathfinder requirement set/show`.
+- Added requirements location and excerpt output to `pathfinder current`.
+- Added state and CLI tests for creation, set/show, empty reads, and current-context output.
 
 ## Checks
 

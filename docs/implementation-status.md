@@ -75,7 +75,7 @@ The next set of slices should deepen the local product workflow before UI, MCP, 
 | 07 | done | `docs/slices/07-current-context-command.md` |
 | 08 | done | `docs/slices/08-cli-polish.md` |
 | 09 | done | `docs/slices/09-mvp-review.md` |
-| 10 | ready | `docs/slices/10-requirements-context.md` |
+| 10 | done | `docs/slices/10-requirements-context.md` |
 | 11 | ready | `docs/slices/11-slice-dependencies-next.md` |
 | 12 | ready | `docs/slices/12-evidence-attachments.md` |
 | 13 | ready | `docs/slices/13-repository-intelligence-summary.md` |

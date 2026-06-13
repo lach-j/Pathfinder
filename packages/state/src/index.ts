@@ -27,6 +27,8 @@ export interface CurrentContext {
   project: Project;
   workstream?: Workstream;
   activeSlice?: Slice;
+  requirementsPath?: string;
+  requirementsMarkdown?: string;
   planPath?: string;
   planMarkdown?: string;
   unresolvedComments: ReviewComment[];
@@ -113,6 +115,7 @@ export class PathfinderStore {
 
     await mkdir(workstreamRoot, { recursive: false });
     await writeJson(path.join(workstreamRoot, "workstream.json"), workstream);
+    await writeFile(path.join(workstreamRoot, "requirements.md"), "", "utf8");
     await writeFile(path.join(workstreamRoot, "plan.md"), "", "utf8");
     await writeJson(path.join(workstreamRoot, "slices.json"), { slices: [] } satisfies SlicesFile);
     await writeJson(path.join(workstreamRoot, "comments.json"), { comments: [] } satisfies CommentsFile);
@@ -131,6 +134,29 @@ export class PathfinderStore {
   async getWorkstream(id: string): Promise<Workstream> {
     const root = await this.requireWorkstreamRoot(id);
     return readJson<Workstream>(path.join(root, "workstream.json"));
+  }
+
+  async setRequirementsFromFile(workstreamId: string, sourceFile: string): Promise<void> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const sourcePath = path.resolve(this.cwd, sourceFile);
+
+    if (!(await exists(sourcePath))) {
+      throw new PathfinderError(`Requirements file not found: ${sourceFile}`);
+    }
+
+    const content = await readFile(sourcePath, "utf8");
+    await writeFile(path.join(root, "requirements.md"), content, "utf8");
+  }
+
+  async getRequirements(workstreamId: string): Promise<string> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const requirementsPath = path.join(root, "requirements.md");
+
+    if (!(await exists(requirementsPath))) {
+      return "";
+    }
+
+    return readFile(requirementsPath, "utf8");
   }
 
   async setPlanFromFile(workstreamId: string, sourceFile: string): Promise<void> {
@@ -400,6 +426,10 @@ export class PathfinderStore {
 
     const workstream = await this.getWorkstream(project.activeWorkstreamId);
     const root = await this.requireWorkstreamRoot(workstream.id);
+    const requirementsPath = path.join(root, "requirements.md");
+    const requirementsMarkdown = (await exists(requirementsPath))
+      ? await readFile(requirementsPath, "utf8")
+      : "";
     const planPath = path.join(root, "plan.md");
     const planMarkdown = await readFile(planPath, "utf8");
     const unresolvedComments = (await this.listComments(workstream.id)).filter((comment) => !comment.resolved);
@@ -408,6 +438,8 @@ export class PathfinderStore {
       return {
         project,
         workstream,
+        requirementsPath,
+        requirementsMarkdown,
         planPath,
         planMarkdown,
         unresolvedComments
@@ -426,6 +458,8 @@ export class PathfinderStore {
       project,
       workstream,
       activeSlice,
+      requirementsPath,
+      requirementsMarkdown,
       planPath,
       planMarkdown,
       unresolvedComments

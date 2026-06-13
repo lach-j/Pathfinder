@@ -43,6 +43,13 @@ npm exec -- pathfinder workstream list
 npm exec -- pathfinder workstream show add-billing-foundation
 ```
 
+Attach and read original workstream requirements:
+
+```bash
+npm exec -- pathfinder requirement set add-billing-foundation --file ./requirements.md
+npm exec -- pathfinder requirement show add-billing-foundation
+```
+
 Attach and read a markdown implementation plan:
 
 ```bash
@@ -127,6 +134,7 @@ Each workstream is stored as human-readable local files:
   workstreams/
     <workstream-id>/
       workstream.json
+      requirements.md
       plan.md
       slices.json
       comments.json
@@ -143,6 +151,8 @@ npm run lint --if-present
 npm run build
 npm exec -- pathfinder help
 npm exec -- pathfinder current
+npm exec -- pathfinder requirement set add-billing-foundation --file ./requirements.md
+npm exec -- pathfinder requirement show add-billing-foundation
 npm exec -- pathfinder slice status add-billing-foundation create-local-state complete
 # Requires a clean working tree before running:
 npm exec -- pathfinder slice branch add-billing-foundation create-local-state --base main

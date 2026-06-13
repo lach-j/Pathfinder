@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -29,8 +29,29 @@ test("creates workstreams with markdown and JSON state files", async () => {
   assert.equal(workstream.id, "add-billing");
   assert.deepEqual(
     await sortedFiles(path.join(repo, ".pathfinder", "workstreams", workstream.id)),
-    ["comments.json", "plan.md", "pr.md", "reviews.json", "slices.json", "workstream.json"]
+    ["comments.json", "plan.md", "pr.md", "requirements.md", "reviews.json", "slices.json", "workstream.json"]
   );
+});
+
+test("stores requirements as markdown and handles legacy missing files", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Requirements Flow");
+  const requirementsPath = path.join(repo, "requirements.md");
+  await writeFile(requirementsPath, "# Requirements\n\nKeep original text intact.\n", "utf8");
+
+  await store.setRequirementsFromFile(workstream.id, requirementsPath);
+
+  assert.equal(await store.getRequirements(workstream.id), "# Requirements\n\nKeep original text intact.\n");
+
+  await rm(path.join(repo, ".pathfinder", "workstreams", workstream.id, "requirements.md"));
+
+  assert.equal(await store.getRequirements(workstream.id), "");
+
+  await store.setRequirementsFromFile(workstream.id, requirementsPath);
+
+  assert.equal(await store.getRequirements(workstream.id), "# Requirements\n\nKeep original text intact.\n");
 });
 
 test("stores plans as markdown and tracks active slices", async () => {
@@ -93,7 +114,10 @@ test("returns current context for the active workstream and slice", async () => 
   await store.initProject();
   const workstream = await store.createWorkstream("Agent Context");
   const planPath = path.join(repo, "plan.md");
+  const requirementsPath = path.join(repo, "requirements.md");
+  await writeFile(requirementsPath, "# Requirements\n\nSupport agent context.\n", "utf8");
   await writeFile(planPath, "# Plan\n\nKeep the agent focused.\n", "utf8");
+  await store.setRequirementsFromFile(workstream.id, requirementsPath);
   await store.setPlanFromFile(workstream.id, planPath);
   const slice = await store.addSlice(workstream.id, "Current Command", "Print local context.");
   await store.setActiveSlice(workstream.id, slice.id);
@@ -105,6 +129,11 @@ test("returns current context for the active workstream and slice", async () => 
 
   assert.equal(context.workstream?.id, workstream.id);
   assert.equal(context.activeSlice?.id, slice.id);
+  assert.equal(context.requirementsMarkdown, "# Requirements\n\nSupport agent context.\n");
+  assert.equal(
+    context.requirementsPath,
+    path.join(repo, ".pathfinder", "workstreams", workstream.id, "requirements.md")
+  );
   assert.equal(context.planMarkdown, "# Plan\n\nKeep the agent focused.\n");
   assert.equal(context.planPath, path.join(repo, ".pathfinder", "workstreams", workstream.id, "plan.md"));
   assert.deepEqual(

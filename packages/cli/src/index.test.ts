@@ -19,6 +19,8 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder workstream create",
     "pathfinder workstream list",
     "pathfinder workstream show",
+    "pathfinder requirement set",
+    "pathfinder requirement show",
     "pathfinder plan set",
     "pathfinder plan show",
     "pathfinder slice add",
@@ -39,6 +41,66 @@ test("help lists the implemented MVP commands", async () => {
   ]) {
     assert.match(result.stdout, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+});
+
+test("sets and shows workstream requirements", async () => {
+  const repo = await createTempGitRepo();
+  await writeFile(path.join(repo, "requirements.md"), "# Requirements\n\nSend low-stock alerts.\n", "utf8");
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  const setResult = await runCli(
+    ["requirement", "set", "inventory-alerts", "--file", "./requirements.md"],
+    repo
+  );
+  const showResult = await runCli(["requirement", "show", "inventory-alerts"], repo);
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", "inventory-alerts", "requirements.md"),
+    "utf8"
+  );
+
+  assert.match(setResult.stdout, /Updated requirements for inventory-alerts\./);
+  assert.equal(showResult.stdout, "# Requirements\n\nSend low-stock alerts.\n");
+  assert.equal(stored, "# Requirements\n\nSend low-stock alerts.\n");
+});
+
+test("shows a clear empty-state for missing requirements", async () => {
+  const repo = await createTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+
+  const result = await runCli(["requirement", "show", "inventory-alerts"], repo);
+
+  assert.match(result.stdout, /No requirements recorded\./);
+});
+
+test("includes requirements in current context", async () => {
+  const repo = await createTempGitRepo();
+  await writeFile(path.join(repo, "requirements.md"), "# Requirements\n\nSend low-stock alerts.\n", "utf8");
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(["requirement", "set", "inventory-alerts", "--file", "./requirements.md"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Reorder Report",
+      "--description",
+      "Create a local report for low stock items."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-reorder-report"], repo);
+
+  const result = await runCli(["current"], repo);
+
+  assert.match(result.stdout, /## Requirements/);
+  assert.match(result.stdout, /Location: .*requirements\.md/);
+  assert.match(result.stdout, /Send low-stock alerts\./);
 });
 
 test("reports unknown commands with usage guidance", async () => {

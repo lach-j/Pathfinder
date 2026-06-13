@@ -58,6 +58,11 @@ async function run(args: string[]): Promise<void> {
     return;
   }
 
+  if (area === "requirement") {
+    await runRequirement(action, rest);
+    return;
+  }
+
   if (area === "slice") {
     await runSlice(action, rest);
     return;
@@ -111,6 +116,33 @@ async function runPr(action: string | undefined, args: string[]): Promise<void> 
   }
 
   throw usageError("Unknown pr command. Expected generate.");
+}
+
+async function runRequirement(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "set") {
+    const [workstreamId, ...optionArgs] = args;
+    requireArgument(workstreamId, "workstream id");
+    const options = parseOptions(optionArgs);
+    requireOption(options.file, "--file");
+    await store.setRequirementsFromFile(workstreamId, options.file);
+    console.log(`Updated requirements for ${workstreamId}.`);
+    return;
+  }
+
+  if (action === "show") {
+    const [workstreamId, ...extra] = args;
+    requireArgument(workstreamId, "workstream id");
+    expectNoExtraArgs(extra);
+    const requirements = await store.getRequirements(workstreamId);
+    if (!requirements.trim()) {
+      console.log("No requirements recorded.");
+      return;
+    }
+    process.stdout.write(requirements);
+    return;
+  }
+
+  throw usageError("Unknown requirement command. Expected set or show.");
 }
 
 async function runWorkstream(action: string | undefined, args: string[]): Promise<void> {
@@ -426,10 +458,15 @@ function formatCurrentContext(context: CurrentContext): string {
   }
 
   lines.push("");
+  lines.push("## Requirements");
+  lines.push("");
+  lines.push(`Location: ${context.requirementsPath}`);
+  lines.push(...formatMarkdownExcerpt(context.requirementsMarkdown ?? "", "Requirements"));
+  lines.push("");
   lines.push("## Plan");
   lines.push("");
   lines.push(`Location: ${context.planPath}`);
-  lines.push(...formatPlanExcerpt(context.planMarkdown ?? ""));
+  lines.push(...formatMarkdownExcerpt(context.planMarkdown ?? "", "Plan"));
   lines.push("");
   lines.push("## Unresolved Comments");
   lines.push("");
@@ -446,18 +483,18 @@ function formatCurrentContext(context: CurrentContext): string {
   return `${lines.join("\n")}\n`;
 }
 
-function formatPlanExcerpt(planMarkdown: string): string[] {
-  const trimmed = planMarkdown.trim();
+function formatMarkdownExcerpt(markdown: string, label: string): string[] {
+  const trimmed = markdown.trim();
 
   if (!trimmed) {
-    return ["Plan excerpt: No plan recorded."];
+    return [`${label} excerpt: No ${label.toLowerCase()} recorded.`];
   }
 
   const excerptLength = 500;
   const excerpt =
     trimmed.length > excerptLength ? `${trimmed.slice(0, excerptLength).trimEnd()}...` : trimmed;
 
-  return ["Plan excerpt:", "", excerpt];
+  return [`${label} excerpt:`, "", excerpt];
 }
 
 function requireArgument(value: string | undefined, label: string): asserts value is string {
@@ -491,6 +528,8 @@ Usage:
   pathfinder workstream create --title "..."
   pathfinder workstream list
   pathfinder workstream show <id>
+  pathfinder requirement set <workstream-id> --file ./requirements.md
+  pathfinder requirement show <workstream-id>
   pathfinder plan set <workstream-id> --file ./plan.md
   pathfinder plan show <workstream-id>
   pathfinder slice add <workstream-id> --title "..." --description "..."
