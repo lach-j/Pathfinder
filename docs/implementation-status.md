@@ -58,7 +58,7 @@ State currently lives under:
 | 04 | done | `docs/slices/04-git-diff-adapter.md` |
 | 05 | done | `docs/slices/05-review-state-foundation.md` |
 | 06 | done | `docs/slices/06-pr-markdown-generation.md` |
-| 07 | ready | `docs/slices/07-current-context-command.md` |
+| 07 | done | `docs/slices/07-current-context-command.md` |
 | 08 | ready | `docs/slices/08-cli-polish.md` |
 
 Status values:

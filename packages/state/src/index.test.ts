@@ -50,6 +50,44 @@ test("stores plans as markdown and tracks active slices", async () => {
   assert.equal((await store.getActiveSlice())?.slice.title, "Create State");
 });
 
+test("returns current context for the active workstream and slice", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Agent Context");
+  const planPath = path.join(repo, "plan.md");
+  await writeFile(planPath, "# Plan\n\nKeep the agent focused.\n", "utf8");
+  await store.setPlanFromFile(workstream.id, planPath);
+  const slice = await store.addSlice(workstream.id, "Current Command", "Print local context.");
+  await store.setActiveSlice(workstream.id, slice.id);
+  await store.addComment(workstream.id, slice.id, "Check output.");
+  const resolved = await store.addComment(workstream.id, slice.id, "Already handled.");
+  await store.resolveComment(workstream.id, resolved.id);
+
+  const context = await store.getCurrentContext();
+
+  assert.equal(context.workstream?.id, workstream.id);
+  assert.equal(context.activeSlice?.id, slice.id);
+  assert.equal(context.planMarkdown, "# Plan\n\nKeep the agent focused.\n");
+  assert.equal(context.planPath, path.join(repo, ".pathfinder", "workstreams", workstream.id, "plan.md"));
+  assert.deepEqual(
+    context.unresolvedComments.map((comment) => comment.id),
+    ["check-output"]
+  );
+});
+
+test("returns clear current context when no active slice is set", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+
+  const context = await store.getCurrentContext();
+
+  assert.equal(context.workstream, undefined);
+  assert.equal(context.activeSlice, undefined);
+  assert.deepEqual(context.unresolvedComments, []);
+});
+
 test("adds, lists, and resolves review comments", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

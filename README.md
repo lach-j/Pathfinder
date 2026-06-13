@@ -59,6 +59,12 @@ npm exec -- pathfinder slice active add-billing-foundation create-local-state
 npm exec -- pathfinder slice show-active
 ```
 
+Print the current Pathfinder context for humans or agents:
+
+```bash
+npm exec -- pathfinder current
+```
+
 Add, list, and resolve local review comments for a slice:
 
 ```bash
@@ -115,6 +121,7 @@ npm test
 npm run lint --if-present
 npm run build
 npm exec -- pathfinder help
+npm exec -- pathfinder current
 npm exec -- pathfinder review create add-billing-foundation --slice create-local-state --summary "Manual review passed."
 npm exec -- pathfinder review list add-billing-foundation
 npm exec -- pathfinder review show add-billing-foundation manual-review-passed

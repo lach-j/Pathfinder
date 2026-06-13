@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { PathfinderError, Review, ReviewComment, Slice } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
-import { PathfinderStore } from "@pathfinder/state";
+import { CurrentContext, PathfinderStore } from "@pathfinder/state";
 
 interface OptionMap {
   title?: string;
@@ -37,6 +37,13 @@ async function run(args: string[]): Promise<void> {
     expectNoExtraArgs(rest);
     const project = await store.initProject();
     console.log(`Initialised Pathfinder for ${project.name}.`);
+    return;
+  }
+
+  if (area === "current") {
+    expectNoExtraArgs([action, ...rest].filter((value): value is string => Boolean(value)));
+    const context = await store.getCurrentContext();
+    process.stdout.write(formatCurrentContext(context));
     return;
   }
 
@@ -342,6 +349,70 @@ function formatReview(review: Review): string {
   return `${review.id}\t${review.status}\t${review.sliceId}\t${review.summary}`;
 }
 
+function formatCurrentContext(context: CurrentContext): string {
+  const lines = ["# Pathfinder Current Context", ""];
+
+  lines.push(`Project: ${context.project.name}`);
+  lines.push("");
+
+  if (!context.workstream) {
+    lines.push("Active workstream: none");
+    lines.push("Active slice: none");
+    lines.push("");
+    lines.push("No active slice set. Use `pathfinder slice active <workstream-id> <slice-id>`.");
+    return `${lines.join("\n")}\n`;
+  }
+
+  lines.push(`Active workstream: ${context.workstream.title} (${context.workstream.id})`);
+
+  if (!context.activeSlice) {
+    lines.push("Active slice: none");
+    lines.push("");
+    lines.push("No active slice set for this workstream.");
+  } else {
+    lines.push(`Active slice: ${context.activeSlice.title} (${context.activeSlice.id})`);
+    lines.push(`Status: ${context.activeSlice.status}`);
+    lines.push("");
+    lines.push("## Slice");
+    lines.push("");
+    lines.push(context.activeSlice.description);
+  }
+
+  lines.push("");
+  lines.push("## Plan");
+  lines.push("");
+  lines.push(`Location: ${context.planPath}`);
+  lines.push(...formatPlanExcerpt(context.planMarkdown ?? ""));
+  lines.push("");
+  lines.push("## Unresolved Comments");
+  lines.push("");
+
+  if (context.unresolvedComments.length === 0) {
+    lines.push("No unresolved comments.");
+  } else {
+    for (const comment of context.unresolvedComments) {
+      const sliceText = comment.sliceId ? `slice ${comment.sliceId}` : "workstream";
+      lines.push(`- ${comment.id} (${sliceText}): ${comment.body}`);
+    }
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatPlanExcerpt(planMarkdown: string): string[] {
+  const trimmed = planMarkdown.trim();
+
+  if (!trimmed) {
+    return ["Plan excerpt: No plan recorded."];
+  }
+
+  const excerptLength = 500;
+  const excerpt =
+    trimmed.length > excerptLength ? `${trimmed.slice(0, excerptLength).trimEnd()}...` : trimmed;
+
+  return ["Plan excerpt:", "", excerpt];
+}
+
 function requireArgument(value: string | undefined, label: string): asserts value is string {
   if (!value) {
     throw new PathfinderError(`Missing ${label}.`);
@@ -365,6 +436,7 @@ function printHelp(): void {
 
 Usage:
   pathfinder init
+  pathfinder current
   pathfinder workstream create --title "..."
   pathfinder workstream list
   pathfinder workstream show <id>

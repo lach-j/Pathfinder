@@ -21,6 +21,15 @@ export interface ActiveSlice {
   slice: Slice;
 }
 
+export interface CurrentContext {
+  project: Project;
+  workstream?: Workstream;
+  activeSlice?: Slice;
+  planPath?: string;
+  planMarkdown?: string;
+  unresolvedComments: ReviewComment[];
+}
+
 export interface GeneratedPrMarkdown {
   markdown: string;
   path: string;
@@ -337,6 +346,50 @@ export class PathfinderStore {
     }
 
     return { workstream, slice };
+  }
+
+  async getCurrentContext(): Promise<CurrentContext> {
+    const project = await this.getProject();
+
+    if (!project.activeWorkstreamId) {
+      return {
+        project,
+        unresolvedComments: []
+      };
+    }
+
+    const workstream = await this.getWorkstream(project.activeWorkstreamId);
+    const root = await this.requireWorkstreamRoot(workstream.id);
+    const planPath = path.join(root, "plan.md");
+    const planMarkdown = await readFile(planPath, "utf8");
+    const unresolvedComments = (await this.listComments(workstream.id)).filter((comment) => !comment.resolved);
+
+    if (!workstream.activeSliceId) {
+      return {
+        project,
+        workstream,
+        planPath,
+        planMarkdown,
+        unresolvedComments
+      };
+    }
+
+    const slices = await this.listSlices(workstream.id);
+    const activeSlice = slices.find((candidate) => candidate.id === workstream.activeSliceId);
+    if (!activeSlice) {
+      throw new PathfinderError(
+        `Active slice '${workstream.activeSliceId}' was not found in workstream '${workstream.id}'.`
+      );
+    }
+
+    return {
+      project,
+      workstream,
+      activeSlice,
+      planPath,
+      planMarkdown,
+      unresolvedComments
+    };
   }
 
   private async listWorkstreamIds(): Promise<string[]> {

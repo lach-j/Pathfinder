@@ -1,6 +1,6 @@
 # Slice 07: Current Context Command
 
-Status: ready
+Status: done
 
 ## Goal
 
