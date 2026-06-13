@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { PathfinderError, RepositorySummary } from "@pathfinder/core";
+import { parseUnifiedDiff, PathfinderError, RepositorySummary, StructuredDiff } from "@pathfinder/core";
 
 import { parseNameStatus } from "./name-status.js";
 
@@ -34,6 +34,22 @@ export class GitAdapter {
     const mergeBase = (await this.runGit(["merge-base", baseRef, "HEAD"])).stdout.trim();
     const result = await this.runGit(["diff", `${mergeBase}..HEAD`]);
     return result.stdout;
+  }
+
+  async getStructuredDiffAgainstBase(baseRef: string): Promise<StructuredDiff> {
+    await this.requireGitRepository();
+    await this.resolveCommit(baseRef);
+    const mergeBase = (await this.runGit(["merge-base", baseRef, "HEAD"])).stdout.trim();
+    const result = await this.runGit(["diff", "--find-renames", `${mergeBase}..HEAD`]);
+    return parseUnifiedDiff(result.stdout);
+  }
+
+  async getStructuredDiffBetweenRefs(baseRef: string, headRef: string): Promise<StructuredDiff> {
+    await this.requireGitRepository();
+    await this.resolveCommit(baseRef);
+    await this.resolveCommit(headRef);
+    const result = await this.runGit(["diff", "--find-renames", `${baseRef}..${headRef}`]);
+    return parseUnifiedDiff(result.stdout);
   }
 
   async getCommittedSummaryAgainstBase(baseRef: string): Promise<RepositorySummary> {

@@ -6,7 +6,9 @@ import {
   ReviewCheck,
   ReviewComment,
   ReviewSession,
-  Slice
+  Slice,
+  StructuredDiff,
+  StructuredDiffLine
 } from "@pathfinder/core";
 import { CurrentContext } from "@pathfinder/state";
 
@@ -127,6 +129,37 @@ export function formatRepositorySummary(summary: RepositorySummary): string {
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+export function formatStructuredDiff(diff: StructuredDiff): string {
+  const lines = ["# Pathfinder Diff", "", `Changed files: ${diff.files.length}`, ""];
+
+  if (diff.files.length === 0) {
+    lines.push("No committed file changes found.");
+    return `${lines.join("\n")}\n`;
+  }
+
+  for (const file of diff.files) {
+    const pathText = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
+    lines.push(`## ${formatChangeStatus(file.status)} ${pathText}`);
+    lines.push("");
+
+    if (file.hunks.length === 0) {
+      lines.push("No textual hunks.");
+      lines.push("");
+      continue;
+    }
+
+    for (const hunk of file.hunks) {
+      lines.push(hunk.header);
+      for (const line of hunk.lines) {
+        lines.push(formatStructuredDiffLine(line));
+      }
+      lines.push("");
+    }
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`;
 }
 
 export function formatCurrentContext(context: CurrentContext): string {
@@ -274,6 +307,25 @@ function formatChangeStatus(status: RepositoryChangeStatus): string {
   }
 
   return "?";
+}
+
+function formatStructuredDiffLine(line: StructuredDiffLine): string {
+  const oldLine = line.oldLineNumber === undefined ? "    " : String(line.oldLineNumber).padStart(4, " ");
+  const newLine = line.newLineNumber === undefined ? "    " : String(line.newLineNumber).padStart(4, " ");
+
+  if (line.kind === "addition") {
+    return `${oldLine} ${newLine} +${line.text}`;
+  }
+
+  if (line.kind === "deletion") {
+    return `${oldLine} ${newLine} -${line.text}`;
+  }
+
+  if (line.kind === "metadata") {
+    return `          ${line.text}`;
+  }
+
+  return `${oldLine} ${newLine}  ${line.text}`;
 }
 
 function formatMarkdownExcerpt(markdown: string, label: string): string[] {

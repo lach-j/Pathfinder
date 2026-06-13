@@ -157,6 +157,19 @@ Inspect the committed branch diff relative to a local base ref:
 npm exec -- pathfinder git diff --base main
 ```
 
+Inspect a structured committed branch diff for CLI/UI review tooling:
+
+```bash
+npm exec -- pathfinder diff show --base main
+npm exec -- pathfinder diff show --base main --json
+npm exec -- pathfinder diff show --session review-create-local-state
+npm exec -- pathfinder diff show --session review-create-local-state --json
+```
+
+`diff show` parses unified Git diff output into files, hunks, old/new line numbers,
+line kinds, and rename metadata. `--session` reuses a stored local review session's
+merge base and head commit.
+
 Summarise committed branch changes relative to a local base ref:
 
 ```bash
@@ -226,6 +239,10 @@ npm exec -- pathfinder review list add-billing-foundation
 npm exec -- pathfinder review show add-billing-foundation manual-review-passed
 npm exec -- pathfinder evidence add add-billing-foundation --slice create-local-state --kind test --description "npm test passed"
 npm exec -- pathfinder evidence list add-billing-foundation
+npm exec -- pathfinder diff show --base main
+npm exec -- pathfinder diff show --base main --json
+npm exec -- pathfinder diff show --session review-create-local-state
+npm exec -- pathfinder diff show --session review-create-local-state --json
 npm exec -- pathfinder git diff
 npm exec -- pathfinder git diff --base main
 npm exec -- pathfinder git summary --base main

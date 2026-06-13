@@ -8,6 +8,8 @@ export interface OptionMap {
   body?: string;
   summary?: string;
   base?: string;
+  session?: string;
+  json?: boolean;
   dependsOn?: string[];
   kind?: string;
   path?: string;
@@ -22,6 +24,11 @@ export function parseOptions(args: string[]): OptionMap {
 
     if (!flag.startsWith("--")) {
       throw usageError(`Unexpected argument '${flag}'.`);
+    }
+
+    if (flag === "--json") {
+      options.json = true;
+      continue;
     }
 
     if (!value || value.startsWith("--")) {
@@ -42,6 +49,8 @@ export function parseOptions(args: string[]): OptionMap {
       options.summary = value;
     } else if (flag === "--base") {
       options.base = value;
+    } else if (flag === "--session") {
+      options.session = value;
     } else if (flag === "--depends-on") {
       options.dependsOn = [...(options.dependsOn ?? []), value];
     } else if (flag === "--kind") {

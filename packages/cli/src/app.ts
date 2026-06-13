@@ -11,7 +11,8 @@ import {
   formatReview,
   formatReviewSession,
   formatReviewSessionSummary,
-  formatSlice
+  formatSlice,
+  formatStructuredDiff
 } from "./formatters.js";
 import { printHelp } from "./help.js";
 import { expectNoExtraArgs, parseOptions, requireArgument, requireOption, usageError } from "./options.js";
@@ -80,12 +81,52 @@ export async function run(args: string[]): Promise<void> {
     return;
   }
 
+  if (area === "diff") {
+    await runDiff(action, rest);
+    return;
+  }
+
   if (area === "pr") {
     await runPr(action, rest);
     return;
   }
 
   throw usageError(`Unknown command '${area}'.`);
+}
+
+async function runDiff(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "show") {
+    const options = parseOptions(args);
+    const git = new GitAdapter({ cwd: process.cwd() });
+
+    if (options.base && options.session) {
+      throw usageError("Use either --base or --session, not both.");
+    }
+
+    if (!options.base && !options.session) {
+      throw usageError("Missing required option --base or --session.");
+    }
+
+    const diff = options.base
+      ? await git.getStructuredDiffAgainstBase(options.base)
+      : await getStructuredDiffForSession(git, options.session);
+
+    if (options.json) {
+      console.log(JSON.stringify(diff, null, 2));
+      return;
+    }
+
+    process.stdout.write(formatStructuredDiff(diff));
+    return;
+  }
+
+  throw usageError("Unknown diff command. Expected show.");
+}
+
+async function getStructuredDiffForSession(git: GitAdapter, sessionId: string | undefined) {
+  requireOption(sessionId, "--session");
+  const session = await store.findReviewSession(sessionId);
+  return git.getStructuredDiffBetweenRefs(session.mergeBase, session.headCommit);
 }
 
 async function runGit(action: string | undefined, args: string[]): Promise<void> {

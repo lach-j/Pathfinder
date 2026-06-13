@@ -32,6 +32,8 @@ Usage:
   pathfinder review show <workstream-id> <review-id>
   pathfinder evidence add <workstream-id> --slice <slice-id> --kind <kind> --description "..." [--path ./artifact.txt]
   pathfinder evidence list <workstream-id>
+  pathfinder diff show --base <base-ref> [--json]
+  pathfinder diff show --session <session-id> [--json]
   pathfinder git diff [--base <base-ref>]
   pathfinder git summary --base <base-ref>
   pathfinder pr generate <workstream-id> [--base <base-ref>]`);

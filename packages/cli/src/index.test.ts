@@ -44,6 +44,8 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder review show",
     "pathfinder evidence add",
     "pathfinder evidence list",
+    "pathfinder diff show --base <base-ref> [--json]",
+    "pathfinder diff show --session <session-id> [--json]",
     "pathfinder git diff",
     "pathfinder git diff [--base <base-ref>]",
     "pathfinder git summary --base <base-ref>",
@@ -524,6 +526,66 @@ test("prints committed diff against a base ref without working tree changes", as
 
   assert.match(result.stdout, /\+Committed change\./);
   assert.doesNotMatch(result.stdout, /Working tree only/);
+});
+
+test("prints structured diff output for committed changes against a base ref", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await git(repo, ["checkout", "-b", "feature-structured-diff"]);
+  await writeFile(path.join(repo, "README.md"), "# Test\n\nCommitted change.\n", "utf8");
+  await git(repo, ["add", "README.md"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "feature"]);
+
+  const result = await runCli(["diff", "show", "--base", "main"], repo);
+  const json = await runCli(["diff", "show", "--base", "main", "--json"], repo);
+  const parsed = JSON.parse(json.stdout);
+
+  assert.match(result.stdout, /# Pathfinder Diff/);
+  assert.match(result.stdout, /## M README\.md/);
+  assert.match(result.stdout, /@@ -1 \+1,3 @@/);
+  assert.match(result.stdout, /\+Committed change\./);
+  assert.equal(parsed.files[0].path, "README.md");
+  assert.equal(
+    parsed.files[0].hunks[0].lines.some(
+      (line: { kind: string; text: string }) => line.kind === "addition" && line.text === "Committed change."
+    ),
+    true
+  );
+});
+
+test("prints structured diff output for a stored review session", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-session-diff"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  await runCli(["review", "start", "--base", "main"], repo);
+
+  const result = await runCli(["diff", "show", "--session", "review-add-report", "--json"], repo);
+  const parsed = JSON.parse(result.stdout);
+
+  assert.equal(parsed.files[0].path, "src/report.ts");
+  assert.equal(parsed.files[0].status, "added");
+  assert.equal(parsed.files[0].hunks[0].lines[0].newLineNumber, 1);
 });
 
 test("reports missing and invalid summary base refs clearly", async () => {

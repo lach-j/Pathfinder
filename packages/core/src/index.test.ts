@@ -12,6 +12,7 @@ import {
   isSliceStatus,
   isUrlSafeId,
   nextAvailableId,
+  parseUnifiedDiff,
   parseStagePlanMarkdown,
   Slice,
   toUrlSafeId
@@ -300,6 +301,82 @@ test("classifies repository paths conservatively", () => {
   assert.equal(categorizeRepositoryPath("assets/logo.png"), "other");
 });
 
+test("parses unified diffs into files, hunks, and line numbers", () => {
+  const diff = parseUnifiedDiff(sampleUnifiedDiff());
+
+  assert.deepEqual(
+    diff.files.map((file) => ({
+      path: file.path,
+      previousPath: file.previousPath,
+      status: file.status,
+      hunks: file.hunks.length
+    })),
+    [
+      {
+        path: "src/modified.ts",
+        previousPath: undefined,
+        status: "modified",
+        hunks: 1
+      },
+      {
+        path: "src/added.ts",
+        previousPath: undefined,
+        status: "added",
+        hunks: 1
+      },
+      {
+        path: "src/deleted.ts",
+        previousPath: undefined,
+        status: "deleted",
+        hunks: 1
+      },
+      {
+        path: "docs/new.md",
+        previousPath: "docs/old.md",
+        status: "renamed",
+        hunks: 1
+      }
+    ]
+  );
+
+  assert.deepEqual(diff.files[0].hunks[0], {
+    header: "@@ -1,3 +1,4 @@",
+    oldStart: 1,
+    oldLines: 3,
+    newStart: 1,
+    newLines: 4,
+    lines: [
+      {
+        kind: "context",
+        oldLineNumber: 1,
+        newLineNumber: 1,
+        text: "one"
+      },
+      {
+        kind: "deletion",
+        oldLineNumber: 2,
+        text: "two"
+      },
+      {
+        kind: "addition",
+        newLineNumber: 2,
+        text: "two changed"
+      },
+      {
+        kind: "context",
+        oldLineNumber: 3,
+        newLineNumber: 3,
+        text: "three"
+      },
+      {
+        kind: "addition",
+        newLineNumber: 4,
+        text: "four"
+      }
+    ]
+  });
+});
+
 test("generates deterministic review checks with warnings", () => {
   const result = generateDeterministicReview({
     baseRef: "main",
@@ -514,5 +591,45 @@ Build local inventory alerts.
 **Depends on:** Stage 1 data source.
 **Commit breakdown:**
 1. Add report
+`;
+}
+
+function sampleUnifiedDiff(): string {
+  return `diff --git a/src/modified.ts b/src/modified.ts
+index 1111111..2222222 100644
+--- a/src/modified.ts
++++ b/src/modified.ts
+@@ -1,3 +1,4 @@
+ one
+-two
++two changed
+ three
++four
+diff --git a/src/added.ts b/src/added.ts
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/src/added.ts
+@@ -0,0 +1,2 @@
++alpha
++beta
+diff --git a/src/deleted.ts b/src/deleted.ts
+deleted file mode 100644
+index 4444444..0000000
+--- a/src/deleted.ts
++++ /dev/null
+@@ -1,2 +0,0 @@
+-gone
+-done
+diff --git a/docs/old.md b/docs/new.md
+similarity index 62%
+rename from docs/old.md
+rename to docs/new.md
+index 5555555..6666666 100644
+--- a/docs/old.md
++++ b/docs/new.md
+@@ -1 +1 @@
+-old title
++new title
 `;
 }

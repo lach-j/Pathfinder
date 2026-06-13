@@ -603,6 +603,22 @@ export class PathfinderStore {
     return session;
   }
 
+  async findReviewSession(sessionId: string): Promise<ReviewSession> {
+    const workstreams = await this.listWorkstreams();
+
+    for (const workstream of workstreams) {
+      const session = (await this.listReviewSessions(workstream.id)).find(
+        (candidate) => candidate.id === sessionId
+      );
+
+      if (session) {
+        return session;
+      }
+    }
+
+    throw new PathfinderError(`Review session '${sessionId}' was not found.`);
+  }
+
   async generatePrMarkdown(
     workstreamId: string,
     repositorySummary?: RepositorySummary

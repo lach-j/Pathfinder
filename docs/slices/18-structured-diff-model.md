@@ -1,6 +1,6 @@
 # Slice 18: Structured Diff Model
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -80,6 +80,25 @@ Smoke test:
 ```bash
 npm exec -- pathfinder diff show --base main
 npm exec -- pathfinder diff show --base main --json
+```
+
+## Implementation Notes
+
+- Added a reusable structured diff model and unified diff parser in `@pathfinder/core`.
+- Added Git adapter helpers that parse committed diffs for a base ref or stored review-session range.
+- Added `pathfinder diff show --base <base-ref> [--json]`.
+- Added `pathfinder diff show --session <session-id> [--json]`.
+- Human output prints files, hunks, old/new line numbers, and raw line text.
+- JSON output exposes the structured model for future UI/API reuse.
+- Existing `pathfinder git diff` behavior remains unchanged.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
 ```
 
 ## Suggested Prompt

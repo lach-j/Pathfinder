@@ -52,6 +52,26 @@ test("returns committed diff against the merge base of a base ref", async () => 
   assert.doesNotMatch(diff, /working tree only/);
 });
 
+test("returns structured committed diffs against a base ref", async () => {
+  const repo = await createTempRepo();
+  await writeFile(path.join(repo, "tracked.txt"), "base\n", "utf8");
+  await git(repo, ["add", "tracked.txt"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "initial"]);
+  await git(repo, ["checkout", "-b", "feature"]);
+  await writeFile(path.join(repo, "tracked.txt"), "feature\n", "utf8");
+  await git(repo, ["add", "tracked.txt"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "feature"]);
+
+  const diff = await new GitAdapter({ cwd: repo }).getStructuredDiffAgainstBase("main");
+
+  assert.equal(diff.files.length, 1);
+  assert.equal(diff.files[0].path, "tracked.txt");
+  assert.equal(diff.files[0].hunks[0].lines[0].kind, "deletion");
+  assert.equal(diff.files[0].hunks[0].lines[0].oldLineNumber, 1);
+  assert.equal(diff.files[0].hunks[0].lines[1].kind, "addition");
+  assert.equal(diff.files[0].hunks[0].lines[1].newLineNumber, 1);
+});
+
 test("parses Git name-status output into categorized files", () => {
   assert.deepEqual(
     parseNameStatus(
