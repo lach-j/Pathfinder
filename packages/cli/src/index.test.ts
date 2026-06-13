@@ -43,7 +43,7 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder git diff",
     "pathfinder git diff [--base <base-ref>]",
     "pathfinder git summary --base <base-ref>",
-    "pathfinder pr generate"
+    "pathfinder pr generate <workstream-id> [--base <base-ref>]"
   ]) {
     assert.match(result.stdout, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
@@ -163,7 +163,7 @@ test("updates slice status and includes completed slices in generated PR markdow
   await runCli(["slice", "status", "inventory-alerts", "add-reorder-report", "complete"], repo);
   const result = await runCli(["pr", "generate", "inventory-alerts"], repo);
 
-  assert.match(result.stdout, /- Add Reorder Report \(`add-reorder-report`\): Create a local report/);
+  assert.match(result.stdout, /- Add Reorder Report \(`add-reorder-report`, complete\): Create a local report/);
 });
 
 test("adds, lists, and includes evidence in current context and PR markdown", async () => {
@@ -213,7 +213,7 @@ test("adds, lists, and includes evidence in current context and PR markdown", as
   assert.equal(listResult.stdout, addResult.stdout);
   assert.match(currentResult.stdout, /## Evidence/);
   assert.match(currentResult.stdout, /npm-test-passed \[test\]: npm test passed \(\.\/test-output\.log\)/);
-  assert.match(prResult.stdout, /- npm test passed \(\.\/test-output\.log\) - slice `add-report`/);
+  assert.match(prResult.stdout, /- `npm-test-passed` \[test\]: npm test passed \(\.\/test-output\.log\)/);
   assert.match(stored, /"path": "\.\/test-output\.log"/);
 });
 
@@ -564,6 +564,96 @@ test("runs a deterministic review against committed branch changes", async () =>
   assert.match(result.stdout, /- A\tsource\tsrc\/report\.ts/);
   assert.match(list.stdout, /deterministic-review\topen\tadd-report\tDeterministic review against main: 1 warning\(s\)\./);
   assert.match(stored, /"checks": \[/);
+});
+
+test("generates PR markdown with committed repository summary", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await writeFile(path.join(repo, "requirements.md"), "# Requirements\n\nReport reorder candidates.\n", "utf8");
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd a local report.\n", "utf8");
+  await runCli(["requirement", "set", "inventory-alerts", "--file", "./requirements.md"], repo);
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Data Source",
+      "--description",
+      "Create local inventory data."
+    ],
+    repo
+  );
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates.",
+      "--depends-on",
+      "add-data-source"
+    ],
+    repo
+  );
+  await runCli(["slice", "status", "inventory-alerts", "add-data-source", "complete"], repo);
+  await runCli(["slice", "status", "inventory-alerts", "add-report", "review"], repo);
+  await runCli(
+    [
+      "evidence",
+      "add",
+      "inventory-alerts",
+      "--slice",
+      "add-data-source",
+      "--kind",
+      "test",
+      "--description",
+      "npm test passed"
+    ],
+    repo
+  );
+  await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--slice",
+      "add-report",
+      "--body",
+      "Resolve before PR."
+    ],
+    repo
+  );
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-pr"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+
+  const result = await runCli(["pr", "generate", "inventory-alerts", "--base", "main"], repo);
+  const stored = await readFile(
+    path.join(repo, ".pathfinder", "workstreams", "inventory-alerts", "pr.md"),
+    "utf8"
+  );
+
+  assert.equal(stored, result.stdout);
+  assert.match(result.stdout, /## Requirements/);
+  assert.match(result.stdout, /Report reorder candidates\./);
+  assert.match(result.stdout, /## Remaining Slices/);
+  assert.match(result.stdout, /- Add Report \(`add-report`, review\): Report reorder candidates\. Dependencies: `add-data-source`\./);
+  assert.match(result.stdout, /## Changed Files/);
+  assert.match(result.stdout, /- Base ref: `main`/);
+  assert.match(result.stdout, /- Head ref: `feature-pr`/);
+  assert.match(result.stdout, /- A source: src\/report\.ts/);
+  assert.match(result.stdout, /- `npm-test-passed` \[test\]: npm test passed/);
+  assert.match(result.stdout, /- Open comment `resolve-before-pr` \(slice `add-report`\): Resolve before PR\./);
 });
 
 async function runCli(args: string[], cwd = process.cwd()): Promise<{ stdout: string; stderr: string }> {

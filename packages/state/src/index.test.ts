@@ -446,10 +446,39 @@ test("generates and writes local PR markdown", async () => {
   assert.equal(stored, result.markdown);
   assert.match(result.markdown, /## Summary/);
   assert.match(result.markdown, /- Workstream: PR Flow \(`pr-flow`\)/);
-  assert.match(result.markdown, /- First Slice \(`first-slice`\): Generate markdown\./);
-  assert.match(result.markdown, /- npm test passed\. - slice `first-slice`/);
+  assert.match(result.markdown, /## Requirements/);
+  assert.match(result.markdown, /- First Slice \(`first-slice`, complete\): Generate markdown\. Dependencies: none\./);
+  assert.match(result.markdown, /- `npm-test-passed` \[test\]: npm test passed\./);
   assert.match(result.markdown, /- Review `manual-review-passed` \(open, slice `first-slice`\): Manual review passed\./);
   assert.match(result.markdown, /- Open comment `confirm-generated-output` \(slice `first-slice`\): Confirm generated output\./);
+});
+
+test("generates PR markdown with repository summary", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("PR Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Generate markdown.");
+  await store.updateSliceStatus(workstream.id, slice.id, "complete");
+
+  const result = await store.generatePrMarkdown(workstream.id, {
+    baseRef: "main",
+    headRef: "feature-pr",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "src/index.ts",
+        status: "added",
+        category: "source"
+      }
+    ]
+  });
+
+  assert.match(result.markdown, /## Changed Files/);
+  assert.match(result.markdown, /- Base ref: `main`/);
+  assert.match(result.markdown, /- Changed files: 1 \(source 1, test 0/);
+  assert.match(result.markdown, /- A source: src\/index\.ts/);
 });
 
 test("fails clearly before init", async () => {

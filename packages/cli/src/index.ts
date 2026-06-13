@@ -133,10 +133,13 @@ async function runGit(action: string | undefined, args: string[]): Promise<void>
 
 async function runPr(action: string | undefined, args: string[]): Promise<void> {
   if (action === "generate") {
-    const [workstreamId, ...extra] = args;
+    const [workstreamId, ...optionArgs] = args;
     requireArgument(workstreamId, "workstream id");
-    expectNoExtraArgs(extra);
-    const result = await store.generatePrMarkdown(workstreamId);
+    const options = parseOptions(optionArgs);
+    const repositorySummary = options.base
+      ? await new GitAdapter({ cwd: process.cwd() }).getCommittedSummaryAgainstBase(options.base)
+      : undefined;
+    const result = await store.generatePrMarkdown(workstreamId, repositorySummary);
     process.stdout.write(result.markdown);
     return;
   }
@@ -821,5 +824,5 @@ Usage:
   pathfinder evidence list <workstream-id>
   pathfinder git diff [--base <base-ref>]
   pathfinder git summary --base <base-ref>
-  pathfinder pr generate <workstream-id>`);
+  pathfinder pr generate <workstream-id> [--base <base-ref>]`);
 }

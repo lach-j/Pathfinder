@@ -478,15 +478,20 @@ export class PathfinderStore {
     return review;
   }
 
-  async generatePrMarkdown(workstreamId: string): Promise<GeneratedPrMarkdown> {
+  async generatePrMarkdown(
+    workstreamId: string,
+    repositorySummary?: RepositorySummary
+  ): Promise<GeneratedPrMarkdown> {
     const root = await this.requireWorkstreamRoot(workstreamId);
     const markdown = generatePrMarkdown({
       workstream: await this.getWorkstream(workstreamId),
+      requirementsMarkdown: await this.getRequirements(workstreamId),
       planMarkdown: await this.getPlan(workstreamId),
       slices: await this.listSlices(workstreamId),
       comments: await this.listComments(workstreamId),
       reviews: await this.listReviews(workstreamId),
-      evidence: await this.listEvidence(workstreamId)
+      evidence: await this.listEvidence(workstreamId),
+      repositorySummary
     });
     const outputPath = path.join(root, "pr.md");
 

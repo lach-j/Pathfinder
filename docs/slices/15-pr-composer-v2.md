@@ -1,6 +1,6 @@
 # Slice 15: PR Composer V2
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -90,6 +90,13 @@ Suggested markdown sections:
 - Empty/missing optional state produces useful placeholder text, not broken output.
 - Tests cover deterministic markdown output.
 - README documents the richer PR generation workflow.
+
+## Implementation Notes
+
+- `pathfinder pr generate <workstream-id>` now renders requirements, plan, completed slices, remaining slices, changed-file placeholders, testing evidence, review notes, risks, and checklist sections.
+- `pathfinder pr generate <workstream-id> --base <base-ref>` adds a committed repository summary from the local Git merge base.
+- PR markdown output is deterministic through explicit sorting of slices, evidence, reviews, comments, and repository files.
+- Optional state uses clear placeholder text when requirements, plan, slices, evidence, reviews, comments, or repository summaries are absent.
 
 ## Checks
 

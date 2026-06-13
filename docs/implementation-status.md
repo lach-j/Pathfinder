@@ -80,7 +80,7 @@ The next set of slices should deepen the local product workflow before UI, MCP, 
 | 12 | done | `docs/slices/12-evidence-attachments.md` |
 | 13 | done | `docs/slices/13-repository-intelligence-summary.md` |
 | 14 | done | `docs/slices/14-deterministic-review-checks.md` |
-| 15 | ready | `docs/slices/15-pr-composer-v2.md` |
+| 15 | done | `docs/slices/15-pr-composer-v2.md` |
 
 Status values:
 

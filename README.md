@@ -153,6 +153,7 @@ Generate a local PR markdown draft:
 
 ```bash
 npm exec -- pathfinder pr generate add-billing-foundation
+npm exec -- pathfinder pr generate add-billing-foundation --base main
 ```
 
 This overwrites and prints:
@@ -160,6 +161,12 @@ This overwrites and prints:
 ```text
 .pathfinder/workstreams/add-billing-foundation/pr.md
 ```
+
+The PR draft is assembled from local Pathfinder state. It includes the workstream, requirements
+excerpt, plan excerpt, completed and remaining slices, slice dependencies, evidence grouped by
+slice/review, review notes, unresolved comments, risks, and a checklist. When `--base` is supplied,
+Pathfinder also includes a committed repository summary for `<base-ref>..HEAD` using the local
+merge base.
 
 Each workstream is stored as human-readable local files:
 
@@ -202,4 +209,5 @@ npm exec -- pathfinder git diff
 npm exec -- pathfinder git diff --base main
 npm exec -- pathfinder git summary --base main
 npm exec -- pathfinder pr generate add-billing-foundation
+npm exec -- pathfinder pr generate add-billing-foundation --base main
 ```
