@@ -39,10 +39,16 @@
     "clean": "node scripts/clean-dist.mjs",
     "build": "npm run clean && npm run build -w @pathfinder/ui && tsc -b packages/core packages/git packages/state packages/local-server packages/cli",
     "typecheck": "tsc -b --pretty false && npm run typecheck -w @pathfinder/ui",
-    "test": "npm run build && node --test packages/core/dist/*.test.js packages/git/dist/*.test.js packages/state/dist/*.test.js packages/cli/dist/*.test.js"
+    "test": "npm run build && node --test packages/core/dist/*.test.js packages/git/dist/*.test.js packages/state/dist/*.test.js packages/cli/dist/*.test.js",
+    "release": "semantic-release"
   },
   "devDependencies": {
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/exec": "^7.1.0",
+    "@semantic-release/github": "^12.0.8",
+    "@semantic-release/release-notes-generator": "^14.1.1",
     "@types/node": "^22.13.0",
+    "semantic-release": "^25.0.5",
     "typescript": "^5.8.0"
   }
 }

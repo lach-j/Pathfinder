@@ -1,6 +1,6 @@
 # Slice 33: Automated Versioning
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -78,3 +78,9 @@ Manual verification:
 npx semantic-release --dry-run
 ```
 
+## Completion Notes
+
+- Added semantic-release with Conventional Commit analysis, generated release notes, and GitHub Release publishing.
+- Added root release configuration that tags releases as `vX.Y.Z`, stamps the CI workspace package version, builds, packs `pathfinder-*.tgz`, and attaches that tarball to the GitHub Release.
+- Updated `.github/workflows/release.yml` with an automated `main` release job while preserving the manual `v*` tag release job.
+- Documented release-triggering commit messages, dry-run verification, and the retained manual tag path in `README.md`.

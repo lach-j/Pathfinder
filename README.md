@@ -35,7 +35,30 @@ On Windows the binary path is usually:
 <temp-prefix>/pathfinder.cmd
 ```
 
-Create a GitHub Release artifact by pushing a version tag. The release workflow runs the checks, builds from source, packs the tarball, and uploads it to the matching GitHub Release:
+Create an automated GitHub Release artifact by pushing Conventional Commits to `main`. The release workflow runs
+checks, lets semantic-release determine the next version, generates release notes, builds from source, packs the
+tarball, and uploads it to the matching GitHub Release. It does not publish to npm.
+
+Commit messages control version bumps:
+
+```text
+fix: correct review session refresh
+feat: add external state mode
+feat!: change state layout
+```
+
+`fix:` creates a patch release, `feat:` creates a minor release, and a `!` marker or `BREAKING CHANGE:` footer creates
+a major release. Commits that do not map to a release type, such as `docs:` or `chore:`, do not create a release by
+themselves.
+
+Dry-run release calculation locally with:
+
+```bash
+npx semantic-release --dry-run
+```
+
+The manual tag release path remains available. Push a version tag to run the same source checks, build, pack, and
+upload flow for that exact tag:
 
 ```bash
 git tag v0.1.0
