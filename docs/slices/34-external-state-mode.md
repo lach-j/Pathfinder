@@ -1,6 +1,6 @@
 # Slice 34: External State Mode
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -116,3 +116,25 @@ pathfinder workstream create --title "Demo"
 pathfinder current
 ```
 
+## Completion Notes
+
+- Added repo/external state mode support with `pathfinder config get state.mode`, `pathfinder config set state.mode repo|external`, and `pathfinder init --personal`.
+- Added a state root resolver so existing store operations can read/write either repo-local `.pathfinder/` or external user state without per-command special cases.
+- External state is stored under the user data root (`%LOCALAPPDATA%\Pathfinder` on Windows when available, otherwise `~/.pathfinder`) with a `projects/<project-id>/` layout.
+- Project ids are deterministic from the first Git remote URL in `.git/config`, falling back to the absolute Git root path.
+- External projects write `project-metadata.json` with the Git root, identity source, and remote URL when available.
+- `init --personal` persists `state.mode=external` so subsequent commands in the same repository find external state.
+- Added state and CLI coverage for repo mode compatibility, external mode, deterministic remote-derived ids, mode conflict messaging, and no repo `.pathfinder/` writes.
+
+Checks run:
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+npm exec --prefix C:\Users\Lachlan\Documents\Pathfinder -- pathfinder config set state.mode external
+npm exec --prefix C:\Users\Lachlan\Documents\Pathfinder -- pathfinder init --personal
+npm exec --prefix C:\Users\Lachlan\Documents\Pathfinder -- pathfinder workstream create --title "Demo"
+npm exec --prefix C:\Users\Lachlan\Documents\Pathfinder -- pathfinder current
+```

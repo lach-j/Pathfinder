@@ -20,6 +20,7 @@ import {
   ReviewSession,
   Slice,
   SliceStatus,
+  StateMode,
   StructuredDiff,
   Workstream,
   assertNonEmptyText,
@@ -46,6 +47,16 @@ import { exists } from "./file-system.js";
 import { findGitRoot } from "./git-root.js";
 import { readJson, writeJson } from "./json-file.js";
 import { validateDependencies } from "./slice-dependencies.js";
+import {
+  PathfinderConfig,
+  PathfinderStoreOptions,
+  getConfiguredStateMode,
+  getPathfinderConfig,
+  resolveExistingStateRoot,
+  resolveStateRootForInit,
+  setConfiguredStateMode,
+  writeExternalProjectMetadata
+} from "./state-root.js";
 
 export interface ActiveSlice {
   workstream: Workstream;
@@ -157,6 +168,10 @@ export interface ExportFeedbackOptions {
   sessionId?: string;
 }
 
+export interface InitProjectOptions {
+  personal?: boolean;
+}
+
 export interface RefreshedReviewSession {
   session: ReviewSession;
   comments: ReviewComment[];
@@ -189,33 +204,65 @@ interface ValidatedCommentTarget {
 
 export class PathfinderStore {
   private readonly cwd: string;
+  private readonly options: PathfinderStoreOptions;
 
-  constructor(cwd: string = process.cwd()) {
+  constructor(cwd: string = process.cwd(), options: PathfinderStoreOptions = {}) {
     this.cwd = path.resolve(cwd);
+    this.options = options;
   }
 
-  async initProject(): Promise<Project> {
-    const gitRoot = await findGitRoot(this.cwd);
-    if (!gitRoot) {
-      throw new PathfinderError("pathfinder init must be run inside a Git repository.");
-    }
+  async getConfig(): Promise<PathfinderConfig> {
+    return getPathfinderConfig(this.options);
+  }
 
-    const stateRoot = path.join(gitRoot, ".pathfinder");
+  async getStateMode(): Promise<StateMode> {
+    return getConfiguredStateMode(this.options);
+  }
+
+  async setStateMode(mode: StateMode): Promise<PathfinderConfig> {
+    return setConfiguredStateMode(mode, this.options);
+  }
+
+  async initProject(options: InitProjectOptions = {}): Promise<Project> {
+    const mode = options.personal ? "external" : await this.getStateMode();
+    const resolution = await resolveStateRootForInit(this.cwd, mode, this.options).catch((error) => {
+      if (error instanceof PathfinderError && error.message === "This command must be run inside a Git repository.") {
+        throw new PathfinderError("pathfinder init must be run inside a Git repository.");
+      }
+      throw error;
+    });
+    const stateRoot = resolution.stateRoot;
     const projectPath = path.join(stateRoot, "project.json");
 
     if (await exists(projectPath)) {
-      throw new PathfinderError("Pathfinder state already exists in this repository.");
+      throw new PathfinderError(
+        mode === "external"
+          ? "External Pathfinder state already exists for this repository."
+          : "Pathfinder state already exists in this repository."
+      );
+    }
+
+    if (mode === "external" && await exists(path.join(resolution.gitRoot, ".pathfinder", "project.json"))) {
+      throw new PathfinderError(
+        "Cannot initialise external Pathfinder state because repo-local .pathfinder/project.json already exists. Run 'pathfinder config set state.mode repo' to use the existing repo state."
+      );
     }
 
     const now = createTimestamp();
     const project: Project = {
       schemaVersion: 1,
-      name: path.basename(gitRoot),
+      name: path.basename(resolution.gitRoot),
       createdAt: now
     };
 
     await mkdir(path.join(stateRoot, "workstreams"), { recursive: true });
     await writeJson(projectPath, project);
+
+    if (mode === "external" && resolution.projectIdentity) {
+      await writeExternalProjectMetadata(stateRoot, resolution.projectIdentity);
+      await this.setStateMode("external");
+    }
+
     return project;
   }
 
@@ -1237,18 +1284,7 @@ export class PathfinderStore {
   }
 
   private async requireStateRoot(): Promise<string> {
-    const repoRoot = await findGitRoot(this.cwd);
-    if (!repoRoot) {
-      throw new PathfinderError("This command must be run inside a Git repository.");
-    }
-
-    const stateRoot = path.join(repoRoot, ".pathfinder");
-    const projectPath = path.join(stateRoot, "project.json");
-    if (!(await exists(projectPath))) {
-      throw new PathfinderError("Pathfinder state not found. Run 'pathfinder init' first.");
-    }
-
-    return stateRoot;
+    return (await resolveExistingStateRoot(this.cwd, this.options)).stateRoot;
   }
 
   private async requireGitRootForAgentCommands(): Promise<string> {
@@ -1410,21 +1446,36 @@ export class PathfinderStore {
   }
 
   private async checkPathfinderProject(gitRoot: string): Promise<AgentDoctorCheck> {
-    const projectPath = path.join(gitRoot, ".pathfinder", "project.json");
+    const mode = await this.getStateMode();
 
-    if (await exists(projectPath)) {
+    try {
+      const resolution = await resolveExistingStateRoot(this.cwd, this.options);
       return {
         id: "pathfinder-state",
         status: "pass",
-        message: ".pathfinder/project.json exists."
+        message: mode === "external"
+          ? `External Pathfinder state exists at ${resolution.stateRoot}.`
+          : ".pathfinder/project.json exists."
       };
+    } catch (error) {
+      const repoProjectPath = path.join(gitRoot, ".pathfinder", "project.json");
+      if (mode === "external" && await exists(repoProjectPath)) {
+        return {
+          id: "pathfinder-state",
+          status: "error",
+          message: "State mode is external, but only repo-local .pathfinder/project.json was found.",
+          fixCommand: "pathfinder config set state.mode repo"
+        };
+      }
     }
 
     return {
       id: "pathfinder-state",
       status: "missing",
-      message: ".pathfinder/project.json was not found.",
-      fixCommand: "pathfinder init"
+      message: mode === "external"
+        ? "External Pathfinder state was not found for this repository."
+        : ".pathfinder/project.json was not found.",
+      fixCommand: mode === "external" ? "pathfinder init --personal" : "pathfinder init"
     };
   }
 

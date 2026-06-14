@@ -17,7 +17,9 @@ test("help lists the implemented commands", async () => {
   const result = await runCli(["help"]);
 
   for (const command of [
-    "pathfinder init [--agents]",
+    "pathfinder init [--agents|--personal]",
+    "pathfinder config get state.mode",
+    "pathfinder config set state.mode repo|external",
     "pathfinder agent bootstrap [--dry-run]",
     "pathfinder agent commands install [--tool claude|opencode] [--dry-run]",
     "pathfinder agent commands list",
@@ -187,6 +189,31 @@ test("init --agents initialises state and bootstraps instructions", async () => 
   assert.match(result.stdout, /Updated .*AGENTS\.md\./);
   assert.match(project, /"schemaVersion": 1/);
   assert.match(agents, /pathfinder agent next --json/);
+});
+
+test("uses external state from config and init --personal", async () => {
+  const repo = await createTempGitRepo();
+  const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));
+  const env = { PATHFINDER_HOME: pathfinderHome };
+
+  const defaultMode = await runCli(["config", "get", "state.mode"], repo, env);
+  const setMode = await runCli(["config", "set", "state.mode", "external"], repo, env);
+  const externalMode = await runCli(["config", "get", "state.mode"], repo, env);
+  const init = await runCli(["init", "--personal"], repo, env);
+  const workstream = await runCli(["workstream", "create", "--title", "Demo"], repo, env);
+  const current = await runCli(["current"], repo, env);
+  const projectIds = await sortedFiles(path.join(pathfinderHome, "projects"));
+  const projectRoot = path.join(pathfinderHome, "projects", projectIds[0]);
+
+  assert.equal(defaultMode.stdout.trim(), "repo");
+  assert.equal(setMode.stdout.trim(), "state.mode=external");
+  assert.equal(externalMode.stdout.trim(), "external");
+  assert.match(init.stdout, /Initialised Pathfinder/);
+  assert.match(workstream.stdout, /demo\tDemo/);
+  assert.match(current.stdout, /Project:/);
+  assert.equal(projectIds.length, 1);
+  assert.match(await readFile(path.join(projectRoot, "project.json"), "utf8"), /"schemaVersion": 1/);
+  await assert.rejects(() => readFile(path.join(repo, ".pathfinder", "project.json"), "utf8"));
 });
 
 test("prints agent next setup recommendation as text and JSON", async () => {
@@ -1619,8 +1646,19 @@ async function closeServer(server: Server): Promise<void> {
   });
 }
 
-async function runCli(args: string[], cwd = process.cwd()): Promise<{ stdout: string; stderr: string }> {
-  return execFileAsync(process.execPath, [cliPath, ...args], { cwd, encoding: "utf8" });
+async function runCli(
+  args: string[],
+  cwd = process.cwd(),
+  env: NodeJS.ProcessEnv = {}
+): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync(process.execPath, [cliPath, ...args], {
+    cwd,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      ...env
+    }
+  });
 }
 
 async function createTempGitRepo(): Promise<string> {
@@ -1641,6 +1679,11 @@ async function createRealTempGitRepo(): Promise<string> {
 async function git(cwd: string, args: string[]): Promise<string> {
   const result = await execFileAsync("git", args, { cwd, encoding: "utf8" });
   return result.stdout;
+}
+
+async function sortedFiles(directory: string): Promise<string[]> {
+  const { readdir } = await import("node:fs/promises");
+  return (await readdir(directory)).sort();
 }
 
 function isExecError(error: unknown): error is Error & { code: number; stderr: string } {

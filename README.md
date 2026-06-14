@@ -149,6 +149,23 @@ This creates:
   workstreams/
 ```
 
+Use personal external state when you do not want Pathfinder to write `.pathfinder/` into the target repository:
+
+```bash
+npm exec -- pathfinder config get state.mode
+npm exec -- pathfinder config set state.mode external
+npm exec -- pathfinder init --personal
+```
+
+Repo-local state remains the default mode. In external mode, Pathfinder stores state under the user data directory instead:
+
+```text
+%LOCALAPPDATA%\Pathfinder\projects\<project-id>\   # Windows
+~/.pathfinder/projects/<project-id>/               # macOS/Linux fallback
+```
+
+The project id is deterministic from the first Git remote URL when available, or from the absolute Git root path otherwise. External state writes a `project-metadata.json` file alongside `project.json` to record the Git root, identity source, and remote URL used for that id. Set `PATHFINDER_HOME` to override the user data root.
+
 Create and inspect a workstream:
 
 ```bash

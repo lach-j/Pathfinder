@@ -7,7 +7,8 @@ import {
   ReviewCommentTarget,
   isAgentCommandTool,
   isAgentPromptPhase,
-  isReviewCommentSide
+  isReviewCommentSide,
+  isStateMode
 } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { serveReviewServer } from "@pathfinder/local-server";
@@ -49,6 +50,10 @@ export async function run(args: string[]): Promise<void> {
       throw usageError("Unknown option '--dry-run'.");
     }
 
+    if (options.personal && options.agents) {
+      throw usageError("Use either --personal or --agents, not both.");
+    }
+
     if (options.agents) {
       try {
         const project = await store.initProject();
@@ -64,8 +69,13 @@ export async function run(args: string[]): Promise<void> {
       return;
     }
 
-    const project = await store.initProject();
+    const project = await store.initProject({ personal: options.personal });
     console.log(`Initialised Pathfinder for ${project.name}.`);
+    return;
+  }
+
+  if (area === "config") {
+    await runConfig(action, rest);
     return;
   }
 
@@ -137,6 +147,42 @@ export async function run(args: string[]): Promise<void> {
   }
 
   throw usageError(`Unknown command '${area}'.`);
+}
+
+async function runConfig(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "get") {
+    const [key, ...extra] = args;
+    requireArgument(key, "config key");
+    expectNoExtraArgs(extra);
+
+    if (key !== "state.mode") {
+      throw usageError("Unknown config key. Expected state.mode.");
+    }
+
+    console.log(await store.getStateMode());
+    return;
+  }
+
+  if (action === "set") {
+    const [key, value, ...extra] = args;
+    requireArgument(key, "config key");
+    requireArgument(value, "config value");
+    expectNoExtraArgs(extra);
+
+    if (key !== "state.mode") {
+      throw usageError("Unknown config key. Expected state.mode.");
+    }
+
+    if (!isStateMode(value)) {
+      throw usageError("Invalid state.mode value. Expected repo or external.");
+    }
+
+    await store.setStateMode(value);
+    console.log(`state.mode=${value}`);
+    return;
+  }
+
+  throw usageError("Unknown config command. Expected get or set.");
 }
 
 async function runAgent(action: string | undefined, args: string[]): Promise<void> {

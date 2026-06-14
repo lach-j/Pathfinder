@@ -41,6 +41,10 @@ export const repositoryFileCategories: readonly RepositoryFileCategory[] = [
   "other"
 ];
 
+export type StateMode = "repo" | "external";
+
+export const stateModes: readonly StateMode[] = ["repo", "external"];
+
 export type RepositoryChangeStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | "other";
 
 export interface RepositorySummaryFile {

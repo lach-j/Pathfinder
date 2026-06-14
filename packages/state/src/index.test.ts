@@ -19,6 +19,70 @@ test("initialises Pathfinder state inside a Git repository", async () => {
   assert.match(await readFile(path.join(repo, ".pathfinder", "project.json"), "utf8"), /"schemaVersion": 1/);
 });
 
+test("initialises external Pathfinder state without writing repo state", async () => {
+  const repo = await createTempRepo();
+  const configRoot = await mkdtemp(path.join(os.tmpdir(), "pathfinder-home-"));
+  const store = new PathfinderStore(repo, { configRoot });
+
+  const project = await store.initProject({ personal: true });
+  const workstream = await store.createWorkstream("Personal State");
+  const metadataPath = path.join(configRoot, "projects");
+  const projectIds = await sortedFiles(metadataPath);
+  const projectRoot = path.join(metadataPath, projectIds[0]);
+  const metadata = JSON.parse(await readFile(path.join(projectRoot, "project-metadata.json"), "utf8"));
+
+  assert.equal(project.name, path.basename(repo));
+  assert.equal(await store.getStateMode(), "external");
+  assert.equal(workstream.id, "personal-state");
+  assert.equal(projectIds.length, 1);
+  assert.equal(metadata.gitRoot, repo);
+  assert.equal(metadata.identitySource, "path");
+  assert.match(await readFile(path.join(configRoot, "config.json"), "utf8"), /"stateMode": "external"/);
+  await assert.rejects(() => readFile(path.join(repo, ".pathfinder", "project.json"), "utf8"));
+});
+
+test("derives deterministic external project ids from Git remote URL", async () => {
+  const configRoot = await mkdtemp(path.join(os.tmpdir(), "pathfinder-home-"));
+  const firstRepo = await createTempRepo();
+  const secondRepo = await createTempRepo();
+  const remoteUrl = "https://example.invalid/acme/project.git";
+  await writeFile(path.join(firstRepo, ".git", "config"), `[remote "origin"]\n\turl = ${remoteUrl}\n`, "utf8");
+  await writeFile(path.join(secondRepo, ".git", "config"), `[remote "origin"]\n\turl = ${remoteUrl}\n`, "utf8");
+
+  const firstStore = new PathfinderStore(firstRepo, { configRoot });
+  await firstStore.initProject({ personal: true });
+  const projectIdsAfterFirst = await sortedFiles(path.join(configRoot, "projects"));
+  const metadata = JSON.parse(
+    await readFile(path.join(configRoot, "projects", projectIdsAfterFirst[0], "project-metadata.json"), "utf8")
+  );
+
+  assert.equal(projectIdsAfterFirst.length, 1);
+  assert.equal(metadata.identitySource, "remote");
+  assert.equal(metadata.remoteUrl, remoteUrl);
+
+  const secondStore = new PathfinderStore(secondRepo, { configRoot });
+  await assert.rejects(
+    () => secondStore.initProject({ personal: true }),
+    /External Pathfinder state already exists for this repository\./
+  );
+  assert.deepEqual(await sortedFiles(path.join(configRoot, "projects")), projectIdsAfterFirst);
+});
+
+test("reports mode conflict when external mode finds only repo-local state", async () => {
+  const repo = await createTempRepo();
+  const configRoot = await mkdtemp(path.join(os.tmpdir(), "pathfinder-home-"));
+  const repoStore = new PathfinderStore(repo, { configRoot });
+  await repoStore.initProject();
+
+  const externalStore = new PathfinderStore(repo, { configRoot });
+  await externalStore.setStateMode("external");
+
+  await assert.rejects(
+    () => externalStore.listWorkstreams(),
+    /repo-local state exists/
+  );
+});
+
 test("bootstraps agent instructions when AGENTS.md is missing", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

@@ -1,4 +1,5 @@
 import { PathfinderError } from "./errors.js";
+import { StateMode, stateModes } from "./domain.js";
 
 export function assertNonEmptyText(value: string, label: string): string {
   const trimmed = value.trim();
@@ -6,4 +7,8 @@ export function assertNonEmptyText(value: string, label: string): string {
     throw new PathfinderError(`${label} is required.`);
   }
   return trimmed;
+}
+
+export function isStateMode(value: string): value is StateMode {
+  return stateModes.includes(value as StateMode);
 }
