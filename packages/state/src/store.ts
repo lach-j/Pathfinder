@@ -105,6 +105,24 @@ export interface AgentCommandsListResult {
   }[];
 }
 
+export type AgentDoctorCheckStatus = "pass" | "missing" | "warning" | "error";
+
+export interface AgentDoctorCheck {
+  id: string;
+  status: AgentDoctorCheckStatus;
+  message: string;
+  fixCommand?: string;
+}
+
+export interface AgentDoctorResult {
+  ok: boolean;
+  checks: AgentDoctorCheck[];
+  next: {
+    phase: AgentNextRecommendation["phase"];
+    command: "pathfinder agent next --json";
+  };
+}
+
 export interface DeterministicReviewRecord {
   review: Review;
   result: DeterministicReviewResult;
@@ -258,6 +276,35 @@ export class PathfinderStore {
     );
 
     return { tools };
+  }
+
+  async getAgentDoctor(provider?: RepositorySummaryProvider): Promise<AgentDoctorResult> {
+    const gitRoot = await findGitRoot(this.cwd);
+    if (!gitRoot) {
+      throw new PathfinderError("Agent doctor must be run inside a Git repository.");
+    }
+
+    const checks: AgentDoctorCheck[] = [
+      await this.checkPathfinderProject(gitRoot),
+      await this.checkAgentBootstrap(gitRoot)
+    ];
+
+    const commandStatus = await this.listAgentCommands();
+    for (const tool of commandStatus.tools) {
+      checks.push(checkAgentCommandTool(tool));
+    }
+
+    const nextCheck = await this.checkAgentNext(provider);
+    checks.push(nextCheck.check);
+
+    return {
+      ok: checks.every((check) => check.status === "pass"),
+      checks,
+      next: {
+        phase: nextCheck.phase,
+        command: "pathfinder agent next --json"
+      }
+    };
   }
 
   async getProject(): Promise<Project> {
@@ -1361,6 +1408,134 @@ export class PathfinderStore {
       };
     }
   }
+
+  private async checkPathfinderProject(gitRoot: string): Promise<AgentDoctorCheck> {
+    const projectPath = path.join(gitRoot, ".pathfinder", "project.json");
+
+    if (await exists(projectPath)) {
+      return {
+        id: "pathfinder-state",
+        status: "pass",
+        message: ".pathfinder/project.json exists."
+      };
+    }
+
+    return {
+      id: "pathfinder-state",
+      status: "missing",
+      message: ".pathfinder/project.json was not found.",
+      fixCommand: "pathfinder init"
+    };
+  }
+
+  private async checkAgentBootstrap(gitRoot: string): Promise<AgentDoctorCheck> {
+    const agentsPath = path.join(gitRoot, "AGENTS.md");
+
+    if (!(await exists(agentsPath))) {
+      return {
+        id: "agents-md",
+        status: "missing",
+        message: "AGENTS.md was not found.",
+        fixCommand: "pathfinder agent bootstrap"
+      };
+    }
+
+    const markdown = await readFile(agentsPath, "utf8");
+    const hasStart = markdown.includes(AGENT_BOOTSTRAP_START);
+    const hasEnd = markdown.includes(AGENT_BOOTSTRAP_END);
+
+    if (hasStart && hasEnd) {
+      return {
+        id: "agents-md",
+        status: "pass",
+        message: "AGENTS.md contains the Pathfinder managed block."
+      };
+    }
+
+    if (hasStart || hasEnd) {
+      return {
+        id: "agents-md",
+        status: "error",
+        message: "AGENTS.md contains incomplete Pathfinder managed block markers.",
+        fixCommand: "pathfinder agent bootstrap"
+      };
+    }
+
+    return {
+      id: "agents-md",
+      status: "missing",
+      message: "AGENTS.md does not contain the Pathfinder managed block.",
+      fixCommand: "pathfinder agent bootstrap"
+    };
+  }
+
+  private async checkAgentNext(provider?: RepositorySummaryProvider): Promise<{
+    check: AgentDoctorCheck;
+    phase: AgentNextRecommendation["phase"];
+  }> {
+    try {
+      const recommendation = await this.getAgentNext(provider);
+      return {
+        check: {
+          id: "agent-next",
+          status: "pass",
+          message: `pathfinder agent next --json returned phase '${recommendation.phase}'.`
+        },
+        phase: recommendation.phase
+      };
+    } catch (error) {
+      return {
+        check: {
+          id: "agent-next",
+          status: "error",
+          message: `pathfinder agent next --json failed: ${errorMessage(error)}`,
+          fixCommand: "pathfinder agent next --json"
+        },
+        phase: "blocked"
+      };
+    }
+  }
+}
+
+function checkAgentCommandTool(tool: AgentCommandsListResult["tools"][number]): AgentDoctorCheck {
+  const id = `${tool.tool}-commands`;
+  const missing = tool.files.filter((file) => !file.installed);
+  const userOwned = tool.files.filter((file) => file.installed && !file.managed);
+  const outdated = tool.files.filter((file) => file.installed && file.managed && file.changed);
+  const fixCommand = `pathfinder agent commands install --tool ${tool.tool}`;
+
+  if (missing.length > 0) {
+    return {
+      id,
+      status: "missing",
+      message: `${tool.displayName} Pathfinder command wrappers are missing: ${missing.map((file) => file.relativePath).join(", ")}.`,
+      fixCommand
+    };
+  }
+
+  if (userOwned.length > 0) {
+    return {
+      id,
+      status: "warning",
+      message: `${tool.displayName} command wrapper paths exist but are not Pathfinder-managed: ${userOwned.map((file) => file.relativePath).join(", ")}.`,
+      fixCommand
+    };
+  }
+
+  if (outdated.length > 0) {
+    return {
+      id,
+      status: "warning",
+      message: `${tool.displayName} Pathfinder command wrappers are installed but need updating: ${outdated.map((file) => file.relativePath).join(", ")}.`,
+      fixCommand
+    };
+  }
+
+  return {
+    id,
+    status: "pass",
+    message: `${tool.displayName} Pathfinder command wrappers are installed.`
+  };
 }
 
 function changedFileMatches(path: string, previousPath: string | undefined, filePath: string): boolean {

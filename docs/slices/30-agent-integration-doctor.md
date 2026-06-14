@@ -1,6 +1,6 @@
 # Slice 30: Agent Integration Doctor
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -108,6 +108,29 @@ Suggested JSON shape:
   4. Agent starts with `pathfinder agent next --json`.
   5. User reviews in the UI and agent addresses feedback.
 - Tests cover missing setup, fully installed setup, and JSON output.
+
+## Implementation Notes
+
+- Added `PathfinderStore.getAgentDoctor()` as a read-only diagnostic that checks local Pathfinder state, the root `AGENTS.md` managed block, Claude Code and OpenCode command wrapper status, and the existing `agent next` phase.
+- Added `pathfinder agent doctor` and `pathfinder agent doctor --json` with stable check ids and fix commands for missing or stale setup.
+- Added CLI and state tests for missing setup, fully installed setup, and deterministic JSON output.
+- Updated README with the end-to-end deterministic agent integration loop and doctor usage.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke tested:
+
+```bash
+npm exec -- pathfinder agent doctor
+npm exec -- pathfinder agent doctor --json
+```
 
 ## Checks
 

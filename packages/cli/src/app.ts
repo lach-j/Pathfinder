@@ -15,6 +15,7 @@ import { PathfinderStore } from "@pathfinder/state";
 
 import {
   formatAgentNext,
+  formatAgentDoctor,
   formatAgentCommandsInstall,
   formatAgentCommandsList,
   formatComment,
@@ -192,6 +193,20 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
+  if (action === "doctor") {
+    const options = parseOptions(args);
+    const git = new GitAdapter({ cwd: process.cwd() });
+    const result = await store.getAgentDoctor((baseRef) => git.getCommittedSummaryAgainstBase(baseRef));
+
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+
+    process.stdout.write(formatAgentDoctor(result));
+    return;
+  }
+
   if (action === "prompt") {
     const options = parseOptions(args);
     const git = new GitAdapter({ cwd: process.cwd() });
@@ -209,7 +224,7 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
-  throw usageError("Unknown agent command. Expected bootstrap, commands, next, or prompt.");
+  throw usageError("Unknown agent command. Expected bootstrap, commands, doctor, next, or prompt.");
 }
 
 async function runDiff(action: string | undefined, args: string[]): Promise<void> {

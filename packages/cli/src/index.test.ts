@@ -21,6 +21,7 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder agent bootstrap [--dry-run]",
     "pathfinder agent commands install [--tool claude|opencode] [--dry-run]",
     "pathfinder agent commands list",
+    "pathfinder agent doctor [--json]",
     "pathfinder current",
     "pathfinder agent next [--json]",
     "pathfinder agent prompt [--phase plan|implement|feedback|review|pr]",
@@ -64,6 +65,57 @@ test("help lists the implemented MVP commands", async () => {
   ]) {
     assert.match(result.stdout, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+});
+
+test("diagnoses missing agent integration setup from the CLI", async () => {
+  const repo = await createTempGitRepo();
+
+  const text = await runCli(["agent", "doctor"], repo);
+  const json = await runCli(["agent", "doctor", "--json"], repo);
+  const parsed = JSON.parse(json.stdout);
+
+  assert.match(text.stdout, /# Pathfinder Agent Doctor/);
+  assert.match(text.stdout, /\[missing\] pathfinder-state/);
+  assert.match(text.stdout, /Fix: pathfinder init/);
+  assert.match(text.stdout, /\[missing\] agents-md/);
+  assert.match(text.stdout, /Fix: pathfinder agent bootstrap/);
+  assert.equal(parsed.ok, false);
+  assert.equal(parsed.next.phase, "uninitialized");
+  assert.equal(parsed.next.command, "pathfinder agent next --json");
+  assert.deepEqual(
+    parsed.checks.map((check: { id: string; status: string }) => [check.id, check.status]),
+    [
+      ["pathfinder-state", "missing"],
+      ["agents-md", "missing"],
+      ["claude-commands", "missing"],
+      ["opencode-commands", "missing"],
+      ["agent-next", "pass"]
+    ]
+  );
+});
+
+test("diagnoses fully installed agent integration setup from the CLI", async () => {
+  const repo = await createTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["agent", "bootstrap"], repo);
+  await runCli(["agent", "commands", "install"], repo);
+
+  const result = await runCli(["agent", "doctor", "--json"], repo);
+  const parsed = JSON.parse(result.stdout);
+
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.next.phase, "needs_workstream");
+  assert.deepEqual(
+    parsed.checks.map((check: { id: string; status: string }) => [check.id, check.status]),
+    [
+      ["pathfinder-state", "pass"],
+      ["agents-md", "pass"],
+      ["claude-commands", "pass"],
+      ["opencode-commands", "pass"],
+      ["agent-next", "pass"]
+    ]
+  );
 });
 
 test("installs and lists native agent command wrappers from the CLI", async () => {

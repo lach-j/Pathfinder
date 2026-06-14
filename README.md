@@ -56,6 +56,27 @@ The command wrappers are thin convenience files for Claude Code and OpenCode. Th
 `.claude/commands/` and `.opencode/commands/`, include Pathfinder managed-file markers, and delegate to
 `pathfinder agent next --json` or `pathfinder agent prompt`. Existing user-owned command files are not overwritten.
 
+Check whether the repository is ready for the deterministic agent workflow:
+
+```bash
+npm exec -- pathfinder agent doctor
+npm exec -- pathfinder agent doctor --json
+```
+
+The doctor is read-only. It checks local Pathfinder state, the managed `AGENTS.md` block, optional Claude Code and
+OpenCode command wrappers, and whether `pathfinder agent next --json` can return a workflow phase. Missing setup is
+reported with explicit fix commands such as `pathfinder init`, `pathfinder agent bootstrap`, or
+`pathfinder agent commands install --tool claude`.
+
+Recommended agent integration loop:
+
+1. Run `pathfinder agent bootstrap`.
+2. Optionally run `pathfinder agent commands install`.
+3. Run `pathfinder agent doctor` and apply any printed setup commands.
+4. Tell the coding agent to continue with Pathfinder.
+5. The agent starts with `pathfinder agent next --json`, follows the returned commands and instruction, and uses `pathfinder agent prompt` when markdown guidance is useful.
+6. The user reviews in the local UI, exports feedback, and asks the agent to address open comments without resolving them automatically.
+
 Initialise Pathfinder state from the root of a Git repository:
 
 ```bash
@@ -141,6 +162,8 @@ npm exec -- pathfinder agent next
 npm exec -- pathfinder agent next --json
 npm exec -- pathfinder agent prompt
 npm exec -- pathfinder agent prompt --phase implement
+npm exec -- pathfinder agent doctor
+npm exec -- pathfinder agent doctor --json
 ```
 
 `agent next --json` is the canonical first command for coding agents. It inspects only local
@@ -157,6 +180,9 @@ instead of being guessed.
 `agent commands install` adds optional native command wrappers for Claude Code and OpenCode. The wrappers are
 project-level markdown files only; they do not run commands automatically and they do not replace `agent next`
 or `agent prompt` as the source of truth.
+
+`agent doctor` verifies the setup that makes the workflow discoverable. It does not mutate files; it prints
+missing or outdated integration pieces and the exact local commands to run before handing work back to an agent.
 
 Add, list, and resolve local review comments for a slice:
 
@@ -361,6 +387,8 @@ npm exec -- pathfinder agent next --json
 npm exec -- pathfinder agent prompt
 npm exec -- pathfinder agent prompt --phase implement
 npm exec -- pathfinder agent prompt --phase feedback
+npm exec -- pathfinder agent doctor
+npm exec -- pathfinder agent doctor --json
 npm exec -- pathfinder agent commands list
 npm exec -- pathfinder agent commands install --dry-run
 npm exec -- pathfinder agent commands install --tool claude

@@ -13,7 +13,7 @@ import {
   StructuredDiffLine
 } from "@pathfinder/core";
 import { CurrentContext } from "@pathfinder/state";
-import { AgentCommandsInstallResult, AgentCommandsListResult } from "@pathfinder/state";
+import { AgentCommandsInstallResult, AgentCommandsListResult, AgentDoctorResult } from "@pathfinder/state";
 
 export function formatSlice(slice: Slice): string {
   const dependencies = slice.dependsOnSliceIds?.length ? `\tdepends-on:${slice.dependsOnSliceIds.join(",")}` : "";
@@ -243,6 +243,26 @@ export function formatAgentCommandsList(result: AgentCommandsListResult): string
   }
 
   return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function formatAgentDoctor(result: AgentDoctorResult): string {
+  const lines = [
+    "# Pathfinder Agent Doctor",
+    "",
+    `Status: ${result.ok ? "ok" : "needs attention"}`,
+    `Next phase: ${result.next.phase}`,
+    `Next command: ${result.next.command}`,
+    "",
+    "## Checks",
+    ""
+  ];
+
+  for (const check of result.checks) {
+    const fix = check.fixCommand ? ` Fix: ${check.fixCommand}` : "";
+    lines.push(`- [${check.status}] ${check.id}: ${check.message}${fix}`);
+  }
+
+  return `${lines.join("\n")}\n`;
 }
 
 export function formatCurrentContext(context: CurrentContext): string {

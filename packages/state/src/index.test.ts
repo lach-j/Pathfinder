@@ -139,6 +139,52 @@ test("preserves existing user-owned native command files", async () => {
   assert.match(await readFile(path.join(repo, ".claude", "commands", "pathfinder-feedback.md"), "utf8"), /pathfinder agent prompt --phase feedback/);
 });
 
+test("diagnoses missing agent integration setup without writing files", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+
+  const result = await store.getAgentDoctor();
+
+  assert.equal(result.ok, false);
+  assert.equal(result.next.phase, "uninitialized");
+  assert.equal(result.next.command, "pathfinder agent next --json");
+  assert.deepEqual(
+    result.checks.map((check) => [check.id, check.status, check.fixCommand]),
+    [
+      ["pathfinder-state", "missing", "pathfinder init"],
+      ["agents-md", "missing", "pathfinder agent bootstrap"],
+      ["claude-commands", "missing", "pathfinder agent commands install --tool claude"],
+      ["opencode-commands", "missing", "pathfinder agent commands install --tool opencode"],
+      ["agent-next", "pass", undefined]
+    ]
+  );
+  await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
+});
+
+test("diagnoses fully installed agent integration setup", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+
+  await store.initProject();
+  await store.bootstrapAgentInstructions();
+  await store.installAgentCommands();
+
+  const result = await store.getAgentDoctor();
+
+  assert.equal(result.ok, true);
+  assert.equal(result.next.phase, "needs_workstream");
+  assert.deepEqual(
+    result.checks.map((check) => [check.id, check.status]),
+    [
+      ["pathfinder-state", "pass"],
+      ["agents-md", "pass"],
+      ["claude-commands", "pass"],
+      ["opencode-commands", "pass"],
+      ["agent-next", "pass"]
+    ]
+  );
+});
+
 test("creates workstreams with markdown and JSON state files", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);
