@@ -1,6 +1,6 @@
 # Slice 29: Native Agent Command Wrappers
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -105,6 +105,32 @@ Do not infer the Pathfinder workflow manually. Run the listed Pathfinder command
 - `--dry-run` does not write files.
 - `list` reports install status and paths.
 - Tests cover install, dry-run, idempotency, and overwrite protection.
+
+## Implementation Notes
+
+- Added managed native command wrapper definitions for Claude Code and OpenCode under the core agent command module.
+- Added state-level install and list behavior for project-level command files, with dry-run support, idempotent managed-file updates, and protection for existing user-owned files.
+- Added `pathfinder agent commands install [--tool claude|opencode] [--dry-run]` and `pathfinder agent commands list`.
+- Added core, state, and CLI tests covering command definitions, install, dry-run, per-tool install, idempotency, list output, and overwrite protection.
+- Updated README usage and check examples for the native command wrapper commands.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke tested:
+
+```bash
+npm exec -- pathfinder agent commands list
+npm exec -- pathfinder agent commands install --dry-run
+npm exec -- pathfinder agent commands install --tool claude
+npm exec -- pathfinder agent commands install --tool opencode
+```
 
 ## Checks
 

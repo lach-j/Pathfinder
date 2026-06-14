@@ -10,6 +10,7 @@ import {
   generateDeterministicReview,
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
+  getAgentCommandToolDefinitions,
   getReviewCommentAnchorStatus,
   isSliceActionable,
   isSliceStatus,
@@ -282,6 +283,28 @@ test("renders deterministic agent prompts for implement and feedback phases", ()
   assert.match(feedback, /`pathfinder feedback export inventory-alerts --session review-add-report --file \.\/\.pathfinder-feedback\.md`/);
   assert.match(feedback, /Address every open feedback item/);
   assert.match(feedback, /Do not resolve comments/);
+});
+
+test("defines managed native agent command wrappers", () => {
+  const definitions = getAgentCommandToolDefinitions();
+  const claude = getAgentCommandToolDefinitions("claude");
+
+  assert.deepEqual(
+    definitions.map((definition) => definition.tool),
+    ["claude", "opencode"]
+  );
+  assert.deepEqual(
+    claude[0].files.map((file) => file.relativePath),
+    [
+      ".claude/commands/pathfinder-plan.md",
+      ".claude/commands/pathfinder-continue.md",
+      ".claude/commands/pathfinder-feedback.md"
+    ]
+  );
+  assert.match(claude[0].files[0].markdown, /<!-- pathfinder-command:start -->/);
+  assert.match(claude[0].files[0].markdown, /pathfinder agent prompt --phase plan/);
+  assert.match(claude[0].files[1].markdown, /pathfinder agent next --json/);
+  assert.match(claude[0].files[2].markdown, /Do not infer the Pathfinder workflow manually/);
 });
 
 test("parses stored stage plans into a workstream title and stages", () => {

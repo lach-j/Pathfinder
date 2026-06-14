@@ -85,6 +85,60 @@ test("dry-run bootstrap prints proposed instructions without writing", async () 
   assert.equal(written, "# Existing\n");
 });
 
+test("installs native agent command wrappers idempotently", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+
+  const dryRun = await store.installAgentCommands({ dryRun: true });
+  const firstList = await store.listAgentCommands();
+  const installed = await store.installAgentCommands();
+  const secondInstall = await store.installAgentCommands();
+  const claudePlan = await readFile(path.join(repo, ".claude", "commands", "pathfinder-plan.md"), "utf8");
+  const opencodeContinue = await readFile(
+    path.join(repo, ".opencode", "commands", "pathfinder-continue.md"),
+    "utf8"
+  );
+
+  assert.equal(dryRun.dryRun, true);
+  assert.equal(dryRun.files.length, 6);
+  assert.equal(dryRun.files.every((file) => file.changed), true);
+  assert.equal(firstList.tools[0].files[0].installed, false);
+  assert.equal(installed.files.every((file) => file.skipped === false), true);
+  assert.equal(installed.files.every((file) => file.changed), true);
+  assert.equal(secondInstall.files.every((file) => file.changed === false), true);
+  assert.match(claudePlan, /pathfinder agent prompt --phase plan/);
+  assert.match(opencodeContinue, /pathfinder agent next --json/);
+});
+
+test("limits native agent command installation by tool", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+
+  const result = await store.installAgentCommands({ tool: "claude" });
+  const list = await store.listAgentCommands();
+
+  assert.deepEqual(result.files.map((file) => file.tool), ["claude", "claude", "claude"]);
+  assert.equal(list.tools.find((tool) => tool.tool === "claude")?.files.every((file) => file.installed), true);
+  assert.equal(list.tools.find((tool) => tool.tool === "opencode")?.files.every((file) => !file.installed), true);
+});
+
+test("preserves existing user-owned native command files", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await import("node:fs/promises").then(({ mkdir }) => mkdir(path.join(repo, ".claude", "commands"), { recursive: true }));
+  await writeFile(path.join(repo, ".claude", "commands", "pathfinder-plan.md"), "# Mine\n", "utf8");
+
+  const result = await store.installAgentCommands({ tool: "claude" });
+  const written = await readFile(path.join(repo, ".claude", "commands", "pathfinder-plan.md"), "utf8");
+  const protectedFile = result.files.find((file) => file.commandName === "pathfinder-plan");
+
+  assert.equal(protectedFile?.skipped, true);
+  assert.equal(protectedFile?.managed, false);
+  assert.equal(protectedFile?.reason, "Existing file is not Pathfinder-managed.");
+  assert.equal(written, "# Mine\n");
+  assert.match(await readFile(path.join(repo, ".claude", "commands", "pathfinder-feedback.md"), "utf8"), /pathfinder agent prompt --phase feedback/);
+});
+
 test("creates workstreams with markdown and JSON state files", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

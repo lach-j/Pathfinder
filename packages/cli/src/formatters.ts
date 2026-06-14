@@ -13,6 +13,7 @@ import {
   StructuredDiffLine
 } from "@pathfinder/core";
 import { CurrentContext } from "@pathfinder/state";
+import { AgentCommandsInstallResult, AgentCommandsListResult } from "@pathfinder/state";
 
 export function formatSlice(slice: Slice): string {
   const dependencies = slice.dependsOnSliceIds?.length ? `\tdepends-on:${slice.dependsOnSliceIds.join(",")}` : "";
@@ -198,6 +199,50 @@ export function formatAgentNext(recommendation: AgentNextRecommendation): string
   lines.push(recommendation.humanInstruction);
 
   return `${lines.join("\n")}\n`;
+}
+
+export function formatAgentCommandsInstall(result: AgentCommandsInstallResult): string {
+  const lines = [
+    result.dryRun ? "# Pathfinder Agent Commands Dry Run" : "# Pathfinder Agent Commands Install",
+    ""
+  ];
+
+  for (const file of result.files) {
+    const action = file.skipped
+      ? "skip"
+      : file.changed
+        ? result.dryRun
+          ? "would write"
+          : "wrote"
+        : "unchanged";
+    const reason = file.reason ? ` (${file.reason})` : "";
+    lines.push(`- ${action}: ${file.tool}/${file.commandName} -> ${file.relativePath}${reason}`);
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+export function formatAgentCommandsList(result: AgentCommandsListResult): string {
+  const lines = ["# Pathfinder Agent Commands", ""];
+
+  for (const tool of result.tools) {
+    lines.push(`## ${tool.displayName} (${tool.tool})`);
+    lines.push("");
+
+    for (const file of tool.files) {
+      const status = file.installed
+        ? file.managed
+          ? "installed"
+          : "user-owned"
+        : "missing";
+      const note = file.reason ? ` - ${file.reason}` : "";
+      lines.push(`- ${file.commandName}: ${status} at ${file.relativePath}${note}`);
+    }
+
+    lines.push("");
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`;
 }
 
 export function formatCurrentContext(context: CurrentContext): string {

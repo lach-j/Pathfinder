@@ -112,7 +112,7 @@ MCP, hooks, direct agent invocation, AI review, and remote Git hosting integrati
 | 26 | done | `docs/slices/26-agent-next-state-machine.md` |
 | 27 | done | `docs/slices/27-agent-prompt-rendering.md` |
 | 28 | done | `docs/slices/28-agent-bootstrap-instructions.md` |
-| 29 | ready | `docs/slices/29-native-agent-command-wrappers.md` |
+| 29 | done | `docs/slices/29-native-agent-command-wrappers.md` |
 | 30 | ready | `docs/slices/30-agent-integration-doctor.md` |
 
 Status values:

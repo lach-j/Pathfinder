@@ -43,6 +43,19 @@ The bootstrap command creates or updates a marked Pathfinder section in root `AG
 The managed section tells agents to start with `pathfinder agent next --json`, use `pathfinder agent prompt` for tool-neutral
 instructions, avoid unmanaged parallel plans when Pathfinder state exists, and leave comment resolution to the developer.
 
+Install optional project-level native command wrappers for tools that support markdown slash/custom commands:
+
+```bash
+npm exec -- pathfinder agent commands list
+npm exec -- pathfinder agent commands install --dry-run
+npm exec -- pathfinder agent commands install --tool claude
+npm exec -- pathfinder agent commands install --tool opencode
+```
+
+The command wrappers are thin convenience files for Claude Code and OpenCode. They are written under
+`.claude/commands/` and `.opencode/commands/`, include Pathfinder managed-file markers, and delegate to
+`pathfinder agent next --json` or `pathfinder agent prompt`. Existing user-owned command files are not overwritten.
+
 Initialise Pathfinder state from the root of a Git repository:
 
 ```bash
@@ -140,6 +153,10 @@ Use it as a tool-neutral fallback when native slash commands or agent-specific w
 available. Explicit phases are also available with `--phase plan`, `--phase implement`,
 `--phase feedback`, `--phase review`, and `--phase pr`; missing state is shown as placeholders
 instead of being guessed.
+
+`agent commands install` adds optional native command wrappers for Claude Code and OpenCode. The wrappers are
+project-level markdown files only; they do not run commands automatically and they do not replace `agent next`
+or `agent prompt` as the source of truth.
 
 Add, list, and resolve local review comments for a slice:
 
@@ -344,6 +361,10 @@ npm exec -- pathfinder agent next --json
 npm exec -- pathfinder agent prompt
 npm exec -- pathfinder agent prompt --phase implement
 npm exec -- pathfinder agent prompt --phase feedback
+npm exec -- pathfinder agent commands list
+npm exec -- pathfinder agent commands install --dry-run
+npm exec -- pathfinder agent commands install --tool claude
+npm exec -- pathfinder agent commands install --tool opencode
 npm exec -- pathfinder requirement set add-billing-foundation --file ./requirements.md
 npm exec -- pathfinder requirement show add-billing-foundation
 npm exec -- pathfinder plan import --file ./PLAN.md

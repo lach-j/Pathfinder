@@ -5,6 +5,7 @@ import {
   AgentPromptPhase,
   PathfinderError,
   ReviewCommentTarget,
+  isAgentCommandTool,
   isAgentPromptPhase,
   isReviewCommentSide
 } from "@pathfinder/core";
@@ -14,6 +15,8 @@ import { PathfinderStore } from "@pathfinder/state";
 
 import {
   formatAgentNext,
+  formatAgentCommandsInstall,
+  formatAgentCommandsList,
   formatComment,
   formatCurrentContext,
   formatDeterministicReview,
@@ -136,6 +139,32 @@ export async function run(args: string[]): Promise<void> {
 }
 
 async function runAgent(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "commands") {
+    const [commandAction, ...commandArgs] = args;
+
+    if (commandAction === "install") {
+      const options = parseOptions(commandArgs);
+      if (options.tool && !isAgentCommandTool(options.tool)) {
+        throw usageError("Invalid --tool value. Expected claude or opencode.");
+      }
+      const tool = options.tool && isAgentCommandTool(options.tool) ? options.tool : undefined;
+      const result = await store.installAgentCommands({
+        tool,
+        dryRun: options.dryRun
+      });
+      process.stdout.write(formatAgentCommandsInstall(result));
+      return;
+    }
+
+    if (commandAction === "list") {
+      expectNoExtraArgs(commandArgs);
+      process.stdout.write(formatAgentCommandsList(await store.listAgentCommands()));
+      return;
+    }
+
+    throw usageError("Unknown agent commands command. Expected install or list.");
+  }
+
   if (action === "bootstrap") {
     const options = parseOptions(args);
     const result = await store.bootstrapAgentInstructions({ dryRun: options.dryRun });
@@ -180,7 +209,7 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
-  throw usageError("Unknown agent command. Expected bootstrap, next, or prompt.");
+  throw usageError("Unknown agent command. Expected bootstrap, commands, next, or prompt.");
 }
 
 async function runDiff(action: string | undefined, args: string[]): Promise<void> {

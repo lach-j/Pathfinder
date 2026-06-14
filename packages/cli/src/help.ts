@@ -4,6 +4,8 @@ export function printHelp(): void {
 Usage:
   pathfinder init [--agents]
   pathfinder agent bootstrap [--dry-run]
+  pathfinder agent commands install [--tool claude|opencode] [--dry-run]
+  pathfinder agent commands list
   pathfinder current
   pathfinder agent next [--json]
   pathfinder agent prompt [--phase plan|implement|feedback|review|pr]

@@ -4,6 +4,10 @@ import path from "node:path";
 import {
   DeterministicReviewResult,
   Evidence,
+  AGENT_COMMAND_MANAGED_END,
+  AGENT_COMMAND_MANAGED_START,
+  AgentCommandTool,
+  AgentCommandToolDefinition,
   AgentNextRecommendation,
   AgentPromptPhase,
   ImportedStagePlan,
@@ -21,6 +25,7 @@ import {
   assertNonEmptyText,
   createTimestamp,
   findNextActionableSlice,
+  getAgentCommandToolDefinitions,
   getAgentNextRecommendation,
   generateDeterministicReview,
   generateFeedbackQueueMarkdown,
@@ -73,6 +78,31 @@ export interface AgentBootstrapResult {
   markdown: string;
   changed: boolean;
   dryRun: boolean;
+}
+
+export interface AgentCommandFileResult {
+  tool: AgentCommandTool;
+  commandName: string;
+  path: string;
+  relativePath: string;
+  installed: boolean;
+  managed: boolean;
+  changed: boolean;
+  skipped: boolean;
+  reason?: string;
+}
+
+export interface AgentCommandsInstallResult {
+  dryRun: boolean;
+  files: AgentCommandFileResult[];
+}
+
+export interface AgentCommandsListResult {
+  tools: {
+    tool: AgentCommandTool;
+    displayName: string;
+    files: AgentCommandFileResult[];
+  }[];
 }
 
 export interface DeterministicReviewRecord {
@@ -193,6 +223,41 @@ export class PathfinderStore {
       changed,
       dryRun
     };
+  }
+
+  async installAgentCommands(options: { tool?: AgentCommandTool; dryRun?: boolean } = {}): Promise<AgentCommandsInstallResult> {
+    const gitRoot = await this.requireGitRootForAgentCommands();
+    const dryRun = Boolean(options.dryRun);
+    const definitions = getAgentCommandToolDefinitions(options.tool);
+    const files: AgentCommandFileResult[] = [];
+
+    for (const definition of definitions) {
+      for (const file of definition.files) {
+        const result = await this.planAgentCommandFile(gitRoot, file);
+
+        if (!dryRun && !result.skipped && result.changed) {
+          await mkdir(path.dirname(result.path), { recursive: true });
+          await writeFile(result.path, file.markdown, "utf8");
+        }
+
+        files.push(result);
+      }
+    }
+
+    return { dryRun, files };
+  }
+
+  async listAgentCommands(): Promise<AgentCommandsListResult> {
+    const gitRoot = await this.requireGitRootForAgentCommands();
+    const tools = await Promise.all(
+      getAgentCommandToolDefinitions().map(async (definition) => ({
+        tool: definition.tool,
+        displayName: definition.displayName,
+        files: await Promise.all(definition.files.map((file) => this.planAgentCommandFile(gitRoot, file)))
+      }))
+    );
+
+    return { tools };
   }
 
   async getProject(): Promise<Project> {
@@ -1137,6 +1202,68 @@ export class PathfinderStore {
     }
 
     return stateRoot;
+  }
+
+  private async requireGitRootForAgentCommands(): Promise<string> {
+    const gitRoot = await findGitRoot(this.cwd);
+    if (!gitRoot) {
+      throw new PathfinderError("Agent command management must be run inside a Git repository.");
+    }
+
+    return gitRoot;
+  }
+
+  private async planAgentCommandFile(
+    gitRoot: string,
+    file: AgentCommandToolDefinition["files"][number]
+  ): Promise<AgentCommandFileResult> {
+    const filePath = path.join(gitRoot, ...file.relativePath.split("/"));
+
+    if (!(await exists(filePath))) {
+      return {
+        tool: file.tool,
+        commandName: file.commandName,
+        path: filePath,
+        relativePath: file.relativePath,
+        installed: false,
+        managed: false,
+        changed: true,
+        skipped: false
+      };
+    }
+
+    const existing = await readFile(filePath, "utf8");
+    const hasStart = existing.includes(AGENT_COMMAND_MANAGED_START);
+    const hasEnd = existing.includes(AGENT_COMMAND_MANAGED_END);
+
+    if (hasStart && hasEnd) {
+      return {
+        tool: file.tool,
+        commandName: file.commandName,
+        path: filePath,
+        relativePath: file.relativePath,
+        installed: true,
+        managed: true,
+        changed: existing !== file.markdown,
+        skipped: false
+      };
+    }
+
+    if (hasStart || hasEnd) {
+      throw new PathfinderError(`Command file '${file.relativePath}' contains incomplete Pathfinder markers.`);
+    }
+
+    return {
+      tool: file.tool,
+      commandName: file.commandName,
+      path: filePath,
+      relativePath: file.relativePath,
+      installed: true,
+      managed: false,
+      changed: false,
+      skipped: true,
+      reason: "Existing file is not Pathfinder-managed."
+    };
   }
 
   private async requireWorkstreamRoot(workstreamId: string): Promise<string> {

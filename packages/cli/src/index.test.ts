@@ -19,6 +19,8 @@ test("help lists the implemented MVP commands", async () => {
   for (const command of [
     "pathfinder init [--agents]",
     "pathfinder agent bootstrap [--dry-run]",
+    "pathfinder agent commands install [--tool claude|opencode] [--dry-run]",
+    "pathfinder agent commands list",
     "pathfinder current",
     "pathfinder agent next [--json]",
     "pathfinder agent prompt [--phase plan|implement|feedback|review|pr]",
@@ -62,6 +64,46 @@ test("help lists the implemented MVP commands", async () => {
   ]) {
     assert.match(result.stdout, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+});
+
+test("installs and lists native agent command wrappers from the CLI", async () => {
+  const repo = await createTempGitRepo();
+
+  const emptyList = await runCli(["agent", "commands", "list"], repo);
+  const dryRun = await runCli(["agent", "commands", "install", "--dry-run"], repo);
+  const claudeInstall = await runCli(["agent", "commands", "install", "--tool", "claude"], repo);
+  const opencodeInstall = await runCli(["agent", "commands", "install", "--tool", "opencode"], repo);
+  const list = await runCli(["agent", "commands", "list"], repo);
+  const claudePlan = await readFile(path.join(repo, ".claude", "commands", "pathfinder-plan.md"), "utf8");
+  const opencodeFeedback = await readFile(
+    path.join(repo, ".opencode", "commands", "pathfinder-feedback.md"),
+    "utf8"
+  );
+
+  assert.match(emptyList.stdout, /pathfinder-plan: missing at \.claude\/commands\/pathfinder-plan\.md/);
+  assert.match(dryRun.stdout, /would write: claude\/pathfinder-plan/);
+  assert.match(dryRun.stdout, /would write: opencode\/pathfinder-feedback/);
+  assert.match(claudeInstall.stdout, /wrote: claude\/pathfinder-plan/);
+  assert.doesNotMatch(claudeInstall.stdout, /opencode\/pathfinder-plan/);
+  assert.match(opencodeInstall.stdout, /wrote: opencode\/pathfinder-feedback/);
+  assert.match(list.stdout, /pathfinder-plan: installed at \.claude\/commands\/pathfinder-plan\.md/);
+  assert.match(list.stdout, /pathfinder-feedback: installed at \.opencode\/commands\/pathfinder-feedback\.md/);
+  assert.match(claudePlan, /Do not infer the Pathfinder workflow manually/);
+  assert.match(opencodeFeedback, /pathfinder agent prompt --phase feedback/);
+});
+
+test("does not overwrite user-owned native agent command files from the CLI", async () => {
+  const repo = await createTempGitRepo();
+  await mkdir(path.join(repo, ".claude", "commands"), { recursive: true });
+  await writeFile(path.join(repo, ".claude", "commands", "pathfinder-plan.md"), "# Custom command\n", "utf8");
+
+  const install = await runCli(["agent", "commands", "install", "--tool", "claude"], repo);
+  const written = await readFile(path.join(repo, ".claude", "commands", "pathfinder-plan.md"), "utf8");
+  const list = await runCli(["agent", "commands", "list"], repo);
+
+  assert.match(install.stdout, /skip: claude\/pathfinder-plan/);
+  assert.equal(written, "# Custom command\n");
+  assert.match(list.stdout, /pathfinder-plan: user-owned at \.claude\/commands\/pathfinder-plan\.md/);
 });
 
 test("bootstraps repository agent instructions from the CLI", async () => {
