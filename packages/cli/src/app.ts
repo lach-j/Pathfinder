@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { PathfinderError, ReviewCommentTarget, isReviewCommentSide } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
+import { serveReviewServer } from "@pathfinder/local-server";
 import { PathfinderStore } from "@pathfinder/state";
 
 import {
@@ -19,7 +20,6 @@ import {
 } from "./formatters.js";
 import { printHelp } from "./help.js";
 import { expectNoExtraArgs, parseOptions, requireArgument, requireOption, usageError } from "./options.js";
-import { serveReviewServer } from "./review-server.js";
 
 const store = new PathfinderStore(process.cwd());
 

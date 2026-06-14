@@ -30,10 +30,11 @@ Local UI is now part of the planned MVP, but only in the review-viewer slices. T
 
 ```text
 packages/
-  core/   domain types and validation
-  git/    local Git adapter
-  state/  filesystem persistence under .pathfinder/
-  cli/    command-line interface
+  core/          domain types and validation
+  git/           local Git adapter
+  state/         filesystem persistence under .pathfinder/
+  local-server/  local-only HTTP API and browser UI assets
+  cli/           command-line interface
 ```
 
 State currently lives under:

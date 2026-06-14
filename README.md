@@ -15,6 +15,16 @@ npm run build
 
 Generated TypeScript output under `packages/*/dist/` is intentionally untracked. Recreate it locally with `npm run build` after a fresh checkout or dependency install.
 
+Source package layout:
+
+```text
+packages/core          domain types, validation, pure planning/review/PR logic
+packages/state         local .pathfinder/ filesystem persistence
+packages/git           local Git adapter
+packages/local-server  local-only HTTP API and browser UI assets
+packages/cli           command routing, argument parsing, terminal output
+```
+
 Run the local CLI with:
 
 ```bash
@@ -155,6 +165,10 @@ npm exec -- pathfinder review serve --port 4783
 The server binds to `127.0.0.1` and is not a hosted backend. It does not add authentication,
 cloud sync, or external API calls; it only exposes local Pathfinder state and local Git diffs
 from the current repository.
+
+The CLI command starts the local server from `packages/local-server`. Browser UI assets live under
+`packages/local-server/src/review-viewer/` so future local workspace views can grow outside the CLI
+package.
 
 Open the printed URL, such as `http://127.0.0.1:4783`, to use the local
 diff viewer. The viewer shows the active workstream and slice, lets you switch

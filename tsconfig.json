@@ -17,6 +17,9 @@
       ],
       "@pathfinder/state": [
         "packages/state/src/index.ts"
+      ],
+      "@pathfinder/local-server": [
+        "packages/local-server/src/index.ts"
       ]
     }
   },
@@ -30,6 +33,9 @@
     },
     {
       "path": "packages/state"
+    },
+    {
+      "path": "packages/local-server"
     },
     {
       "path": "packages/cli"

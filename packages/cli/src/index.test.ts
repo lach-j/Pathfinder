@@ -8,7 +8,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { serveReviewServer } from "./review-server.js";
+import { serveReviewServer } from "@pathfinder/local-server";
 
 const execFileAsync = promisify(execFile);
 const cliPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "index.js");

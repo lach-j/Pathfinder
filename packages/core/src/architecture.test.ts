@@ -3,7 +3,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 
-type PackageName = "core" | "git" | "state" | "cli";
+type PackageName = "core" | "git" | "state" | "local-server" | "cli";
 
 interface SourceFile {
   packageName: PackageName;
@@ -15,14 +15,16 @@ const packageOrder: Record<PackageName, number> = {
   core: 0,
   git: 1,
   state: 1,
-  cli: 2
+  "local-server": 2,
+  cli: 3
 };
 
 const allowedPackageImports: Record<PackageName, readonly string[]> = {
   core: [],
   git: ["@pathfinder/core"],
   state: ["@pathfinder/core"],
-  cli: ["@pathfinder/core", "@pathfinder/git", "@pathfinder/state"]
+  "local-server": ["@pathfinder/core", "@pathfinder/git", "@pathfinder/state"],
+  cli: ["@pathfinder/core", "@pathfinder/git", "@pathfinder/local-server", "@pathfinder/state"]
 };
 
 test("production package imports follow the architecture dependency direction", async () => {
@@ -74,6 +76,9 @@ test("core production code stays platform independent", async () => {
 test("declared package order documents the intended dependency layers", () => {
   assert.equal(packageOrder.core < packageOrder.git, true);
   assert.equal(packageOrder.core < packageOrder.state, true);
+  assert.equal(packageOrder.git < packageOrder["local-server"], true);
+  assert.equal(packageOrder.state < packageOrder["local-server"], true);
+  assert.equal(packageOrder["local-server"] < packageOrder.cli, true);
   assert.equal(packageOrder.git < packageOrder.cli, true);
   assert.equal(packageOrder.state < packageOrder.cli, true);
 });
@@ -127,5 +132,5 @@ function findImportSpecifiers(source: string): string[] {
 }
 
 function isPackageName(value: string): value is PackageName {
-  return value === "core" || value === "git" || value === "state" || value === "cli";
+  return value === "core" || value === "git" || value === "state" || value === "local-server" || value === "cli";
 }
