@@ -80,6 +80,14 @@ is the canonical first command for agents. Repository instructions and optional 
 
 MCP, hooks, direct agent invocation, AI review, and remote Git hosting integrations remain out of scope for the next slice set.
 
+The next product focus is personal installation and no-repo-footprint usage:
+
+1. Build source-only releases where GitHub Actions produces installable npm tarballs.
+2. Upload release artifacts to GitHub Releases before publishing to npm.
+3. Add automated semantic versioning once manual release artifacts work.
+4. Support external state outside target repositories.
+5. Support user-level agent instructions/commands so work repos do not need `AGENTS.md`, `.claude/`, `.opencode/`, or `.pathfinder/` files.
+
 ## Progress
 
 | Slice | Status | Handoff |
@@ -114,6 +122,12 @@ MCP, hooks, direct agent invocation, AI review, and remote Git hosting integrati
 | 28 | done | `docs/slices/28-agent-bootstrap-instructions.md` |
 | 29 | done | `docs/slices/29-native-agent-command-wrappers.md` |
 | 30 | done | `docs/slices/30-agent-integration-doctor.md` |
+| 31 | ready | `docs/slices/31-release-packaging.md` |
+| 32 | ready | `docs/slices/32-github-release-artifact-workflow.md` |
+| 33 | ready | `docs/slices/33-automated-versioning.md` |
+| 34 | ready | `docs/slices/34-external-state-mode.md` |
+| 35 | ready | `docs/slices/35-no-repo-footprint-agent-mode.md` |
+| 36 | ready | `docs/slices/36-personal-mode-doctor.md` |
 
 Status values:
 
@@ -182,5 +196,14 @@ Next agent-integration order:
 28. Agent bootstrap instructions
 29. Native agent command wrappers
 30. Agent integration doctor
+
+Next distribution and personal-mode order:
+
+31. Release packaging
+32. GitHub release artifact workflow
+33. Automated versioning
+34. External state mode
+35. No-repo-footprint agent mode
+36. Personal mode doctor
 
 The order can change if a slice doc says it has no dependency on earlier slices.
