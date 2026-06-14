@@ -6,6 +6,7 @@ Usage:
   pathfinder config get state.mode
   pathfinder config set state.mode repo|external
   pathfinder agent bootstrap [--dry-run]
+  pathfinder agent install --user claude|opencode|all [--dry-run]
   pathfinder agent commands install [--tool claude|opencode] [--dry-run]
   pathfinder agent commands list
   pathfinder agent doctor [--json]

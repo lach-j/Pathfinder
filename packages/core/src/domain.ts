@@ -271,6 +271,7 @@ export interface AgentNextRecommendation {
   workstreamId?: string;
   sliceId?: string;
   reviewSessionId?: string;
+  feedbackQueuePath?: string;
   commands: string[];
   agentInstruction: string;
   humanInstruction: string;
@@ -288,6 +289,7 @@ export interface AgentNextInput {
   reviewSessions?: ReviewSession[];
   repositorySummary?: RepositorySummary;
   repositorySummaryError?: string;
+  feedbackQueuePath?: string;
   stateError?: string;
 }
 
@@ -300,6 +302,7 @@ export interface AgentPromptInput {
   activeSlice?: Slice;
   requirementsPath?: string;
   planPath?: string;
+  feedbackQueuePath?: string;
 }
 
 export interface ImportedStagePlanStage {

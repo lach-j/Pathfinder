@@ -1,6 +1,6 @@
 # Slice 35: No-Repo-Footprint Agent Mode
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -101,3 +101,31 @@ git status --short
 
 `git status --short` should not show Pathfinder-created files in the target repo.
 
+## Completion Notes
+
+- Added `pathfinder agent install --user claude|opencode|all [--dry-run]`.
+- Claude user-level install manages a marked Pathfinder block in the user's `.claude/CLAUDE.md` and writes no target-repo files.
+- OpenCode user-level install reports manual instructions instead of guessing an unsafe global path.
+- In external state mode, `pathfinder feedback export <workstream-id>` without `--file` writes `.pathfinder-feedback.md` under that repository's external Pathfinder state root.
+- `agent next --json` and `agent prompt` now include the external feedback queue path in feedback phase.
+- Repo-local `agent bootstrap` and `agent commands install` behavior remains available and covered.
+- Added core, state, and CLI tests for user-level install, no repo writes, external feedback export defaults, and external feedback prompt text.
+- Updated README usage for user-level install and external feedback exports.
+
+Checks run:
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke test run with temporary `PATHFINDER_HOME` and `PATHFINDER_USER_HOME` values:
+
+```bash
+pathfinder config set state.mode external
+pathfinder agent install --user claude --dry-run
+pathfinder agent install --user claude
+git status --short
+```

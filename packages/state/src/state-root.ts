@@ -15,6 +15,7 @@ export interface PathfinderConfig {
 
 export interface PathfinderStoreOptions {
   configRoot?: string;
+  userHome?: string;
 }
 
 export interface ProjectIdentity {

@@ -203,6 +203,40 @@ test("preserves existing user-owned native command files", async () => {
   assert.match(await readFile(path.join(repo, ".claude", "commands", "pathfinder-feedback.md"), "utf8"), /pathfinder agent prompt --phase feedback/);
 });
 
+test("installs user-level Claude instructions without writing repo files", async () => {
+  const repo = await createTempRepo();
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-user-home-"));
+  const store = new PathfinderStore(repo, { userHome });
+
+  const dryRun = await store.installUserAgentIntegration({ tool: "claude", dryRun: true });
+  const installed = await store.installUserAgentIntegration({ tool: "claude" });
+  const secondInstall = await store.installUserAgentIntegration({ tool: "claude" });
+  const written = await readFile(path.join(userHome, ".claude", "CLAUDE.md"), "utf8");
+
+  assert.equal(dryRun.dryRun, true);
+  assert.equal(dryRun.files[0].path, path.join(userHome, ".claude", "CLAUDE.md"));
+  assert.equal(installed.files[0].changed, true);
+  assert.equal(secondInstall.files[0].changed, false);
+  assert.match(written, /<!-- pathfinder-user-agent:start -->/);
+  assert.match(written, /pathfinder agent doctor --json/);
+  assert.match(written, /Do not write Pathfinder setup files into the repository unless the user asks/);
+  await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
+  await assert.rejects(() => readFile(path.join(repo, ".claude", "CLAUDE.md"), "utf8"));
+});
+
+test("reports manual user-level OpenCode instructions without guessing a path", async () => {
+  const repo = await createTempRepo();
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-user-home-"));
+  const store = new PathfinderStore(repo, { userHome });
+
+  const result = await store.installUserAgentIntegration({ tool: "opencode" });
+
+  assert.equal(result.files.length, 0);
+  assert.equal(result.manualInstructions[0].tool, "opencode");
+  assert.match(result.manualInstructions[0].instructions.join("\n"), /OpenCode user-level rule and command locations vary/);
+  await assert.rejects(() => readFile(path.join(repo, ".opencode", "commands", "pathfinder-plan.md"), "utf8"));
+});
+
 test("diagnoses missing agent integration setup without writing files", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);
@@ -1004,6 +1038,23 @@ test("exports empty feedback queue when no open comments exist", async () => {
 
   assert.match(feedback.markdown, /# Pathfinder Feedback Queue/);
   assert.match(feedback.markdown, /No open feedback items found\./);
+});
+
+test("external state provides an external default feedback queue path", async () => {
+  const repo = await createTempRepo();
+  const configRoot = await mkdtemp(path.join(os.tmpdir(), "pathfinder-home-"));
+  const store = new PathfinderStore(repo, { configRoot });
+
+  await store.initProject({ personal: true });
+  const workstream = await store.createWorkstream("External Feedback");
+  const projectIds = await sortedFiles(path.join(configRoot, "projects"));
+  const projectRoot = path.join(configRoot, "projects", projectIds[0]);
+
+  const feedback = await store.exportFeedbackQueue(workstream.id);
+
+  assert.equal(feedback.defaultPath, path.join(projectRoot, ".pathfinder-feedback.md"));
+  assert.equal(feedback.defaultPath.startsWith(repo), false);
+  assert.match(feedback.markdown, /External Feedback/);
 });
 
 test("creates, lists, and gets local review records", async () => {

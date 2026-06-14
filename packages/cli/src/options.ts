@@ -22,6 +22,7 @@ export interface OptionMap {
   path?: string;
   phase?: string;
   tool?: string;
+  user?: string;
 }
 
 export function parseOptions(args: string[]): OptionMap {
@@ -96,6 +97,8 @@ export function parseOptions(args: string[]): OptionMap {
       options.phase = value;
     } else if (flag === "--tool") {
       options.tool = value;
+    } else if (flag === "--user") {
+      options.user = value;
     } else {
       throw usageError(`Unknown option '${flag}'.`);
     }

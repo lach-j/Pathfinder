@@ -1,4 +1,5 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import {
@@ -6,10 +7,14 @@ import {
   Evidence,
   AGENT_COMMAND_MANAGED_END,
   AGENT_COMMAND_MANAGED_START,
+  AGENT_USER_INSTALL_MANAGED_END,
+  AGENT_USER_INSTALL_MANAGED_START,
   AgentCommandTool,
   AgentCommandToolDefinition,
   AgentNextRecommendation,
   AgentPromptPhase,
+  AgentUserInstallTool,
+  AgentUserInstallToolDefinition,
   ImportedStagePlan,
   PathfinderError,
   Project,
@@ -28,6 +33,7 @@ import {
   findNextActionableSlice,
   getAgentCommandToolDefinitions,
   getAgentNextRecommendation,
+  getAgentUserInstallToolDefinitions,
   generateDeterministicReview,
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
@@ -82,6 +88,7 @@ export interface GeneratedPrMarkdown {
 
 export interface FeedbackQueueExport {
   markdown: string;
+  defaultPath?: string;
 }
 
 export interface AgentBootstrapResult {
@@ -113,6 +120,27 @@ export interface AgentCommandsListResult {
     tool: AgentCommandTool;
     displayName: string;
     files: AgentCommandFileResult[];
+  }[];
+}
+
+export interface AgentUserInstallFileResult {
+  tool: AgentUserInstallTool;
+  path: string;
+  relativePath: string;
+  installed: boolean;
+  managed: boolean;
+  changed: boolean;
+  skipped: boolean;
+  reason?: string;
+}
+
+export interface AgentUserInstallResult {
+  dryRun: boolean;
+  files: AgentUserInstallFileResult[];
+  manualInstructions: {
+    tool: AgentUserInstallTool;
+    displayName: string;
+    instructions: string[];
   }[];
 }
 
@@ -310,6 +338,40 @@ export class PathfinderStore {
     }
 
     return { dryRun, files };
+  }
+
+  async installUserAgentIntegration(options: {
+    tool?: AgentUserInstallTool;
+    dryRun?: boolean;
+  } = {}): Promise<AgentUserInstallResult> {
+    const dryRun = Boolean(options.dryRun);
+    const definitions = getAgentUserInstallToolDefinitions(options.tool);
+    const files: AgentUserInstallFileResult[] = [];
+    const manualInstructions: AgentUserInstallResult["manualInstructions"] = [];
+
+    for (const definition of definitions) {
+      for (const file of definition.files) {
+        const result = await this.planUserAgentInstallFile(file);
+
+        if (!dryRun && !result.skipped && result.changed) {
+          await mkdir(path.dirname(result.path), { recursive: true });
+          await writeFile(result.path, result.markdown, "utf8");
+        }
+
+        const { markdown: _markdown, ...publicResult } = result;
+        files.push(publicResult);
+      }
+
+      if (definition.manualInstructions.length > 0) {
+        manualInstructions.push({
+          tool: definition.tool,
+          displayName: definition.displayName,
+          instructions: definition.manualInstructions
+        });
+      }
+    }
+
+    return { dryRun, files, manualInstructions };
   }
 
   async listAgentCommands(): Promise<AgentCommandsListResult> {
@@ -925,9 +987,13 @@ export class PathfinderStore {
     repositorySummary?: RepositorySummary
   ): Promise<GeneratedPrMarkdown> {
     const root = await this.requireWorkstreamRoot(workstreamId);
-    const stateRoot = await this.requireStateRoot();
-    const conventionalFeedbackPath = path.join(path.dirname(stateRoot), ".pathfinder-feedback.md");
-    const feedbackQueuePath = (await exists(conventionalFeedbackPath)) ? ".pathfinder-feedback.md" : undefined;
+    const resolution = await resolveExistingStateRoot(this.cwd, this.options);
+    const conventionalFeedbackPath = path.join(path.dirname(resolution.stateRoot), ".pathfinder-feedback.md");
+    const externalFeedbackPath = path.join(resolution.stateRoot, ".pathfinder-feedback.md");
+    const feedbackQueuePath =
+      resolution.mode === "external" && await exists(externalFeedbackPath)
+        ? externalFeedbackPath
+        : (await exists(conventionalFeedbackPath)) ? ".pathfinder-feedback.md" : undefined;
     const markdown = generatePrMarkdown({
       workstream: await this.getWorkstream(workstreamId),
       requirementsMarkdown: await this.getRequirements(workstreamId),
@@ -975,7 +1041,8 @@ export class PathfinderStore {
         session,
         comments,
         slices
-      })
+      }),
+      defaultPath: await this.getDefaultFeedbackQueuePath()
     };
   }
 
@@ -1166,6 +1233,7 @@ export class PathfinderStore {
       planMarkdown: await this.getPlan(activeWorkstream.id),
       openComments: (await this.listComments(activeWorkstream.id)).filter((comment) => !comment.resolved),
       reviewSessions,
+      feedbackQueuePath: await this.getDefaultFeedbackQueuePath(),
       ...repository
     });
   }
@@ -1196,7 +1264,8 @@ export class PathfinderStore {
         workstream,
         activeSlice,
         requirementsPath: path.join(root, "requirements.md"),
-        planPath: path.join(root, "plan.md")
+        planPath: path.join(root, "plan.md"),
+        feedbackQueuePath: await this.getDefaultFeedbackQueuePath()
       });
     } catch {
       return renderAgentPrompt({ phase, recommendation });
@@ -1287,6 +1356,11 @@ export class PathfinderStore {
     return (await resolveExistingStateRoot(this.cwd, this.options)).stateRoot;
   }
 
+  private async getDefaultFeedbackQueuePath(): Promise<string | undefined> {
+    const resolution = await resolveExistingStateRoot(this.cwd, this.options);
+    return resolution.mode === "external" ? path.join(resolution.stateRoot, ".pathfinder-feedback.md") : undefined;
+  }
+
   private async requireGitRootForAgentCommands(): Promise<string> {
     const gitRoot = await findGitRoot(this.cwd);
     if (!gitRoot) {
@@ -1347,6 +1421,52 @@ export class PathfinderStore {
       skipped: true,
       reason: "Existing file is not Pathfinder-managed."
     };
+  }
+
+  private async planUserAgentInstallFile(
+    file: AgentUserInstallToolDefinition["files"][number]
+  ): Promise<AgentUserInstallFileResult & { markdown: string }> {
+    const filePath = path.join(this.getUserHome(), ...file.relativePath.split("/"));
+    const existing = (await exists(filePath)) ? await readFile(filePath, "utf8") : "";
+    const markdown = applyManagedBlock(
+      existing,
+      file.markdown,
+      AGENT_USER_INSTALL_MANAGED_START,
+      AGENT_USER_INSTALL_MANAGED_END,
+      `${file.relativePath} contains incomplete Pathfinder user agent markers.`,
+      `${file.relativePath} contains malformed Pathfinder user agent markers.`
+    );
+
+    if (!existing) {
+      return {
+        tool: file.tool,
+        path: filePath,
+        relativePath: file.relativePath,
+        installed: false,
+        managed: false,
+        changed: true,
+        skipped: false,
+        markdown
+      };
+    }
+
+    const hasStart = existing.includes(AGENT_USER_INSTALL_MANAGED_START);
+    const hasEnd = existing.includes(AGENT_USER_INSTALL_MANAGED_END);
+
+    return {
+      tool: file.tool,
+      path: filePath,
+      relativePath: file.relativePath,
+      installed: true,
+      managed: hasStart && hasEnd,
+      changed: markdown !== existing,
+      skipped: false,
+      markdown
+    };
+  }
+
+  private getUserHome(): string {
+    return path.resolve(this.options.userHome ?? process.env.PATHFINDER_USER_HOME ?? os.homedir());
   }
 
   private async requireWorkstreamRoot(workstreamId: string): Promise<string> {
@@ -1642,26 +1762,44 @@ ${AGENT_BOOTSTRAP_END}
 `;
 
 function applyAgentBootstrapBlock(existing: string): string {
-  const startIndex = existing.indexOf(AGENT_BOOTSTRAP_START);
-  const endIndex = existing.indexOf(AGENT_BOOTSTRAP_END);
+  return applyManagedBlock(
+    existing,
+    AGENT_BOOTSTRAP_BLOCK,
+    AGENT_BOOTSTRAP_START,
+    AGENT_BOOTSTRAP_END,
+    "AGENTS.md contains an incomplete Pathfinder agent bootstrap block.",
+    "AGENTS.md contains malformed Pathfinder agent bootstrap markers."
+  );
+}
+
+function applyManagedBlock(
+  existing: string,
+  block: string,
+  startMarker: string,
+  endMarker: string,
+  incompleteMessage: string,
+  malformedMessage: string
+): string {
+  const startIndex = existing.indexOf(startMarker);
+  const endIndex = existing.indexOf(endMarker);
 
   if ((startIndex === -1) !== (endIndex === -1)) {
-    throw new PathfinderError("AGENTS.md contains an incomplete Pathfinder agent bootstrap block.");
+    throw new PathfinderError(incompleteMessage);
   }
 
   if (startIndex !== -1 && endIndex !== -1) {
     if (endIndex < startIndex) {
-      throw new PathfinderError("AGENTS.md contains malformed Pathfinder agent bootstrap markers.");
+      throw new PathfinderError(malformedMessage);
     }
 
-    const afterEnd = endIndex + AGENT_BOOTSTRAP_END.length;
-    return `${existing.slice(0, startIndex)}${AGENT_BOOTSTRAP_BLOCK}${existing.slice(afterEnd).replace(/^\r?\n/, "")}`;
+    const afterEnd = endIndex + endMarker.length;
+    return `${existing.slice(0, startIndex)}${block}${existing.slice(afterEnd).replace(/^\r?\n/, "")}`;
   }
 
   if (!existing.trim()) {
-    return AGENT_BOOTSTRAP_BLOCK;
+    return block;
   }
 
   const trimmedEnd = existing.replace(/\s*$/, "");
-  return `${trimmedEnd}\n\n${AGENT_BOOTSTRAP_BLOCK}`;
+  return `${trimmedEnd}\n\n${block}`;
 }

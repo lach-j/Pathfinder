@@ -1,4 +1,5 @@
 export type AgentCommandTool = "claude" | "opencode";
+export type AgentUserInstallTool = AgentCommandTool;
 
 export interface AgentCommandFileDefinition {
   tool: AgentCommandTool;
@@ -13,8 +14,23 @@ export interface AgentCommandToolDefinition {
   files: AgentCommandFileDefinition[];
 }
 
+export interface AgentUserInstallFileDefinition {
+  tool: AgentUserInstallTool;
+  relativePath: string;
+  markdown: string;
+}
+
+export interface AgentUserInstallToolDefinition {
+  tool: AgentUserInstallTool;
+  displayName: string;
+  files: AgentUserInstallFileDefinition[];
+  manualInstructions: string[];
+}
+
 export const AGENT_COMMAND_MANAGED_START = "<!-- pathfinder-command:start -->";
 export const AGENT_COMMAND_MANAGED_END = "<!-- pathfinder-command:end -->";
+export const AGENT_USER_INSTALL_MANAGED_START = "<!-- pathfinder-user-agent:start -->";
+export const AGENT_USER_INSTALL_MANAGED_END = "<!-- pathfinder-user-agent:end -->";
 
 const COMMANDS = [
   {
@@ -69,6 +85,32 @@ export function getAgentCommandToolDefinitions(
   }));
 }
 
+export function getAgentUserInstallToolDefinitions(
+  tool?: AgentUserInstallTool
+): AgentUserInstallToolDefinition[] {
+  const tools = tool ? [tool] : SUPPORTED_AGENT_COMMAND_TOOLS;
+  return tools.map((candidate) => ({
+    tool: candidate,
+    displayName: TOOL_NAMES[candidate],
+    files: candidate === "claude"
+      ? [
+          {
+            tool: candidate,
+            relativePath: ".claude/CLAUDE.md",
+            markdown: renderUserInstructionsMarkdown()
+          }
+        ]
+      : [],
+    manualInstructions: candidate === "opencode"
+      ? [
+          "OpenCode user-level rule and command locations vary by installation.",
+          "Add the Pathfinder user instructions shown below to your OpenCode user-level rules if your installation supports them.",
+          renderUserInstructionsBody()
+        ]
+      : []
+  }));
+}
+
 function renderCommandMarkdown(
   commandName: string,
   description: string,
@@ -89,4 +131,34 @@ ${command}
 ${followUp}
 ${AGENT_COMMAND_MANAGED_END}
 `;
+}
+
+function renderUserInstructionsMarkdown(): string {
+  return `${AGENT_USER_INSTALL_MANAGED_START}
+${renderUserInstructionsBody()}
+${AGENT_USER_INSTALL_MANAGED_END}
+`;
+}
+
+function renderUserInstructionsBody(): string {
+  return `# Pathfinder
+
+Pathfinder is installed on this machine.
+
+When working in a Git repository and the user asks to plan, implement, continue, review, or address feedback, run:
+
+\`\`\`bash
+pathfinder agent doctor --json
+\`\`\`
+
+If Pathfinder is initialized or applicable, start with:
+
+\`\`\`bash
+pathfinder agent next --json
+\`\`\`
+
+Use \`pathfinder agent prompt\` for phase-specific instructions.
+Do not create unmanaged plans or task lists when Pathfinder state exists.
+Do not resolve Pathfinder comments automatically.
+Do not write Pathfinder setup files into the repository unless the user asks.`;
 }

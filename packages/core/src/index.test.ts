@@ -11,6 +11,7 @@ import {
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
   getAgentCommandToolDefinitions,
+  getAgentUserInstallToolDefinitions,
   getReviewCommentAnchorStatus,
   isSliceActionable,
   isSliceStatus,
@@ -161,6 +162,38 @@ test("recommends implementation, feedback, and PR phases for agents", () => {
     "pathfinder feedback export inventory-alerts --session review-add-report --file ./.pathfinder-feedback.md"
   ]);
 
+  const externalFeedback = getAgentNextRecommendation({
+    isInitialized: true,
+    workstreams: [workstream],
+    activeWorkstream: workstream,
+    slices: [activeSlice],
+    activeSlice,
+    planMarkdown: "# Plan",
+    openComments: [
+      {
+        id: "handle-empty-case",
+        sliceId: "add-report",
+        target: {
+          type: "line",
+          sessionId: "review-add-report",
+          filePath: "src/report.ts",
+          lineNumber: 1,
+          side: "new"
+        },
+        body: "Handle empty data.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    reviewSessions: [session],
+    feedbackQueuePath: "/home/me/.pathfinder/projects/demo/.pathfinder-feedback.md"
+  });
+
+  assert.deepEqual(externalFeedback.commands, [
+    "pathfinder feedback export inventory-alerts --session review-add-report"
+  ]);
+  assert.match(externalFeedback.agentInstruction, /\/home\/me\/\.pathfinder\/projects\/demo\/\.pathfinder-feedback\.md/);
+
   assert.equal(
     getAgentNextRecommendation({
       isInitialized: true,
@@ -283,11 +316,33 @@ test("renders deterministic agent prompts for implement and feedback phases", ()
   assert.match(feedback, /`pathfinder feedback export inventory-alerts --session review-add-report --file \.\/\.pathfinder-feedback\.md`/);
   assert.match(feedback, /Address every open feedback item/);
   assert.match(feedback, /Do not resolve comments/);
+
+  const externalFeedback = renderAgentPrompt({
+    recommendation: {
+      phase: "feedback",
+      reason: "Active review session has open comments.",
+      workstreamId: "inventory-alerts",
+      sliceId: "add-report",
+      reviewSessionId: "review-add-report",
+      feedbackQueuePath: "/home/me/.pathfinder/projects/demo/.pathfinder-feedback.md",
+      commands: [
+        "pathfinder feedback export inventory-alerts --session review-add-report"
+      ],
+      agentInstruction: "Read feedback.",
+      humanInstruction: "Review fixes."
+    },
+    workstream,
+    activeSlice
+  });
+
+  assert.match(externalFeedback, /`pathfinder feedback export inventory-alerts --session review-add-report`/);
+  assert.match(externalFeedback, /Export and read `\/home\/me\/\.pathfinder\/projects\/demo\/\.pathfinder-feedback\.md`/);
 });
 
 test("defines managed native agent command wrappers", () => {
   const definitions = getAgentCommandToolDefinitions();
   const claude = getAgentCommandToolDefinitions("claude");
+  const userInstall = getAgentUserInstallToolDefinitions();
 
   assert.deepEqual(
     definitions.map((definition) => definition.tool),
@@ -305,6 +360,11 @@ test("defines managed native agent command wrappers", () => {
   assert.match(claude[0].files[0].markdown, /pathfinder agent prompt --phase plan/);
   assert.match(claude[0].files[1].markdown, /pathfinder agent next --json/);
   assert.match(claude[0].files[2].markdown, /Do not infer the Pathfinder workflow manually/);
+  assert.deepEqual(userInstall[0].files.map((file) => file.relativePath), [".claude/CLAUDE.md"]);
+  assert.match(userInstall[0].files[0].markdown, /<!-- pathfinder-user-agent:start -->/);
+  assert.match(userInstall[0].files[0].markdown, /pathfinder agent doctor --json/);
+  assert.equal(userInstall[1].files.length, 0);
+  assert.match(userInstall[1].manualInstructions.join("\n"), /OpenCode user-level rule and command locations vary/);
 });
 
 test("parses stored stage plans into a workstream title and stages", () => {

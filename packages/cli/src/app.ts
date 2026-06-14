@@ -27,6 +27,7 @@ import {
   formatReview,
   formatReviewSession,
   formatReviewSessionSummary,
+  formatAgentUserInstall,
   formatSlice,
   formatStructuredDiff
 } from "./formatters.js";
@@ -186,6 +187,24 @@ async function runConfig(action: string | undefined, args: string[]): Promise<vo
 }
 
 async function runAgent(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "install") {
+    const options = parseOptions(args);
+    if (!options.user) {
+      throw usageError("Missing required option --user.");
+    }
+    if (options.user !== "all" && !isAgentCommandTool(options.user)) {
+      throw usageError("Invalid --user value. Expected claude, opencode, or all.");
+    }
+
+    const tool = options.user === "all" ? undefined : options.user;
+    const result = await store.installUserAgentIntegration({
+      tool,
+      dryRun: options.dryRun
+    });
+    process.stdout.write(formatAgentUserInstall(result));
+    return;
+  }
+
   if (action === "commands") {
     const [commandAction, ...commandArgs] = args;
 
@@ -270,7 +289,7 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
-  throw usageError("Unknown agent command. Expected bootstrap, commands, doctor, next, or prompt.");
+  throw usageError("Unknown agent command. Expected bootstrap, commands, doctor, install, next, or prompt.");
 }
 
 async function runDiff(action: string | undefined, args: string[]): Promise<void> {
@@ -373,6 +392,12 @@ async function runFeedback(action: string | undefined, args: string[]): Promise<
       const outputPath = path.resolve(process.cwd(), options.file);
       await writeFile(outputPath, result.markdown, "utf8");
       console.log(`Wrote feedback queue to ${outputPath}.`);
+      return;
+    }
+
+    if (result.defaultPath) {
+      await writeFile(result.defaultPath, result.markdown, "utf8");
+      console.log(`Wrote feedback queue to ${result.defaultPath}.`);
       return;
     }
 

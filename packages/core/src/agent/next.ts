@@ -93,29 +93,31 @@ export function getAgentNextRecommendation(input: AgentNextInput): AgentNextReco
     const openActiveComments = openComments.filter((comment) => commentAppliesToActiveSlice(comment, activeSlice.id));
 
     if (latestSession && openSessionComments.length > 0) {
+      const feedbackQueuePath = input.feedbackQueuePath ?? "./.pathfinder-feedback.md";
       return recommendation({
         phase: "feedback",
         reason: "Active review session has open comments.",
         workstreamId: workstream.id,
         sliceId: activeSlice.id,
         reviewSessionId: latestSession.id,
-        commands: [
-          `pathfinder feedback export ${workstream.id} --session ${latestSession.id} --file ./.pathfinder-feedback.md`
-        ],
-        agentInstruction: `Read ./.pathfinder-feedback.md, address every open comment while staying scoped to slice ${activeSlice.id}, run checks, then run pathfinder review refresh ${workstream.id} ${latestSession.id}. Do not resolve comments automatically.`,
+        feedbackQueuePath,
+        commands: [feedbackExportCommand(workstream.id, latestSession.id, input.feedbackQueuePath)],
+        agentInstruction: `Read ${feedbackQueuePath}, address every open comment while staying scoped to slice ${activeSlice.id}, run checks, then run pathfinder review refresh ${workstream.id} ${latestSession.id}. Do not resolve comments automatically.`,
         humanInstruction: "Review the updated diff after the agent refreshes the session."
       });
     }
 
     if (openActiveComments.length > 0) {
+      const feedbackQueuePath = input.feedbackQueuePath ?? "./.pathfinder-feedback.md";
       return recommendation({
         phase: "feedback",
         reason: "The active slice has open feedback.",
         workstreamId: workstream.id,
         sliceId: activeSlice.id,
         ...(latestSession ? { reviewSessionId: latestSession.id } : {}),
-        commands: [`pathfinder feedback export ${workstream.id} --file ./.pathfinder-feedback.md`],
-        agentInstruction: "Read ./.pathfinder-feedback.md, address every open item while staying scoped to the active slice, then run checks. Do not resolve comments automatically.",
+        feedbackQueuePath,
+        commands: [feedbackExportCommand(workstream.id, undefined, input.feedbackQueuePath)],
+        agentInstruction: `Read ${feedbackQueuePath}, address every open item while staying scoped to the active slice, then run checks. Do not resolve comments automatically.`,
         humanInstruction: "Review the changes and resolve comments only after verifying the fixes."
       });
     }
@@ -223,6 +225,16 @@ function readyForPr(workstreamId: string): AgentNextRecommendation {
     agentInstruction: "Do not add new implementation work. Generate or update the PR draft if asked.",
     humanInstruction: "Generate the PR draft and review it before publishing externally."
   });
+}
+
+function feedbackExportCommand(
+  workstreamId: string,
+  sessionId: string | undefined,
+  defaultFeedbackQueuePath: string | undefined
+): string {
+  const sessionFlag = sessionId ? ` --session ${sessionId}` : "";
+  const fileFlag = defaultFeedbackQueuePath ? "" : " --file ./.pathfinder-feedback.md";
+  return `pathfinder feedback export ${workstreamId}${sessionFlag}${fileFlag}`;
 }
 
 function recommendation(value: AgentNextRecommendation): AgentNextRecommendation {

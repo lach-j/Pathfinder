@@ -126,7 +126,7 @@ The current product focus is personal installation and no-repo-footprint usage:
 | 32 | done | `docs/slices/32-github-release-artifact-workflow.md` |
 | 33 | done | `docs/slices/33-automated-versioning.md` |
 | 34 | done | `docs/slices/34-external-state-mode.md` |
-| 35 | ready | `docs/slices/35-no-repo-footprint-agent-mode.md` |
+| 35 | done | `docs/slices/35-no-repo-footprint-agent-mode.md` |
 | 36 | ready | `docs/slices/36-personal-mode-doctor.md` |
 
 Status values:

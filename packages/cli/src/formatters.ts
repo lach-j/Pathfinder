@@ -13,7 +13,12 @@ import {
   StructuredDiffLine
 } from "@pathfinder/core";
 import { CurrentContext } from "@pathfinder/state";
-import { AgentCommandsInstallResult, AgentCommandsListResult, AgentDoctorResult } from "@pathfinder/state";
+import {
+  AgentCommandsInstallResult,
+  AgentCommandsListResult,
+  AgentDoctorResult,
+  AgentUserInstallResult
+} from "@pathfinder/state";
 
 export function formatSlice(slice: Slice): string {
   const dependencies = slice.dependsOnSliceIds?.length ? `\tdepends-on:${slice.dependsOnSliceIds.join(",")}` : "";
@@ -239,6 +244,34 @@ export function formatAgentCommandsList(result: AgentCommandsListResult): string
       lines.push(`- ${file.commandName}: ${status} at ${file.relativePath}${note}`);
     }
 
+    lines.push("");
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function formatAgentUserInstall(result: AgentUserInstallResult): string {
+  const lines = [
+    result.dryRun ? "# Pathfinder User Agent Install Dry Run" : "# Pathfinder User Agent Install",
+    ""
+  ];
+
+  for (const file of result.files) {
+    const action = file.skipped
+      ? "skip"
+      : file.changed
+        ? result.dryRun
+          ? "would write"
+          : "wrote"
+        : "unchanged";
+    const reason = file.reason ? ` (${file.reason})` : "";
+    lines.push(`- ${action}: ${file.tool} -> ${file.relativePath} (${file.path})${reason}`);
+  }
+
+  for (const manual of result.manualInstructions) {
+    lines.push(`- manual: ${manual.tool} (${manual.displayName})`);
+    lines.push("");
+    lines.push(...manual.instructions);
     lines.push("");
   }
 

@@ -21,6 +21,7 @@ test("help lists the implemented commands", async () => {
     "pathfinder config get state.mode",
     "pathfinder config set state.mode repo|external",
     "pathfinder agent bootstrap [--dry-run]",
+    "pathfinder agent install --user claude|opencode|all [--dry-run]",
     "pathfinder agent commands install [--tool claude|opencode] [--dry-run]",
     "pathfinder agent commands list",
     "pathfinder agent doctor [--json]",
@@ -146,6 +147,28 @@ test("installs and lists native agent command wrappers from the CLI", async () =
   assert.match(opencodeFeedback, /pathfinder agent prompt --phase feedback/);
 });
 
+test("installs user-level Claude instructions from the CLI without repo files", async () => {
+  const repo = await createTempGitRepo();
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-user-home-"));
+  const env = { PATHFINDER_USER_HOME: userHome };
+
+  const dryRun = await runCli(["agent", "install", "--user", "claude", "--dry-run"], repo, env);
+  await assert.rejects(() => readFile(path.join(userHome, ".claude", "CLAUDE.md"), "utf8"));
+  const install = await runCli(["agent", "install", "--user", "claude"], repo, env);
+  const secondInstall = await runCli(["agent", "install", "--user", "claude"], repo, env);
+  const written = await readFile(path.join(userHome, ".claude", "CLAUDE.md"), "utf8");
+  const opencode = await runCli(["agent", "install", "--user", "opencode", "--dry-run"], repo, env);
+
+  assert.match(dryRun.stdout, /would write: claude -> \.claude\/CLAUDE\.md/);
+  assert.match(dryRun.stdout, /pathfinder-cli-user-home/);
+  assert.match(install.stdout, /wrote: claude -> \.claude\/CLAUDE\.md/);
+  assert.match(secondInstall.stdout, /unchanged: claude -> \.claude\/CLAUDE\.md/);
+  assert.match(written, /pathfinder agent doctor --json/);
+  assert.match(opencode.stdout, /manual: opencode/);
+  await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
+  await assert.rejects(() => readFile(path.join(repo, ".claude", "CLAUDE.md"), "utf8"));
+});
+
 test("does not overwrite user-owned native agent command files from the CLI", async () => {
   const repo = await createTempGitRepo();
   await mkdir(path.join(repo, ".claude", "commands"), { recursive: true });
@@ -214,6 +237,25 @@ test("uses external state from config and init --personal", async () => {
   assert.equal(projectIds.length, 1);
   assert.match(await readFile(path.join(projectRoot, "project.json"), "utf8"), /"schemaVersion": 1/);
   await assert.rejects(() => readFile(path.join(repo, ".pathfinder", "project.json"), "utf8"));
+});
+
+test("writes feedback export to external state by default in external mode", async () => {
+  const repo = await createTempGitRepo();
+  const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));
+  const env = { PATHFINDER_HOME: pathfinderHome };
+
+  await runCli(["config", "set", "state.mode", "external"], repo, env);
+  await runCli(["init", "--personal"], repo, env);
+  await runCli(["workstream", "create", "--title", "Feedback Mode"], repo, env);
+
+  const result = await runCli(["feedback", "export", "feedback-mode"], repo, env);
+  const projectIds = await sortedFiles(path.join(pathfinderHome, "projects"));
+  const feedbackPath = path.join(pathfinderHome, "projects", projectIds[0], ".pathfinder-feedback.md");
+  const feedback = await readFile(feedbackPath, "utf8");
+
+  assert.match(result.stdout, /Wrote feedback queue to .*\.pathfinder-feedback\.md\./);
+  assert.match(feedback, /Feedback Mode/);
+  await assert.rejects(() => readFile(path.join(repo, ".pathfinder-feedback.md"), "utf8"));
 });
 
 test("prints agent next setup recommendation as text and JSON", async () => {
@@ -302,8 +344,50 @@ test("prints agent prompts in automatic and explicit phase modes", async () => {
   const automaticFeedback = await runCli(["agent", "prompt"], repo);
 
   assert.match(automaticFeedback.stdout, /# Pathfinder Agent Prompt: feedback/);
-  assert.match(automaticFeedback.stdout, /`pathfinder feedback export inventory-alerts --session <review-session-id> --file \.\/\.pathfinder-feedback\.md`/);
+  assert.match(automaticFeedback.stdout, /`pathfinder feedback export inventory-alerts --file \.\/\.pathfinder-feedback\.md`/);
   assert.match(automaticFeedback.stdout, /Do not resolve comments/);
+});
+
+test("agent next and prompt reference external feedback path in external mode", async () => {
+  const repo = await createTempGitRepo();
+  const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));
+  const env = { PATHFINDER_HOME: pathfinderHome };
+
+  await runCli(["config", "set", "state.mode", "external"], repo, env);
+  await runCli(["init", "--personal"], repo, env);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo, env);
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo, env);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo,
+    env
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo, env);
+  await runCli(
+    ["comment", "add", "inventory-alerts", "--slice", "add-report", "--body", "Add tests."],
+    repo,
+    env
+  );
+
+  const next = await runCli(["agent", "next", "--json"], repo, env);
+  const prompt = await runCli(["agent", "prompt"], repo, env);
+  const parsed = JSON.parse(next.stdout);
+
+  assert.equal(parsed.phase, "feedback");
+  assert.match(parsed.feedbackQueuePath, /projects.*\.pathfinder-feedback\.md/);
+  assert.deepEqual(parsed.commands, ["pathfinder feedback export inventory-alerts"]);
+  assert.match(parsed.agentInstruction, /projects.*\.pathfinder-feedback\.md/);
+  assert.match(prompt.stdout, /`pathfinder feedback export inventory-alerts`/);
+  assert.match(prompt.stdout, /Export and read `.*projects.*\.pathfinder-feedback\.md`/);
 });
 
 test("sets and shows workstream requirements", async () => {

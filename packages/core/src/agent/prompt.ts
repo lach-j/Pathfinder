@@ -11,6 +11,7 @@ export function renderAgentPrompt(input: AgentPromptInput): string {
   const requirementsPath =
     input.requirementsPath ?? `.pathfinder/workstreams/${workstreamId}/requirements.md`;
   const planPath = input.planPath ?? `.pathfinder/workstreams/${workstreamId}/plan.md`;
+  const feedbackQueuePath = input.feedbackQueuePath ?? input.recommendation.feedbackQueuePath ?? "./.pathfinder-feedback.md";
 
   const lines = [
     `# Pathfinder Agent Prompt: ${phase}`,
@@ -44,6 +45,7 @@ export function renderAgentPrompt(input: AgentPromptInput): string {
       reviewSessionId,
       requirementsPath,
       planPath,
+      feedbackQueuePath,
       recommendedCommands: input.recommendation.commands
     }).map((command) => `- \`${command}\``),
     "",
@@ -54,7 +56,8 @@ export function renderAgentPrompt(input: AgentPromptInput): string {
       sliceId,
       reviewSessionId,
       requirementsPath,
-      planPath
+      planPath,
+      feedbackQueuePath
     })
   ];
 
@@ -91,6 +94,7 @@ interface PromptCommandContext {
   reviewSessionId: string;
   requirementsPath: string;
   planPath: string;
+  feedbackQueuePath: string;
   recommendedCommands: string[];
 }
 
@@ -122,7 +126,7 @@ function commandsForPromptPhase(phase: AgentPromptPhase, context: PromptCommandC
   if (phase === "feedback") {
     return [
       "pathfinder agent next --json",
-      `pathfinder feedback export ${context.workstreamId} --session ${context.reviewSessionId} --file ./.pathfinder-feedback.md`,
+      feedbackExportCommand(context.workstreamId, context.reviewSessionId, context.feedbackQueuePath),
       "npm run typecheck",
       "npm test",
       "npm run lint --if-present",
@@ -153,6 +157,7 @@ interface PromptInstructionContext {
   reviewSessionId: string;
   requirementsPath: string;
   planPath: string;
+  feedbackQueuePath: string;
 }
 
 function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInstructionContext): string[] {
@@ -178,7 +183,7 @@ function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInst
 
   if (phase === "feedback") {
     return [
-      "1. Export and read `./.pathfinder-feedback.md`.",
+      `1. Export and read \`${context.feedbackQueuePath}\`.`,
       "2. Address every open feedback item in that file while staying scoped to the active slice.",
       "3. Run `npm run typecheck`, `npm test`, and `npm run lint --if-present`.",
       `4. Refresh the review session with \`pathfinder review refresh ${context.workstreamId} ${context.reviewSessionId}\`.`,
@@ -201,4 +206,10 @@ function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInst
     "3. Do not add new implementation work in PR mode.",
     "4. Summarize the PR draft path and any blockers that remain."
   ];
+}
+
+function feedbackExportCommand(workstreamId: string, reviewSessionId: string, feedbackQueuePath: string): string {
+  const sessionFlag = reviewSessionId.startsWith("<") ? "" : ` --session ${reviewSessionId}`;
+  const fileFlag = feedbackQueuePath === "./.pathfinder-feedback.md" ? " --file ./.pathfinder-feedback.md" : "";
+  return `pathfinder feedback export ${workstreamId}${sessionFlag}${fileFlag}`;
 }

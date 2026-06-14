@@ -113,6 +113,20 @@ The command wrappers are thin convenience files for Claude Code and OpenCode. Th
 `.claude/commands/` and `.opencode/commands/`, include Pathfinder managed-file markers, and delegate to
 `pathfinder agent next --json` or `pathfinder agent prompt`. Existing user-owned command files are not overwritten.
 
+Install user-level agent instructions when you want the agent workflow available without adding Pathfinder helper files
+to each target repository:
+
+```bash
+npm exec -- pathfinder agent install --user claude
+npm exec -- pathfinder agent install --user claude --dry-run
+npm exec -- pathfinder agent install --user opencode
+npm exec -- pathfinder agent install --user all
+```
+
+The Claude user-level install manages a marked Pathfinder block in the user's Claude instructions file and writes no
+files to the current repository. OpenCode user-level rule locations vary by installation, so Pathfinder prints manual
+instructions instead of guessing a global path.
+
 Check whether the repository is ready for the deterministic agent workflow:
 
 ```bash
@@ -127,7 +141,7 @@ reported with explicit fix commands such as `pathfinder init`, `pathfinder agent
 
 Recommended agent integration loop:
 
-1. Run `pathfinder agent bootstrap`.
+1. Run `pathfinder agent install --user claude` for no-repo-footprint setup, or `pathfinder agent bootstrap` for repo-local setup.
 2. Optionally run `pathfinder agent commands install`.
 3. Run `pathfinder agent doctor` and apply any printed setup commands.
 4. Tell the coding agent to continue with Pathfinder.
@@ -255,6 +269,10 @@ instead of being guessed.
 project-level markdown files only; they do not run commands automatically and they do not replace `agent next`
 or `agent prompt` as the source of truth.
 
+`agent install --user claude` installs user-level Pathfinder instructions without touching the target repository. Use
+`--dry-run` to print exactly which user-level file would be written. `agent install --user opencode` currently prints
+manual user-level instructions because OpenCode global rule paths are not assumed.
+
 `agent doctor` verifies the setup that makes the workflow discoverable. It does not mutate files; it prints
 missing or outdated integration pieces and the exact local commands to run before handing work back to an agent.
 
@@ -289,6 +307,8 @@ review session metadata when scoped with `--session`, and grouped open comments.
 bridge for Claude, Codex, Cursor, or another coding agent: paste or attach the markdown, ask the
 agent to address every item while staying scoped to the active slice, then review the refreshed diff.
 Pathfinder does not invoke an AI provider and does not resolve comments automatically.
+In external state mode, omitting `--file` writes the queue to the current repository's external Pathfinder state
+directory instead of `./.pathfinder-feedback.md`; explicit `--file` paths still win.
 
 Start and inspect a durable local review session for the active slice:
 
@@ -463,6 +483,8 @@ npm exec -- pathfinder agent prompt --phase implement
 npm exec -- pathfinder agent prompt --phase feedback
 npm exec -- pathfinder agent doctor
 npm exec -- pathfinder agent doctor --json
+npm exec -- pathfinder agent install --user claude --dry-run
+npm exec -- pathfinder agent install --user claude
 npm exec -- pathfinder agent commands list
 npm exec -- pathfinder agent commands install --dry-run
 npm exec -- pathfinder agent commands install --tool claude
