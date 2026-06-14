@@ -2,7 +2,8 @@ export function printHelp(): void {
   console.log(`Pathfinder Stage 1
 
 Usage:
-  pathfinder init
+  pathfinder init [--agents]
+  pathfinder agent bootstrap [--dry-run]
   pathfinder current
   pathfinder agent next [--json]
   pathfinder agent prompt [--phase plan|implement|feedback|review|pr]

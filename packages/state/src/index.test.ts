@@ -19,6 +19,72 @@ test("initialises Pathfinder state inside a Git repository", async () => {
   assert.match(await readFile(path.join(repo, ".pathfinder", "project.json"), "utf8"), /"schemaVersion": 1/);
 });
 
+test("bootstraps agent instructions when AGENTS.md is missing", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+
+  const result = await store.bootstrapAgentInstructions();
+  const written = await readFile(path.join(repo, "AGENTS.md"), "utf8");
+
+  assert.equal(result.path, path.join(repo, "AGENTS.md"));
+  assert.equal(result.changed, true);
+  assert.equal(written, result.markdown);
+  assert.match(written, /<!-- pathfinder-agent:start -->/);
+  assert.match(written, /pathfinder agent next --json/);
+  assert.match(written, /pathfinder agent prompt/);
+  assert.match(written, /Pathfinder is the source of truth/);
+  assert.match(written, /Do not create unmanaged task lists or parallel plans/);
+  assert.match(written, /do not resolve Pathfinder comments automatically/);
+  assert.match(written, /MCP is not required/);
+});
+
+test("bootstraps agent instructions while preserving existing AGENTS.md content", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await writeFile(path.join(repo, "AGENTS.md"), "# Existing\n\nKeep this.\n", "utf8");
+
+  await store.bootstrapAgentInstructions();
+  const written = await readFile(path.join(repo, "AGENTS.md"), "utf8");
+  const second = await store.bootstrapAgentInstructions();
+  const writtenAgain = await readFile(path.join(repo, "AGENTS.md"), "utf8");
+
+  assert.match(written, /^# Existing\n\nKeep this\.\n\n<!-- pathfinder-agent:start -->/);
+  assert.equal(second.changed, false);
+  assert.equal(writtenAgain, written);
+  assert.equal((written.match(/<!-- pathfinder-agent:start -->/g) ?? []).length, 1);
+});
+
+test("updates an existing managed agent instruction block only", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await writeFile(
+    path.join(repo, "AGENTS.md"),
+    "# Existing\n\n<!-- pathfinder-agent:start -->\nold instructions\n<!-- pathfinder-agent:end -->\n\n## Tail\nKeep tail.\n",
+    "utf8"
+  );
+
+  await store.bootstrapAgentInstructions();
+  const written = await readFile(path.join(repo, "AGENTS.md"), "utf8");
+
+  assert.match(written, /^# Existing\n\n<!-- pathfinder-agent:start -->/);
+  assert.doesNotMatch(written, /old instructions/);
+  assert.match(written, /## Tail\nKeep tail\.\n$/);
+});
+
+test("dry-run bootstrap prints proposed instructions without writing", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await writeFile(path.join(repo, "AGENTS.md"), "# Existing\n", "utf8");
+
+  const result = await store.bootstrapAgentInstructions({ dryRun: true });
+  const written = await readFile(path.join(repo, "AGENTS.md"), "utf8");
+
+  assert.equal(result.dryRun, true);
+  assert.equal(result.changed, true);
+  assert.match(result.markdown, /pathfinder agent next --json/);
+  assert.equal(written, "# Existing\n");
+});
+
 test("creates workstreams with markdown and JSON state files", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

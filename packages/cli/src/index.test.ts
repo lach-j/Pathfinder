@@ -17,7 +17,8 @@ test("help lists the implemented MVP commands", async () => {
   const result = await runCli(["help"]);
 
   for (const command of [
-    "pathfinder init",
+    "pathfinder init [--agents]",
+    "pathfinder agent bootstrap [--dry-run]",
     "pathfinder current",
     "pathfinder agent next [--json]",
     "pathfinder agent prompt [--phase plan|implement|feedback|review|pr]",
@@ -61,6 +62,37 @@ test("help lists the implemented MVP commands", async () => {
   ]) {
     assert.match(result.stdout, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+});
+
+test("bootstraps repository agent instructions from the CLI", async () => {
+  const repo = await createTempGitRepo();
+  await writeFile(path.join(repo, "AGENTS.md"), "# Existing\n", "utf8");
+
+  const dryRun = await runCli(["agent", "bootstrap", "--dry-run"], repo);
+  const beforeWrite = await readFile(path.join(repo, "AGENTS.md"), "utf8");
+  const writeResult = await runCli(["agent", "bootstrap"], repo);
+  const secondWrite = await runCli(["agent", "bootstrap"], repo);
+  const written = await readFile(path.join(repo, "AGENTS.md"), "utf8");
+
+  assert.match(dryRun.stdout, /pathfinder agent next --json/);
+  assert.equal(beforeWrite, "# Existing\n");
+  assert.match(writeResult.stdout, /Updated .*AGENTS\.md\./);
+  assert.match(secondWrite.stdout, /No changes needed for .*AGENTS\.md\./);
+  assert.match(written, /^# Existing\n\n<!-- pathfinder-agent:start -->/);
+  assert.equal((written.match(/<!-- pathfinder-agent:start -->/g) ?? []).length, 1);
+});
+
+test("init --agents initialises state and bootstraps instructions", async () => {
+  const repo = await createTempGitRepo();
+
+  const result = await runCli(["init", "--agents"], repo);
+  const project = await readFile(path.join(repo, ".pathfinder", "project.json"), "utf8");
+  const agents = await readFile(path.join(repo, "AGENTS.md"), "utf8");
+
+  assert.match(result.stdout, /Initialised Pathfinder/);
+  assert.match(result.stdout, /Updated .*AGENTS\.md\./);
+  assert.match(project, /"schemaVersion": 1/);
+  assert.match(agents, /pathfinder agent next --json/);
 });
 
 test("prints agent next setup recommendation as text and JSON", async () => {

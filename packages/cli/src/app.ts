@@ -39,7 +39,27 @@ export async function run(args: string[]): Promise<void> {
   }
 
   if (area === "init") {
-    expectNoExtraArgs(rest);
+    const options = parseOptions([action, ...rest].filter((value): value is string => Boolean(value)));
+
+    if (options.dryRun) {
+      throw usageError("Unknown option '--dry-run'.");
+    }
+
+    if (options.agents) {
+      try {
+        const project = await store.initProject();
+        console.log(`Initialised Pathfinder for ${project.name}.`);
+      } catch (error) {
+        if (!(error instanceof PathfinderError && error.message === "Pathfinder state already exists in this repository.")) {
+          throw error;
+        }
+      }
+
+      const result = await store.bootstrapAgentInstructions();
+      console.log(`${result.changed ? "Updated" : "No changes needed for"} ${result.path}.`);
+      return;
+    }
+
     const project = await store.initProject();
     console.log(`Initialised Pathfinder for ${project.name}.`);
     return;
@@ -116,6 +136,19 @@ export async function run(args: string[]): Promise<void> {
 }
 
 async function runAgent(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "bootstrap") {
+    const options = parseOptions(args);
+    const result = await store.bootstrapAgentInstructions({ dryRun: options.dryRun });
+
+    if (options.dryRun) {
+      process.stdout.write(result.markdown);
+      return;
+    }
+
+    console.log(`${result.changed ? "Updated" : "No changes needed for"} ${result.path}.`);
+    return;
+  }
+
   if (action === "next") {
     const options = parseOptions(args);
     const git = new GitAdapter({ cwd: process.cwd() });
@@ -147,7 +180,7 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
-  throw usageError("Unknown agent command. Expected next or prompt.");
+  throw usageError("Unknown agent command. Expected bootstrap, next, or prompt.");
 }
 
 async function runDiff(action: string | undefined, args: string[]): Promise<void> {

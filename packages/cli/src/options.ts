@@ -14,6 +14,8 @@ export interface OptionMap {
   side?: string;
   json?: boolean;
   open?: boolean;
+  agents?: boolean;
+  dryRun?: boolean;
   dependsOn?: string[];
   kind?: string;
   path?: string;
@@ -38,6 +40,16 @@ export function parseOptions(args: string[]): OptionMap {
 
     if (flag === "--open") {
       options.open = true;
+      continue;
+    }
+
+    if (flag === "--agents") {
+      options.agents = true;
+      continue;
+    }
+
+    if (flag === "--dry-run") {
+      options.dryRun = true;
       continue;
     }
 

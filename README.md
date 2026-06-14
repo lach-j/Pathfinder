@@ -32,10 +32,22 @@ Run the local CLI with:
 npm exec -- pathfinder help
 ```
 
+Install repository-level agent instructions so compatible coding agents know to ask Pathfinder what to do next:
+
+```bash
+npm exec -- pathfinder agent bootstrap
+npm exec -- pathfinder agent bootstrap --dry-run
+```
+
+The bootstrap command creates or updates a marked Pathfinder section in root `AGENTS.md` while preserving user-written content.
+The managed section tells agents to start with `pathfinder agent next --json`, use `pathfinder agent prompt` for tool-neutral
+instructions, avoid unmanaged parallel plans when Pathfinder state exists, and leave comment resolution to the developer.
+
 Initialise Pathfinder state from the root of a Git repository:
 
 ```bash
 npm exec -- pathfinder init
+npm exec -- pathfinder init --agents
 ```
 
 This creates:

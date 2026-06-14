@@ -1,6 +1,6 @@
 # Slice 28: Agent Bootstrap Instructions
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -101,6 +101,32 @@ Suggested managed block markers:
 - `--dry-run` does not write files.
 - Tests cover create, update, idempotency, and dry-run behavior.
 - README documents the bootstrap command as the recommended first setup step for agent integration.
+
+## Implementation Notes
+
+- Added `PathfinderStore.bootstrapAgentInstructions()` to create, update, and dry-run a marker-managed root `AGENTS.md` block without requiring existing `.pathfinder/` state.
+- Added the managed Pathfinder agent workflow block with instructions to start from `pathfinder agent next --json`, use `pathfinder agent prompt`, avoid unmanaged parallel plans, leave comment resolution to the developer, and not require MCP.
+- Added `pathfinder agent bootstrap [--dry-run]`.
+- Added `pathfinder init --agents`, which initializes Pathfinder state when needed and installs the same agent instruction block.
+- Added state and CLI tests covering creation, update, preservation of existing content, idempotency, dry-run behavior, and init integration.
+- Updated README and CLI help with the bootstrap commands.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke tested in temporary Git repositories:
+
+```bash
+npm exec --prefix C:\Users\Lachlan\Documents\Pathfinder -- pathfinder agent bootstrap --dry-run
+npm exec --prefix C:\Users\Lachlan\Documents\Pathfinder -- pathfinder agent bootstrap
+npm exec --prefix C:\Users\Lachlan\Documents\Pathfinder -- pathfinder init --agents
+```
 
 ## Checks
 

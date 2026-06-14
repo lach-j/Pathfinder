@@ -68,6 +68,13 @@ export interface FeedbackQueueExport {
   markdown: string;
 }
 
+export interface AgentBootstrapResult {
+  path: string;
+  markdown: string;
+  changed: boolean;
+  dryRun: boolean;
+}
+
 export interface DeterministicReviewRecord {
   review: Review;
   result: DeterministicReviewResult;
@@ -162,6 +169,30 @@ export class PathfinderStore {
     await mkdir(path.join(stateRoot, "workstreams"), { recursive: true });
     await writeJson(projectPath, project);
     return project;
+  }
+
+  async bootstrapAgentInstructions(options: { dryRun?: boolean } = {}): Promise<AgentBootstrapResult> {
+    const gitRoot = await findGitRoot(this.cwd);
+    if (!gitRoot) {
+      throw new PathfinderError("Agent bootstrap must be run inside a Git repository.");
+    }
+
+    const agentsPath = path.join(gitRoot, "AGENTS.md");
+    const existing = (await exists(agentsPath)) ? await readFile(agentsPath, "utf8") : "";
+    const markdown = applyAgentBootstrapBlock(existing);
+    const changed = markdown !== existing;
+    const dryRun = Boolean(options.dryRun);
+
+    if (!dryRun && changed) {
+      await writeFile(agentsPath, markdown, "utf8");
+    }
+
+    return {
+      path: agentsPath,
+      markdown,
+      changed,
+      dryRun
+    };
   }
 
   async getProject(): Promise<Project> {
@@ -1233,4 +1264,51 @@ function errorMessage(error: unknown): string {
   }
 
   return "Unknown Pathfinder state error.";
+}
+
+const AGENT_BOOTSTRAP_START = "<!-- pathfinder-agent:start -->";
+const AGENT_BOOTSTRAP_END = "<!-- pathfinder-agent:end -->";
+
+const AGENT_BOOTSTRAP_BLOCK = `${AGENT_BOOTSTRAP_START}
+## Pathfinder Agent Workflow
+
+Pathfinder is the source of truth for planning, slice scope, review feedback, and PR output in this repository.
+
+When asked to plan, implement, continue, review, or address feedback here, first run:
+
+\`\`\`bash
+pathfinder agent next --json
+\`\`\`
+
+Follow the returned \`phase\`, \`commands\`, and \`agentInstruction\`. Use \`pathfinder agent prompt\` when you need tool-neutral markdown instructions for the current phase.
+
+Do not create unmanaged task lists or parallel plans when Pathfinder state exists. Keep implementation scoped to the active Pathfinder slice, and do not resolve Pathfinder comments automatically after making code changes.
+
+MCP is not required for this workflow; use the local Pathfinder CLI commands above.
+${AGENT_BOOTSTRAP_END}
+`;
+
+function applyAgentBootstrapBlock(existing: string): string {
+  const startIndex = existing.indexOf(AGENT_BOOTSTRAP_START);
+  const endIndex = existing.indexOf(AGENT_BOOTSTRAP_END);
+
+  if ((startIndex === -1) !== (endIndex === -1)) {
+    throw new PathfinderError("AGENTS.md contains an incomplete Pathfinder agent bootstrap block.");
+  }
+
+  if (startIndex !== -1 && endIndex !== -1) {
+    if (endIndex < startIndex) {
+      throw new PathfinderError("AGENTS.md contains malformed Pathfinder agent bootstrap markers.");
+    }
+
+    const afterEnd = endIndex + AGENT_BOOTSTRAP_END.length;
+    return `${existing.slice(0, startIndex)}${AGENT_BOOTSTRAP_BLOCK}${existing.slice(afterEnd).replace(/^\r?\n/, "")}`;
+  }
+
+  if (!existing.trim()) {
+    return AGENT_BOOTSTRAP_BLOCK;
+  }
+
+  const trimmedEnd = existing.replace(/\s*$/, "");
+  return `${trimmedEnd}\n\n${AGENT_BOOTSTRAP_BLOCK}`;
 }
