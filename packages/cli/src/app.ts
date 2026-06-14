@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createInterface } from "node:readline/promises";
 
+import { cancel, intro, isCancel, multiselect, outro, select } from "@clack/prompts";
 import {
   AgentPromptPhase,
   PathfinderError,
@@ -121,14 +121,16 @@ export async function run(args: string[]): Promise<void> {
 }
 
 type InitMode = "repo" | "personal";
-type InitAgent = "none" | "claude" | "opencode" | "all";
+type InitAgent = "claude" | "opencode";
 
 interface InitSetup {
   mode: InitMode;
-  agent: InitAgent;
+  agents: InitAgent[];
   repoBootstrap: boolean;
   repoCommands: boolean;
 }
+
+const supportedInitAgents: readonly InitAgent[] = ["claude", "opencode"];
 
 async function runInit(options: ReturnType<typeof parseOptions>): Promise<void> {
   if (options.dryRun) {
@@ -175,72 +177,86 @@ function shouldPromptForInit(options: ReturnType<typeof parseOptions>): boolean 
 
 function getInitSetupFromOptions(options: ReturnType<typeof parseOptions>): InitSetup {
   const mode: InitMode = options.personal ? "personal" : "repo";
-  const user = options.user === "all" || isAgentCommandTool(options.user ?? "") ? options.user as InitAgent : "none";
+  const agents = initAgentsFromUserOption(options.user);
 
   return {
     mode,
-    agent: mode === "personal" ? user : "none",
+    agents: mode === "personal" ? agents : [],
     repoBootstrap: mode === "repo" && Boolean(options.agents),
     repoCommands: false
   };
 }
 
-async function promptInitSetup(): Promise<InitSetup> {
-  const readline = createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  try {
-    console.log("Pathfinder setup");
-    console.log("");
-    console.log("1. Personal - keep Pathfinder state and agent setup outside this repo");
-    console.log("2. Repo-local - write .pathfinder/ and optional repo agent helpers");
-    const modeChoice = await askChoice(readline, "Choose setup mode", ["personal", "repo"], "personal");
-    const mode = modeChoice as InitMode;
-
-    console.log("");
-    console.log("1. Claude Code");
-    console.log("2. OpenCode");
-    console.log("3. All supported agents");
-    console.log("4. None");
-    const agentChoice = await askChoice(readline, "Set up an agent integration", ["claude", "opencode", "all", "none"], "claude");
-    const agent = agentChoice as InitAgent;
-
-    return {
-      mode,
-      agent,
-      repoBootstrap: mode === "repo" && agent !== "none",
-      repoCommands: mode === "repo" && agent !== "none"
-    };
-  } finally {
-    readline.close();
+function initAgentsFromUserOption(user: string | undefined): InitAgent[] {
+  if (!user) {
+    return [];
   }
+
+  if (user === "all") {
+    return [...supportedInitAgents];
+  }
+
+  return isAgentCommandTool(user) ? [user] : [];
 }
 
-async function askChoice(
-  readline: ReturnType<typeof createInterface>,
-  label: string,
-  values: string[],
-  defaultValue: string
-): Promise<string> {
-  const defaultIndex = values.indexOf(defaultValue) + 1;
-  const answer = (await readline.question(`${label} [${defaultIndex}]: `)).trim().toLowerCase();
-  if (!answer) {
-    return defaultValue;
+async function promptInitSetup(): Promise<InitSetup> {
+  intro("Pathfinder setup");
+
+  const mode = await select<InitMode>({
+    message: "Where should Pathfinder store state for this repo?",
+    initialValue: "personal",
+    options: [
+      {
+        value: "personal",
+        label: "Personal",
+        hint: "Keep Pathfinder state and agent setup outside this repo"
+      },
+      {
+        value: "repo",
+        label: "Repo-local",
+        hint: "Write .pathfinder/ and optional repo agent helpers"
+      }
+    ]
+  });
+
+  if (isCancel(mode)) {
+    cancel("Setup cancelled.");
+    process.exitCode = 1;
+    throw new PathfinderError("Setup cancelled.");
   }
 
-  const number = Number(answer);
-  if (Number.isInteger(number) && number >= 1 && number <= values.length) {
-    return values[number - 1];
+  const agents = await multiselect<InitAgent>({
+    message: mode === "personal"
+      ? "Install user-level instructions for which agents?"
+      : "Install repo-local helpers for which agents?",
+    required: false,
+    initialValues: ["claude"],
+    options: [
+      {
+        value: "claude",
+        label: "Claude Code"
+      },
+      {
+        value: "opencode",
+        label: "OpenCode"
+      }
+    ]
+  });
+
+  if (isCancel(agents)) {
+    cancel("Setup cancelled.");
+    process.exitCode = 1;
+    throw new PathfinderError("Setup cancelled.");
   }
 
-  const match = values.find((value) => value === answer);
-  if (match) {
-    return match;
-  }
+  outro("Setup choices saved.");
 
-  throw usageError(`Invalid choice '${answer}'.`);
+  return {
+    mode,
+    agents,
+    repoBootstrap: mode === "repo" && agents.length > 0,
+    repoCommands: mode === "repo" && agents.length > 0
+  };
 }
 
 async function applyInitSetup(setup: InitSetup): Promise<void> {
@@ -260,8 +276,7 @@ async function applyInitSetup(setup: InitSetup): Promise<void> {
 
   if (setup.mode === "personal") {
     console.log("State: personal external Pathfinder state.");
-    if (setup.agent !== "none") {
-      const tool = setup.agent === "all" ? undefined : setup.agent;
+    for (const tool of setup.agents) {
       const result = await store.installUserAgentIntegration({ tool });
       process.stdout.write(formatAgentUserInstall(result));
     }
@@ -275,9 +290,10 @@ async function applyInitSetup(setup: InitSetup): Promise<void> {
   }
 
   if (setup.repoCommands) {
-    const tool = setup.agent === "all" ? undefined : setup.agent === "none" ? undefined : setup.agent;
-    const result = await store.installAgentCommands({ tool });
-    process.stdout.write(formatAgentCommandsInstall(result));
+    for (const tool of setup.agents) {
+      const result = await store.installAgentCommands({ tool });
+      process.stdout.write(formatAgentCommandsInstall(result));
+    }
   }
 }
 

@@ -13,6 +13,7 @@
     "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
+    "@clack/prompts": "^1.5.1",
     "@pathfinder/core": "0.1.0",
     "@pathfinder/git": "0.1.0",
     "@pathfinder/local-server": "0.1.0",

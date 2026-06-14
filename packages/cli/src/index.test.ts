@@ -236,6 +236,22 @@ test("init --personal --user claude sets up personal state and user-level instru
   await assert.rejects(() => readFile(path.join(repo, ".claude", "commands", "pathfinder-plan.md"), "utf8"));
 });
 
+test("init --personal --user all sets up every supported personal integration", async () => {
+  const repo = await createTempGitRepo();
+  const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-user-home-"));
+  const env = { PATHFINDER_HOME: pathfinderHome, PATHFINDER_USER_HOME: userHome };
+
+  const result = await runCli(["init", "--personal", "--user", "all"], repo, env);
+  const claudeInstructions = await readFile(path.join(userHome, ".claude", "CLAUDE.md"), "utf8");
+
+  assert.match(result.stdout, /wrote: claude -> \.claude\/CLAUDE\.md/);
+  assert.match(result.stdout, /manual: opencode/);
+  assert.match(claudeInstructions, /pathfinder agent next --json/);
+  await assert.rejects(() => readFile(path.join(repo, ".pathfinder", "project.json"), "utf8"));
+  await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
+});
+
 test("uses external state after init --personal without global config", async () => {
   const repo = await createTempGitRepo();
   const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));

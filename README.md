@@ -26,10 +26,10 @@ From the root of the Git repository you want to use with Pathfinder:
 pathfinder init
 ```
 
-The setup is interactive by default in a terminal. For most personal use, choose:
+The setup is interactive by default in a terminal. Use the arrow keys to choose the setup mode, then select one or more agent integrations with Space and press Enter to continue. For most personal use, choose:
 
 - Personal setup
-- Claude Code, OpenCode, or all supported agents
+- Claude Code, OpenCode, or both
 
 Personal setup keeps Pathfinder state outside the target repo and installs user-level agent instructions where possible. For Claude Code, Pathfinder updates your user-level Claude instructions instead of writing `.claude/commands/` into the repository.
 
@@ -37,6 +37,12 @@ For non-interactive setup with Claude Code:
 
 ```bash
 pathfinder init --personal --user claude
+```
+
+To install every supported personal integration non-interactively:
+
+```bash
+pathfinder init --personal --user all
 ```
 
 For repo-local setup instead:
