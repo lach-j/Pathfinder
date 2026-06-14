@@ -4,9 +4,11 @@ import path from "node:path";
 import { cancel, intro, isCancel, multiselect, outro, select } from "@clack/prompts";
 import {
   AgentPromptPhase,
+  AgentUserInstallTool,
   PathfinderError,
   ReviewCommentTarget,
   isAgentCommandTool,
+  isAgentUserInstallTool,
   isAgentPromptPhase,
   isReviewCommentSide
 } from "@pathfinder/core";
@@ -121,7 +123,7 @@ export async function run(args: string[]): Promise<void> {
 }
 
 type InitMode = "repo" | "personal";
-type InitAgent = "claude" | "opencode";
+type InitAgent = AgentUserInstallTool;
 
 interface InitSetup {
   mode: InitMode;
@@ -130,7 +132,7 @@ interface InitSetup {
   repoCommands: boolean;
 }
 
-const supportedInitAgents: readonly InitAgent[] = ["claude", "opencode"];
+const supportedInitAgents: readonly InitAgent[] = ["claude", "opencode", "codex"];
 
 async function runInit(options: ReturnType<typeof parseOptions>): Promise<void> {
   if (options.dryRun) {
@@ -138,7 +140,7 @@ async function runInit(options: ReturnType<typeof parseOptions>): Promise<void> 
   }
 
   if (options.tool) {
-    throw usageError("Unknown option '--tool' for init. Use --user claude|opencode|all with --personal.");
+    throw usageError("Unknown option '--tool' for init. Use --user claude|opencode|codex|all with --personal.");
   }
 
   if (options.personal && options.repo) {
@@ -146,11 +148,11 @@ async function runInit(options: ReturnType<typeof parseOptions>): Promise<void> 
   }
 
   if (options.personal && options.agents) {
-    throw usageError("Use --personal --user claude|opencode|all for personal agent setup.");
+    throw usageError("Use --personal --user claude|opencode|codex|all for personal agent setup.");
   }
 
-  if (options.user && options.user !== "all" && !isAgentCommandTool(options.user)) {
-    throw usageError("Invalid --user value. Expected claude, opencode, or all.");
+  if (options.user && options.user !== "all" && !isAgentUserInstallTool(options.user)) {
+    throw usageError("Invalid --user value. Expected claude, opencode, codex, or all.");
   }
 
   if (options.user && !options.personal) {
@@ -196,7 +198,7 @@ function initAgentsFromUserOption(user: string | undefined): InitAgent[] {
     return [...supportedInitAgents];
   }
 
-  return isAgentCommandTool(user) ? [user] : [];
+  return isAgentUserInstallTool(user) ? [user] : [];
 }
 
 async function promptInitSetup(): Promise<InitSetup> {
@@ -239,6 +241,10 @@ async function promptInitSetup(): Promise<InitSetup> {
       {
         value: "opencode",
         label: "OpenCode"
+      },
+      {
+        value: "codex",
+        label: "Codex"
       }
     ]
   });
@@ -291,6 +297,10 @@ async function applyInitSetup(setup: InitSetup): Promise<void> {
 
   if (setup.repoCommands) {
     for (const tool of setup.agents) {
+      if (!isAgentCommandTool(tool)) {
+        continue;
+      }
+
       const result = await store.installAgentCommands({ tool });
       process.stdout.write(formatAgentCommandsInstall(result));
     }
@@ -303,8 +313,8 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     if (!options.user) {
       throw usageError("Missing required option --user.");
     }
-    if (options.user !== "all" && !isAgentCommandTool(options.user)) {
-      throw usageError("Invalid --user value. Expected claude, opencode, or all.");
+    if (options.user !== "all" && !isAgentUserInstallTool(options.user)) {
+      throw usageError("Invalid --user value. Expected claude, opencode, codex, or all.");
     }
 
     const tool = options.user === "all" ? undefined : options.user;

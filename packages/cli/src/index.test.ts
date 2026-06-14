@@ -18,10 +18,10 @@ test("help lists the implemented commands", async () => {
 
   for (const command of [
     "pathfinder init [--interactive]",
-    "pathfinder init --personal [--user claude|opencode|all]",
+    "pathfinder init --personal [--user claude|opencode|codex|all]",
     "pathfinder init --repo [--agents]",
     "pathfinder agent bootstrap [--dry-run]",
-    "pathfinder agent install --user claude|opencode|all [--dry-run]",
+    "pathfinder agent install --user claude|opencode|codex|all [--dry-run]",
     "pathfinder agent commands install [--tool claude|opencode] [--dry-run]",
     "pathfinder agent commands list",
     "pathfinder agent doctor [--json]",
@@ -169,6 +169,22 @@ test("installs user-level Claude instructions from the CLI without repo files", 
   await assert.rejects(() => readFile(path.join(repo, ".claude", "CLAUDE.md"), "utf8"));
 });
 
+test("installs user-level Codex instructions from the CLI without duplicate managed blocks", async () => {
+  const repo = await createTempGitRepo();
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-user-home-"));
+  const env = { PATHFINDER_USER_HOME: userHome };
+
+  const install = await runCli(["agent", "install", "--user", "codex"], repo, env);
+  const secondInstall = await runCli(["agent", "install", "--user", "codex"], repo, env);
+  const written = await readFile(path.join(userHome, ".codex", "AGENTS.md"), "utf8");
+
+  assert.match(install.stdout, /wrote: codex -> AGENTS\.md/);
+  assert.match(secondInstall.stdout, /unchanged: codex -> AGENTS\.md/);
+  assert.match(written, /pathfinder agent doctor --json/);
+  assert.equal((written.match(/<!-- pathfinder-user-agent:start -->/g) ?? []).length, 1);
+  await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
+});
+
 test("does not overwrite user-owned native agent command files from the CLI", async () => {
   const repo = await createTempGitRepo();
   await mkdir(path.join(repo, ".claude", "commands"), { recursive: true });
@@ -244,10 +260,13 @@ test("init --personal --user all sets up every supported personal integration", 
 
   const result = await runCli(["init", "--personal", "--user", "all"], repo, env);
   const claudeInstructions = await readFile(path.join(userHome, ".claude", "CLAUDE.md"), "utf8");
+  const codexInstructions = await readFile(path.join(userHome, ".codex", "AGENTS.md"), "utf8");
 
   assert.match(result.stdout, /wrote: claude -> \.claude\/CLAUDE\.md/);
   assert.match(result.stdout, /manual: opencode/);
+  assert.match(result.stdout, /wrote: codex -> AGENTS\.md/);
   assert.match(claudeInstructions, /pathfinder agent next --json/);
+  assert.match(codexInstructions, /pathfinder agent next --json/);
   await assert.rejects(() => readFile(path.join(repo, ".pathfinder", "project.json"), "utf8"));
   await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
 });

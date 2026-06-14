@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -218,6 +218,45 @@ test("installs user-level Claude instructions without writing repo files", async
   assert.match(written, /Do not write Pathfinder setup files into the repository unless the user asks/);
   await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
   await assert.rejects(() => readFile(path.join(repo, ".claude", "CLAUDE.md"), "utf8"));
+});
+
+test("installs user-level Codex instructions without duplicate managed blocks", async () => {
+  const repo = await createTempRepo();
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-user-home-"));
+  const store = new PathfinderStore(repo, { userHome });
+
+  const installed = await store.installUserAgentIntegration({ tool: "codex" });
+  const secondInstall = await store.installUserAgentIntegration({ tool: "codex" });
+  const written = await readFile(path.join(userHome, ".codex", "AGENTS.md"), "utf8");
+
+  assert.equal(installed.files[0].path, path.join(userHome, ".codex", "AGENTS.md"));
+  assert.equal(installed.files[0].relativePath, "AGENTS.md");
+  assert.equal(installed.files[0].changed, true);
+  assert.equal(secondInstall.files[0].changed, false);
+  assert.equal((written.match(/<!-- pathfinder-user-agent:start -->/g) ?? []).length, 1);
+  assert.match(written, /pathfinder agent doctor --json/);
+  await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
+});
+
+test("preserves existing Codex global instructions when installing managed block", async () => {
+  const repo = await createTempRepo();
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-user-home-"));
+  const codexInstructionsPath = path.join(userHome, ".codex", "AGENTS.md");
+  const store = new PathfinderStore(repo, { userHome });
+
+  await mkdir(path.dirname(codexInstructionsPath), { recursive: true });
+  await writeFile(codexInstructionsPath, "# Existing Codex rules\n\nKeep this rule.\n", "utf8");
+
+  const installed = await store.installUserAgentIntegration({ tool: "codex" });
+  const secondInstall = await store.installUserAgentIntegration({ tool: "codex" });
+  const written = await readFile(codexInstructionsPath, "utf8");
+
+  assert.equal(installed.files[0].managed, false);
+  assert.equal(installed.files[0].changed, true);
+  assert.equal(secondInstall.files[0].managed, true);
+  assert.equal(secondInstall.files[0].changed, false);
+  assert.match(written, /^# Existing Codex rules\n\nKeep this rule\.\n\n<!-- pathfinder-user-agent:start -->/);
+  assert.equal((written.match(/<!-- pathfinder-user-agent:start -->/g) ?? []).length, 1);
 });
 
 test("reports manual user-level OpenCode instructions without guessing a path", async () => {

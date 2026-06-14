@@ -1,5 +1,5 @@
 export type AgentCommandTool = "claude" | "opencode";
-export type AgentUserInstallTool = AgentCommandTool;
+export type AgentUserInstallTool = AgentCommandTool | "codex";
 
 export interface AgentCommandFileDefinition {
   tool: AgentCommandTool;
@@ -18,6 +18,7 @@ export interface AgentUserInstallFileDefinition {
   tool: AgentUserInstallTool;
   relativePath: string;
   markdown: string;
+  installRoot?: "user-home" | "codex-home";
 }
 
 export interface AgentUserInstallToolDefinition {
@@ -58,15 +59,21 @@ const TOOL_PATHS: Record<AgentCommandTool, string> = {
   opencode: ".opencode/commands"
 };
 
-const TOOL_NAMES: Record<AgentCommandTool, string> = {
+const TOOL_NAMES: Record<AgentUserInstallTool, string> = {
   claude: "Claude Code",
-  opencode: "OpenCode"
+  opencode: "OpenCode",
+  codex: "Codex"
 };
 
 export const SUPPORTED_AGENT_COMMAND_TOOLS: AgentCommandTool[] = ["claude", "opencode"];
+export const SUPPORTED_AGENT_USER_INSTALL_TOOLS: AgentUserInstallTool[] = ["claude", "opencode", "codex"];
 
 export function isAgentCommandTool(value: string): value is AgentCommandTool {
   return SUPPORTED_AGENT_COMMAND_TOOLS.includes(value as AgentCommandTool);
+}
+
+export function isAgentUserInstallTool(value: string): value is AgentUserInstallTool {
+  return SUPPORTED_AGENT_USER_INSTALL_TOOLS.includes(value as AgentUserInstallTool);
 }
 
 export function getAgentCommandToolDefinitions(
@@ -88,7 +95,7 @@ export function getAgentCommandToolDefinitions(
 export function getAgentUserInstallToolDefinitions(
   tool?: AgentUserInstallTool
 ): AgentUserInstallToolDefinition[] {
-  const tools = tool ? [tool] : SUPPORTED_AGENT_COMMAND_TOOLS;
+  const tools = tool ? [tool] : SUPPORTED_AGENT_USER_INSTALL_TOOLS;
   return tools.map((candidate) => ({
     tool: candidate,
     displayName: TOOL_NAMES[candidate],
@@ -100,7 +107,16 @@ export function getAgentUserInstallToolDefinitions(
             markdown: renderUserInstructionsMarkdown()
           }
         ]
-      : [],
+      : candidate === "codex"
+        ? [
+            {
+              tool: candidate,
+              relativePath: "AGENTS.md",
+              installRoot: "codex-home",
+              markdown: renderUserInstructionsMarkdown()
+            }
+          ]
+        : [],
     manualInstructions: candidate === "opencode"
       ? [
           "OpenCode user-level rule and command locations vary by installation.",

@@ -1408,7 +1408,7 @@ export class PathfinderStore {
   private async planUserAgentInstallFile(
     file: AgentUserInstallToolDefinition["files"][number]
   ): Promise<AgentUserInstallFileResult & { markdown: string }> {
-    const filePath = path.join(this.getUserHome(), ...file.relativePath.split("/"));
+    const filePath = path.join(this.getUserAgentInstallRoot(file), ...file.relativePath.split("/"));
     const existing = (await exists(filePath)) ? await readFile(filePath, "utf8") : "";
     const markdown = applyManagedBlock(
       existing,
@@ -1449,6 +1449,22 @@ export class PathfinderStore {
 
   private getUserHome(): string {
     return path.resolve(this.options.userHome ?? process.env.PATHFINDER_USER_HOME ?? os.homedir());
+  }
+
+  private getUserAgentInstallRoot(file: AgentUserInstallToolDefinition["files"][number]): string {
+    if (file.installRoot === "codex-home") {
+      return this.getCodexHome();
+    }
+
+    return this.getUserHome();
+  }
+
+  private getCodexHome(): string {
+    if (this.options.userHome || process.env.PATHFINDER_USER_HOME) {
+      return path.join(this.getUserHome(), ".codex");
+    }
+
+    return path.resolve(process.env.CODEX_HOME ?? path.join(os.homedir(), ".codex"));
   }
 
   private async requireWorkstreamRoot(workstreamId: string): Promise<string> {

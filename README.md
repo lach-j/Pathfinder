@@ -29,9 +29,9 @@ pathfinder init
 The setup is interactive by default in a terminal. Use the arrow keys to choose the setup mode, then select one or more agent integrations with Space and press Enter to continue. For most personal use, choose:
 
 - Personal setup
-- Claude Code, OpenCode, or both
+- Claude Code, OpenCode, Codex, or any combination
 
-Personal setup keeps Pathfinder state outside the target repo and installs user-level agent instructions where possible. For Claude Code, Pathfinder updates your user-level Claude instructions instead of writing `.claude/commands/` into the repository.
+Personal setup keeps Pathfinder state outside the target repo and installs user-level agent instructions where possible. For Claude Code and Codex, Pathfinder updates your user-level agent instructions instead of writing command helpers into the repository.
 
 For non-interactive setup with Claude Code:
 
@@ -84,6 +84,16 @@ If Claude needs fuller markdown instructions for the current phase, it can run:
 ```bash
 pathfinder agent prompt
 ```
+
+## Using Codex
+
+For Codex, run personal setup with the Codex integration:
+
+```bash
+pathfinder init --personal --user codex
+```
+
+Pathfinder writes a managed section to your Codex global instructions file. By default that is `~/.codex/AGENTS.md`; if `CODEX_HOME` is set, Pathfinder uses `CODEX_HOME/AGENTS.md`.
 
 ## Basic Workflow
 
@@ -147,13 +157,13 @@ Setup-related commands:
 ```text
 pathfinder init --personal --user claude
 pathfinder init --repo --agents
-pathfinder agent install --user claude
+pathfinder agent install --user codex
 pathfinder agent bootstrap
 pathfinder agent commands install --tool claude
 pathfinder agent doctor
 ```
 
-`agent install --user claude` installs user-level Claude instructions.
+`agent install --user claude` and `agent install --user codex` install user-level instructions.
 `agent bootstrap` writes repo-local `AGENTS.md` instructions.
 `agent commands install` writes optional repo-local slash/custom command wrappers for tools that support them.
 `agent doctor` checks whether the current repo and agent integration are ready.

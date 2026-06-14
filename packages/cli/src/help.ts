@@ -3,10 +3,10 @@ export function printHelp(): void {
 
 Usage:
   pathfinder init [--interactive]
-  pathfinder init --personal [--user claude|opencode|all]
+  pathfinder init --personal [--user claude|opencode|codex|all]
   pathfinder init --repo [--agents]
   pathfinder agent bootstrap [--dry-run]
-  pathfinder agent install --user claude|opencode|all [--dry-run]
+  pathfinder agent install --user claude|opencode|codex|all [--dry-run]
   pathfinder agent commands install [--tool claude|opencode] [--dry-run]
   pathfinder agent commands list
   pathfinder agent doctor [--json]

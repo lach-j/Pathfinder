@@ -365,6 +365,10 @@ test("defines managed native agent command wrappers", () => {
   assert.match(userInstall[0].files[0].markdown, /pathfinder agent doctor --json/);
   assert.equal(userInstall[1].files.length, 0);
   assert.match(userInstall[1].manualInstructions.join("\n"), /OpenCode user-level rule and command locations vary/);
+  assert.deepEqual(userInstall.map((definition) => definition.tool), ["claude", "opencode", "codex"]);
+  assert.deepEqual(userInstall[2].files.map((file) => file.relativePath), ["AGENTS.md"]);
+  assert.equal(userInstall[2].files[0].installRoot, "codex-home");
+  assert.match(userInstall[2].files[0].markdown, /pathfinder agent doctor --json/);
 });
 
 test("parses stored stage plans into a workstream title and stages", () => {
