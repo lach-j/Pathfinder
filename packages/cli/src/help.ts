@@ -1,5 +1,5 @@
 export function printHelp(): void {
-  console.log(`Pathfinder Stage 1
+  console.log(`Pathfinder
 
 Usage:
   pathfinder init [--agents]

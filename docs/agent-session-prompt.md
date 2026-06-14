@@ -22,6 +22,8 @@ Implement only the assigned slice.
 
 Use the assigned slice handoff for scope, acceptance criteria, likely files, checks, and smoke tests. You may edit any repository files needed to complete that slice, but do not implement other slices while doing so.
 
+Do not infer stale phase boundaries from earlier documentation. Follow the assigned handoff and `docs/implementation-status.md`.
+
 Do not build UI unless the assigned slice explicitly asks for local UI work.
 Do not build AI features unless the assigned slice explicitly asks for them.
 Do not build MCP unless the assigned slice explicitly asks for it.

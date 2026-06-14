@@ -28,3 +28,11 @@ Git may depend on `@pathfinder/core`. It must not depend on `@pathfinder/state` 
 Keep process execution in `src/adapter.ts`. Put standalone parsers beside it, such as `src/name-status.ts` and future raw diff helpers when they are Git-specific.
 
 If a parser becomes reusable by CLI, UI, and review comments, prefer moving the pure model/parser into `@pathfinder/core` and let this package supply the raw Git text.
+
+## Local Map
+
+- `src/adapter.ts`: wraps `git` command execution, dirty checks, branch creation, diff retrieval, and repository summaries.
+- `src/name-status.ts`: parses `git diff --name-status` output into repository summary files.
+- `src/index.ts`: public barrel exports.
+
+Prefer returning raw Git text or core domain objects from this package. Keep user-facing wording in the CLI and HTTP status/error shaping in the local server.

@@ -1,118 +1,102 @@
 # AGENTS.md
 
-## Project
+## Repository Role
 
-This repository contains Pathfinder, a local-first open-source developer tool.
+Pathfinder is a local-first, open-source developer tool for planning work, tracking local review state, inspecting Git diffs, collecting feedback, and producing PR-ready output for AI-assisted development.
 
-Pathfinder is a context, Git, and agent middleman for AI-assisted development. It helps developers turn requirements into plans, plans into reviewable slices, slices into local diffs, and local diffs into PR-ready output.
+For product vision and boundaries, read [PATHFINDER_PRD.md](PATHFINDER_PRD.md).
+For active slice status and implementation sequencing, read [docs/implementation-status.md](docs/implementation-status.md).
+For a fresh slice implementation handoff, use [docs/agent-session-prompt.md](docs/agent-session-prompt.md).
 
-## Product constraints
+## System Map
 
-Pathfinder is:
+- `packages/core/`: platform-independent domain types, validation, planning parsers, diff parsing, review logic, feedback markdown, agent prompt logic, and PR markdown generation.
+- `packages/state/`: filesystem persistence, `.pathfinder/` layout, state orchestration, agent bootstrap file writes, and the `PathfinderStore` facade.
+- `packages/git/`: local Git process adapter and Git-output parsers.
+- `packages/cli/`: command routing, argument parsing, terminal output, and CLI smoke-test surface.
+- `packages/local-server/`: local-only HTTP API and static serving for the built browser UI.
+- `packages/ui/`: React browser app, review UI components, browser API client, and CSS.
+- `docs/`: PRD, implementation status, slice handoffs, ideas, and agent-session prompts.
+- `.github/`: repository automation such as release workflows.
+- `scripts/`: local maintenance scripts used by package commands.
 
-- local-first
-- open-source
-- single-user by default
-- filesystem-first
-- Git-aware
-- agent-friendly
+Directory-specific `AGENTS.md` files may add narrower rules. When editing inside a package or support directory, read the nearest one before changing files there.
 
-Pathfinder is not:
+## Architecture Rules
 
-- a SaaS product
-- a team management platform
-- a Jira replacement
-- a GitHub/GitLab replacement
-- an IDE
-- an AI coding agent
-
-Do not add:
-
-- authentication
-- billing
-- cloud sync
-- organisations
-- roles/permissions
-- hosted backend assumptions
-- external API dependencies unless explicitly requested
-
-## Build approach
-
-Build in small vertical slices.
-
-Prefer this order:
-
-1. Local state model
-2. CLI
-3. Git adapter
-4. Review comments
-5. PR markdown generation
-6. Local UI
-7. Agent bridge
-8. MCP
-9. Claude/Codex-specific integrations
-
-Do not jump ahead to later stages unless asked.
-
-## Architecture principles
-
-Core logic should be reusable by CLI, UI, and agent integrations.
+Keep business behavior reusable by CLI, UI, local server, and agent integrations.
 
 Separate:
 
-- domain model
+- domain model and pure logic
 - filesystem persistence
 - Git integration
 - CLI interface
-- UI interface
-- agent/MCP interface
+- local HTTP interface
+- browser UI interface
+- agent integration helpers
 
-The UI must not own business logic.
+The UI and CLI should orchestrate reusable behavior; they should not own domain rules or state formats.
 
-## State
+## Dependency Direction
 
-Prefer local project state under:
+Production code should follow this direction:
 
 ```text
-.pathfinder/
+core
+git -> core
+state -> core
+local-server -> core, git, state
+cli -> core, git, state, local-server
+ui -> local HTTP API only
 ```
 
-State should be human-readable where practical.
+Do not introduce reverse imports such as `core` importing a package, `state` importing `cli`, or `ui` importing `state`.
 
-Use markdown for long-form plans and PR drafts.
+## Product Constraints
 
+Pathfinder is local-first, filesystem-first, Git-aware, open-source, and single-user by default.
+
+Do not add authentication, billing, cloud sync, organisations, roles/permissions, hosted backend assumptions, or external API dependencies unless the assigned slice explicitly asks for them.
+
+Preserve user files and local Pathfinder state. Do not overwrite state unless the command clearly implies it.
+
+## State Format
+
+Project state is filesystem-backed and human-readable where practical.
+
+Use markdown for long-form plans, requirements, feedback queues, and PR drafts.
 Use JSON for structured entities.
 
-Development rules
-Keep changes small and reviewable.
-Add tests for core behaviour.
-Prefer explicit types.
-Prefer simple filesystem persistence before databases.
-Avoid speculative plugin systems until there is a concrete use case.
-Avoid unnecessary dependencies.
-Preserve existing user files.
-Do not overwrite state unless the command clearly implies it.
-Provide clear error messages.
-Agent behaviour
+State code belongs in `packages/state/`. Pure validation or state-independent transformations belong in `packages/core/`.
 
-When implementing a task:
+## Implementation Workflow
 
-Read the relevant PRD/spec files.
-Restate the current slice goal.
-Implement only the requested slice.
-Run available checks.
-Summarise changed files.
-Explain how to manually verify the result.
-Current MVP goal
+Before starting a slice:
 
-The first MVP should support:
+1. Read this file, [PATHFINDER_PRD.md](PATHFINDER_PRD.md), [README.md](README.md), [docs/implementation-status.md](docs/implementation-status.md), and the assigned slice handoff.
+2. Read the nearest directory-level `AGENTS.md` for files you expect to edit.
+3. Restate the assigned slice goal.
+4. Implement only the assigned slice unless the user explicitly broadens scope.
 
-pathfinder init
-pathfinder workstream create
-pathfinder plan set/show
-pathfinder slice add/list/active
-pathfinder git diff
-pathfinder comment add/list/resolve
-pathfinder pr generate
+While changing code:
 
-AI review, MCP, Claude hooks, and UI are future enhancements.
+- Keep changes small and reviewable.
+- Prefer explicit types and focused modules.
+- Use existing package boundaries before adding abstractions.
+- Add or update tests for behavior that changes.
+- Keep generated build output out of source edits unless the slice explicitly asks for generated artifacts.
+
+Before finishing:
+
+1. Run the checks listed in the assigned slice.
+2. At minimum run:
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+```
+
+3. Smoke test any CLI command, server route, or UI path introduced or changed by the work.
+4. Summarise changed files, checks run, and manual verification commands.

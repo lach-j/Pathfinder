@@ -2,9 +2,9 @@
 
 Pathfinder is a local-first, open-source context and review layer for AI-assisted development. It helps turn requirements into plans, plans into reviewable slices, and slices into PR-ready output while keeping state in the local repository.
 
-## Stage 1 Workflow
+## Usage
 
-Stage 1 provides the local state model and CLI foundation only. It does not include UI, AI features, MCP, GitHub/GitLab integration, or external APIs.
+Pathfinder provides a local CLI, filesystem state, Git diff review workflow, browser review UI, deterministic agent prompts, and PR markdown generation.
 
 Install dependencies and build:
 

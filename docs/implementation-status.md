@@ -24,7 +24,7 @@ Pathfinder is local-first, open-source, filesystem-first, Git-aware, and single-
 
 Do not add authentication, billing, cloud sync, organisations, roles, hosted backend assumptions, external APIs, MCP, Claude hooks, or AI review unless a slice explicitly asks for it.
 
-Local UI is now part of the planned MVP, but only in the review-viewer slices. The UI must use reusable core/state/git behavior and must not own business logic.
+Local UI and deterministic agent integration are now implemented product areas. Any future UI or agent work must still use reusable core/state/git behavior and must not own business logic.
 
 ## Current Architecture
 
@@ -56,7 +56,7 @@ State currently lives under:
       pr.md
 ```
 
-## Current MVP Direction
+## Current Product Direction
 
 Slices 01-15 established a local CLI/state foundation with workstreams, requirements, plans, slices, comments, reviews, evidence, Git diffs, branch metadata, slice statuses, current context, deterministic review checks, repository summaries, and PR markdown generation.
 
@@ -80,7 +80,7 @@ is the canonical first command for agents. Repository instructions and optional 
 
 MCP, hooks, direct agent invocation, AI review, and remote Git hosting integrations remain out of scope for the next slice set.
 
-The next product focus is personal installation and no-repo-footprint usage:
+The current product focus is personal installation and no-repo-footprint usage:
 
 1. Build source-only releases where GitHub Actions produces installable npm tarballs.
 2. Upload release artifacts to GitHub Releases before publishing to npm.
@@ -168,7 +168,7 @@ Completed foundation:
 06. PR markdown generation
 07. Current context command
 08. CLI polish
-09. MVP review follow-up
+09. Review follow-up
 10. Requirements context
 11. Slice dependencies and next selection
 12. Evidence attachments

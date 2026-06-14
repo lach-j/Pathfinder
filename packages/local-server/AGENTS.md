@@ -27,3 +27,11 @@ Local server may depend on `@pathfinder/core`, `@pathfinder/git`, and `@pathfind
 ## Contribution Pattern
 
 Keep server routing focused. Browser UI source belongs in `@pathfinder/ui`; this package should expose local API routes and serve the built UI bundle.
+
+## Local Map
+
+- `src/review-server.ts`: server creation, request routing, JSON body parsing, API responses, static asset serving, and local-only error handling.
+- `src/review-viewer/`: static fallback assets used when the built UI bundle is unavailable.
+- `src/index.ts`: public exports for CLI/tests.
+
+When adding a route, keep request validation close to the route, call `PathfinderStore` or `GitAdapter` for behavior, and return JSON shapes that the browser UI can consume without learning filesystem details.

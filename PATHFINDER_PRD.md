@@ -356,7 +356,7 @@ Validation of a slice against:
 - Diff
 - Acceptance criteria
 
-Review is first a local human workflow. AI may assist later, but the MVP should make manual local diff review useful without calling a model.
+Review is first a local human workflow. AI may assist later, but Pathfinder should make manual local diff review useful without calling a model.
 
 Review comments should be able to target:
 
@@ -891,7 +891,7 @@ Agent edits code
 Pathfinder refreshes diff and comment state
 ```
 
-MCP and tool-specific hooks are future enhancements, not requirements for the first useful loop.
+MCP and tool-specific hooks are optional integration concepts, not requirements for the first useful loop.
 
 ---
 
@@ -1049,7 +1049,9 @@ Template:
 
 ---
 
-# Future Enhancements
+# Exploratory Ideas
+
+Exploratory product ideas are tracked under `docs/ideas/`. They are not implementation commitments until they are split into scoped slice handoffs under `docs/slices/`.
 
 ## AI Planning Assistant
 
@@ -1108,9 +1110,9 @@ all validating the same slice.
 
 ---
 
-# MVP Scope
+# Baseline Useful Scope
 
-The first usable version should contain:
+The first broadly useful version should contain:
 
 - Local state and CLI
 - Git diff adapter
@@ -1120,7 +1122,7 @@ The first usable version should contain:
 - Agent action queue export
 - PR Composer
 
-The first usable version does not need:
+The baseline useful workflow does not require:
 
 - AI-generated review comments
 - MCP
@@ -1129,7 +1131,7 @@ The first usable version does not need:
 - Auth
 - Cloud sync
 
-Earlier planning and slicing support remains useful, but the MVP should be judged by whether the developer can review local changes and drive the agent feedback loop.
+Earlier planning and slicing support remains useful, but Pathfinder should be judged by whether the developer can review local changes and drive the agent feedback loop.
 
 Historical broader components:
 

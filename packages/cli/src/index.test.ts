@@ -13,7 +13,7 @@ import { serveReviewServer } from "@pathfinder/local-server";
 const execFileAsync = promisify(execFile);
 const cliPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "index.js");
 
-test("help lists the implemented MVP commands", async () => {
+test("help lists the implemented commands", async () => {
   const result = await runCli(["help"]);
 
   for (const command of [
