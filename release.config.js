@@ -14,6 +14,9 @@ export default {
     [
       "@semantic-release/github",
       {
+        successComment: false,
+        failComment: false,
+        releasedLabels: false,
         assets: [
           {
             path: "pathfinder-*.tgz",
