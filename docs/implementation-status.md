@@ -88,6 +88,13 @@ The current product focus is personal installation and no-repo-footprint usage:
 4. Support external state outside target repositories.
 5. Support user-level agent instructions/commands so work repos do not need `AGENTS.md`, `.claude/`, `.opencode/`, or `.pathfinder/` files.
 
+After personal mode, the next focus is making normal agent-driven slice execution more stable:
+
+1. Starting a selected slice should create or switch to a slice branch from the intended base before implementation.
+2. Review sessions should be started only after slice changes are committed.
+3. Human review approval should be explicit, scriptable, and clear to both users and agents.
+4. Agent prompts and command output should avoid noisy, misleading, or unsupported instructions.
+
 ## Progress
 
 | Slice | Status | Handoff |
@@ -128,6 +135,10 @@ The current product focus is personal installation and no-repo-footprint usage:
 | 34 | done | `docs/slices/34-external-state-mode.md` |
 | 35 | done | `docs/slices/35-no-repo-footprint-agent-mode.md` |
 | 36 | ready | `docs/slices/36-personal-mode-doctor.md` |
+| 37 | ready | `docs/slices/37-slice-start-branch-workflow.md` |
+| 38 | ready | `docs/slices/38-commit-before-review.md` |
+| 39 | ready | `docs/slices/39-human-review-approval-gate.md` |
+| 40 | ready | `docs/slices/40-agent-prompt-command-stability.md` |
 
 Status values:
 
@@ -205,5 +216,12 @@ Next distribution and personal-mode order:
 34. External state mode
 35. No-repo-footprint agent mode
 36. Personal mode doctor
+
+Next agent workflow stability order:
+
+37. Slice start branch workflow
+38. Commit before review
+39. Human review approval gate
+40. Agent prompt and command stability
 
 The order can change if a slice doc says it has no dependency on earlier slices.
