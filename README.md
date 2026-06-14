@@ -15,6 +15,26 @@ npm run build
 
 Generated TypeScript output under `packages/*/dist/` is intentionally untracked. Recreate it locally with `npm run build` after a fresh checkout or dependency install.
 
+Create a release-style npm tarball from built output:
+
+```bash
+npm run build
+npm pack
+```
+
+The packed artifact is source-light and includes the built CLI, bundled internal runtime packages, and built UI assets used by `pathfinder review serve`. Smoke test it with a temporary global prefix:
+
+```bash
+npm install -g --prefix <temp-prefix> ./pathfinder-*.tgz
+<temp-prefix>/bin/pathfinder help
+```
+
+On Windows the binary path is usually:
+
+```text
+<temp-prefix>/pathfinder.cmd
+```
+
 Source package layout:
 
 ```text

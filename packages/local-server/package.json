@@ -4,10 +4,14 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "dependencies": {
     "@pathfinder/core": "0.1.0",
     "@pathfinder/git": "0.1.0",
     "@pathfinder/state": "0.1.0"
   }
 }
-

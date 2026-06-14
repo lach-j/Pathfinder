@@ -7,6 +7,14 @@
   "bin": {
     "pathfinder": "./packages/cli/dist/index.js"
   },
+  "files": [
+    "README.md",
+    "packages/cli/dist",
+    "!packages/cli/dist/**/*.test.*",
+    "!packages/cli/dist/**/*.tsbuildinfo",
+    "packages/cli/package.json",
+    "packages/ui/dist"
+  ],
   "workspaces": [
     "packages/core",
     "packages/git",
@@ -15,8 +23,21 @@
     "packages/local-server",
     "packages/cli"
   ],
+  "dependencies": {
+    "@pathfinder/core": "0.1.0",
+    "@pathfinder/git": "0.1.0",
+    "@pathfinder/local-server": "0.1.0",
+    "@pathfinder/state": "0.1.0"
+  },
+  "bundledDependencies": [
+    "@pathfinder/core",
+    "@pathfinder/git",
+    "@pathfinder/local-server",
+    "@pathfinder/state"
+  ],
   "scripts": {
-    "build": "npm run build -w @pathfinder/ui && tsc -b packages/core packages/git packages/state packages/local-server packages/cli",
+    "clean": "node scripts/clean-dist.mjs",
+    "build": "npm run clean && npm run build -w @pathfinder/ui && tsc -b packages/core packages/git packages/state packages/local-server packages/cli",
     "typecheck": "tsc -b --pretty false && npm run typecheck -w @pathfinder/ui",
     "test": "npm run build && node --test packages/core/dist/*.test.js packages/git/dist/*.test.js packages/state/dist/*.test.js packages/cli/dist/*.test.js"
   },

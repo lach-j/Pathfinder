@@ -32,7 +32,11 @@ interface CommentRequestBody {
 const defaultHost = "127.0.0.1";
 const defaultPort = 4783;
 const maxBodyBytes = 1024 * 1024;
-const uiDistDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../ui/dist");
+const serverDistDir = path.dirname(fileURLToPath(import.meta.url));
+const uiDistDirCandidates = [
+  path.resolve(serverDistDir, "../../ui/dist"),
+  path.resolve(serverDistDir, "../../../../packages/ui/dist")
+];
 
 export async function serveReviewServer(options: ReviewServerOptions = {}): Promise<Server> {
   const cwd = options.cwd ?? process.cwd();
@@ -364,25 +368,30 @@ async function serveUiAsset(parts: string[], response: ServerResponse): Promise<
   const relativePath = parts.length === 0 || parts[0] !== "assets"
     ? "index.html"
     : parts.join("/");
-  const filePath = path.resolve(uiDistDir, relativePath);
 
-  if (!isPathInside(uiDistDir, filePath)) {
-    writeJson(response, 404, { error: "Not found." });
-    return;
+  for (const uiDistDir of uiDistDirCandidates) {
+    const filePath = path.resolve(uiDistDir, relativePath);
+    if (!isPathInside(uiDistDir, filePath)) {
+      writeJson(response, 404, { error: "Not found." });
+      return;
+    }
+
+    try {
+      const content = await readFile(filePath);
+      response.writeHead(200, {
+        "content-type": contentTypeFor(filePath),
+        "cache-control": relativePath === "index.html" ? "no-store" : "public, max-age=31536000, immutable"
+      });
+      response.end(content);
+      return;
+    } catch {
+      continue;
+    }
   }
 
-  try {
-    const content = await readFile(filePath);
-    response.writeHead(200, {
-      "content-type": contentTypeFor(filePath),
-      "cache-control": relativePath === "index.html" ? "no-store" : "public, max-age=31536000, immutable"
-    });
-    response.end(content);
-  } catch {
-    writeJson(response, 404, {
-      error: "Pathfinder UI assets were not found. Run npm run build before starting the local server."
-    });
-  }
+  writeJson(response, 404, {
+    error: "Pathfinder UI assets were not found. Run npm run build before starting the local server."
+  });
 }
 
 function isPathInside(root: string, candidate: string): boolean {

@@ -1,6 +1,6 @@
 # Slice 31: Release Packaging
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -86,3 +86,29 @@ On Windows the binary path may be:
 <temp-prefix>/pathfinder.cmd
 ```
 
+## Implementation Notes
+
+- Root `npm pack` now produces a source-light release artifact from built output.
+- Internal runtime workspaces are bundled into the tarball so global installs do not need registry-published `@pathfinder/*` packages.
+- Built UI assets are included under `packages/ui/dist`, and the local server resolves UI assets from both monorepo and installed-package layouts.
+- `npm run build` cleans generated package output before rebuilding to avoid stale files in release artifacts.
+
+## Verification
+
+Run on 2026-06-14:
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+npm pack
+npm install -g --prefix <temp-prefix> ./pathfinder-0.1.0.tgz
+<temp-prefix>/pathfinder.cmd help
+```
+
+Additional installed-package smoke test:
+
+```text
+pathfinder review serve --port 4797 returned HTTP 200 for / and served the built UI root element.
+```
