@@ -1,6 +1,6 @@
 # Slice 26: Agent Next State Machine
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -129,6 +129,31 @@ Phase guidance:
 - Missing or inconsistent state produces a useful `blocked` or setup phase instead of an uncaught exception where practical.
 - Tests cover at least: uninitialized, no workstream, no active slice, ready to implement, open feedback, and ready for PR.
 - README documents the command as the first command an agent should run.
+
+## Implementation Notes
+
+- Added a pure core agent-next state machine with stable phases, reasons, ids, commands, and agent/human instructions.
+- Added `PathfinderStore.getAgentNext()` to assemble local project, workstream, slice, review session, comment, plan, and optional Git summary state without mutating files.
+- Added `pathfinder agent next` and `pathfinder agent next --json`.
+- Base ref inspection is conservative: Git summary is requested only when a base ref is already known from active slice or review session metadata; otherwise output keeps `<base-ref>` placeholders.
+- Added core, state, and CLI tests for setup, slice selection, ready-to-implement, review session, human review, feedback, and PR-ready recommendations.
+- Updated README to document `agent next --json` as the canonical first agent command.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke tested:
+
+```bash
+npm exec -- pathfinder agent next
+npm exec -- pathfinder agent next --json
+```
 
 ## Checks
 

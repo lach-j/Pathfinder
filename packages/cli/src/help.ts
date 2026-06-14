@@ -4,6 +4,7 @@ export function printHelp(): void {
 Usage:
   pathfinder init
   pathfinder current
+  pathfinder agent next [--json]
   pathfinder workstream create --title "..."
   pathfinder workstream list
   pathfinder workstream show <id>

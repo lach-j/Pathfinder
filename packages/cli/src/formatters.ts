@@ -1,4 +1,5 @@
 import {
+  AgentNextRecommendation,
   describeReviewCommentTarget,
   Evidence,
   RepositoryChangeStatus,
@@ -161,6 +162,42 @@ export function formatStructuredDiff(diff: StructuredDiff): string {
   }
 
   return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function formatAgentNext(recommendation: AgentNextRecommendation): string {
+  const lines = [
+    "# Pathfinder Agent Next",
+    "",
+    `Phase: ${recommendation.phase}`,
+    `Reason: ${recommendation.reason}`
+  ];
+
+  if (recommendation.workstreamId) {
+    lines.push(`Workstream: ${recommendation.workstreamId}`);
+  }
+
+  if (recommendation.sliceId) {
+    lines.push(`Slice: ${recommendation.sliceId}`);
+  }
+
+  if (recommendation.reviewSessionId) {
+    lines.push(`Review session: ${recommendation.reviewSessionId}`);
+  }
+
+  lines.push("");
+  lines.push("## Recommended Commands");
+  lines.push("");
+  lines.push(...recommendation.commands.map((command) => `- ${command}`));
+  lines.push("");
+  lines.push("## Agent Instruction");
+  lines.push("");
+  lines.push(recommendation.agentInstruction);
+  lines.push("");
+  lines.push("## Human Instruction");
+  lines.push("");
+  lines.push(recommendation.humanInstruction);
+
+  return `${lines.join("\n")}\n`;
 }
 
 export function formatCurrentContext(context: CurrentContext): string {

@@ -19,6 +19,7 @@ test("help lists the implemented MVP commands", async () => {
   for (const command of [
     "pathfinder init",
     "pathfinder current",
+    "pathfinder agent next [--json]",
     "pathfinder workstream create",
     "pathfinder workstream list",
     "pathfinder workstream show",
@@ -59,6 +60,49 @@ test("help lists the implemented MVP commands", async () => {
   ]) {
     assert.match(result.stdout, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+});
+
+test("prints agent next setup recommendation as text and JSON", async () => {
+  const repo = await createTempGitRepo();
+
+  const text = await runCli(["agent", "next"], repo);
+  const json = await runCli(["agent", "next", "--json"], repo);
+  const parsed = JSON.parse(json.stdout);
+
+  assert.match(text.stdout, /# Pathfinder Agent Next/);
+  assert.match(text.stdout, /Phase: uninitialized/);
+  assert.equal(parsed.phase, "uninitialized");
+  assert.deepEqual(parsed.commands, ["pathfinder init"]);
+});
+
+test("prints agent next recommendation for active implementation state", async () => {
+  const repo = await createTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+
+  const result = await runCli(["agent", "next", "--json"], repo);
+  const parsed = JSON.parse(result.stdout);
+
+  assert.equal(parsed.phase, "ready_to_implement");
+  assert.equal(parsed.workstreamId, "inventory-alerts");
+  assert.equal(parsed.sliceId, "add-report");
+  assert.deepEqual(parsed.commands, ["pathfinder current", "pathfinder review start --base <base-ref>"]);
 });
 
 test("sets and shows workstream requirements", async () => {

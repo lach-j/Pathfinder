@@ -249,6 +249,44 @@ export interface FeedbackQueueMarkdownInput {
   slices: Slice[];
 }
 
+export type AgentNextPhase =
+  | "uninitialized"
+  | "needs_workstream"
+  | "needs_plan"
+  | "needs_slice_selection"
+  | "ready_to_implement"
+  | "needs_review_session"
+  | "needs_human_review"
+  | "feedback"
+  | "ready_for_pr"
+  | "blocked";
+
+export interface AgentNextRecommendation {
+  phase: AgentNextPhase;
+  reason: string;
+  workstreamId?: string;
+  sliceId?: string;
+  reviewSessionId?: string;
+  commands: string[];
+  agentInstruction: string;
+  humanInstruction: string;
+}
+
+export interface AgentNextInput {
+  isInitialized: boolean;
+  workstreams: Workstream[];
+  activeWorkstream?: Workstream;
+  slices?: Slice[];
+  activeSlice?: Slice;
+  nextSlice?: Slice;
+  planMarkdown?: string;
+  openComments?: ReviewComment[];
+  reviewSessions?: ReviewSession[];
+  repositorySummary?: RepositorySummary;
+  repositorySummaryError?: string;
+  stateError?: string;
+}
+
 export interface ImportedStagePlanStage {
   stageNumber: number;
   title: string;

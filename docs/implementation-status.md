@@ -109,7 +109,7 @@ MCP, hooks, direct agent invocation, AI review, and remote Git hosting integrati
 | 23 | done | `docs/slices/23-inline-commenting-ui.md` |
 | 24 | done | `docs/slices/24-review-refresh-and-stale-comments.md` |
 | 25 | done | `docs/slices/25-pr-composer-review-loop.md` |
-| 26 | ready | `docs/slices/26-agent-next-state-machine.md` |
+| 26 | done | `docs/slices/26-agent-next-state-machine.md` |
 | 27 | ready | `docs/slices/27-agent-prompt-rendering.md` |
 | 28 | ready | `docs/slices/28-agent-bootstrap-instructions.md` |
 | 29 | ready | `docs/slices/29-native-agent-command-wrappers.md` |

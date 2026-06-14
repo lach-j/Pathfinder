@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   DeterministicReviewResult,
   Evidence,
+  AgentNextRecommendation,
   ImportedStagePlan,
   PathfinderError,
   Project,
@@ -19,6 +20,7 @@ import {
   assertNonEmptyText,
   createTimestamp,
   findNextActionableSlice,
+  getAgentNextRecommendation,
   generateDeterministicReview,
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
@@ -80,6 +82,8 @@ export interface ImportedStagePlanState {
   workstream: Workstream;
   slices: Slice[];
 }
+
+export type RepositorySummaryProvider = (baseRef: string) => Promise<RepositorySummary>;
 
 export interface AddCommentInput {
   body: string;
@@ -913,6 +917,67 @@ export class PathfinderStore {
     };
   }
 
+  async getAgentNext(provider?: RepositorySummaryProvider): Promise<AgentNextRecommendation> {
+    let project: Project;
+    try {
+      project = await this.getProject();
+    } catch (error) {
+      if (error instanceof PathfinderError && error.message.includes("Pathfinder state not found")) {
+        return getAgentNextRecommendation({
+          isInitialized: false,
+          workstreams: []
+        });
+      }
+
+      return getAgentNextRecommendation({
+        isInitialized: false,
+        workstreams: [],
+        stateError: errorMessage(error)
+      });
+    }
+
+    const workstreams = await this.listWorkstreams();
+    let activeWorkstream: Workstream | undefined;
+
+    try {
+      activeWorkstream = await this.resolveAgentWorkstream(project, workstreams);
+    } catch (error) {
+      return getAgentNextRecommendation({
+        isInitialized: true,
+        workstreams,
+        stateError: errorMessage(error)
+      });
+    }
+
+    if (!activeWorkstream) {
+      return getAgentNextRecommendation({
+        isInitialized: true,
+        workstreams
+      });
+    }
+
+    const slices = await this.listSlices(activeWorkstream.id);
+    const activeSlice = activeWorkstream.activeSliceId
+      ? slices.find((slice) => slice.id === activeWorkstream.activeSliceId)
+      : undefined;
+    const reviewSessions = await this.listReviewSessions(activeWorkstream.id);
+    const knownBaseRef = activeSlice?.baseRef ?? latestSessionForSlice(reviewSessions, activeSlice?.id)?.baseRef;
+    const repository = knownBaseRef && provider ? await this.tryGetRepositorySummary(provider, knownBaseRef) : {};
+
+    return getAgentNextRecommendation({
+      isInitialized: true,
+      workstreams,
+      activeWorkstream,
+      slices,
+      activeSlice,
+      nextSlice: findNextActionableSlice(slices),
+      planMarkdown: await this.getPlan(activeWorkstream.id),
+      openComments: (await this.listComments(activeWorkstream.id)).filter((comment) => !comment.resolved),
+      reviewSessions,
+      ...repository
+    });
+  }
+
   private async validateCommentTarget(
     workstreamId: string,
     target: ReviewCommentTarget | undefined,
@@ -1068,6 +1133,41 @@ export class PathfinderStore {
 
     return readJson<EvidenceFile>(filePath);
   }
+
+  private async resolveAgentWorkstream(
+    project: Project,
+    workstreams: Workstream[]
+  ): Promise<Workstream | undefined> {
+    if (project.activeWorkstreamId) {
+      const active = workstreams.find((workstream) => workstream.id === project.activeWorkstreamId);
+      if (!active) {
+        throw new PathfinderError(`Active workstream '${project.activeWorkstreamId}' was not found.`);
+      }
+
+      return active;
+    }
+
+    if (workstreams.length === 1) {
+      return workstreams[0];
+    }
+
+    return undefined;
+  }
+
+  private async tryGetRepositorySummary(
+    provider: RepositorySummaryProvider,
+    baseRef: string
+  ): Promise<{ repositorySummary: RepositorySummary } | { repositorySummaryError: string }> {
+    try {
+      return {
+        repositorySummary: await provider(baseRef)
+      };
+    } catch (error) {
+      return {
+        repositorySummaryError: errorMessage(error)
+      };
+    }
+  }
 }
 
 function changedFileMatches(path: string, previousPath: string | undefined, filePath: string): boolean {
@@ -1079,4 +1179,23 @@ function commentTargetsSession(comment: ReviewComment, sessionId: string): boole
     (comment.target?.type === "file" || comment.target?.type === "line") &&
     comment.target.sessionId === sessionId
   );
+}
+
+function latestSessionForSlice(sessions: ReviewSession[], sliceId: string | undefined): ReviewSession | undefined {
+  if (!sliceId) {
+    return undefined;
+  }
+
+  return sessions
+    .filter((session) => session.sliceId === sliceId)
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+    .at(-1);
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return "Unknown Pathfinder state error.";
 }

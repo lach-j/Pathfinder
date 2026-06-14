@@ -109,6 +109,18 @@ Print the current Pathfinder context for humans or agents:
 npm exec -- pathfinder current
 ```
 
+Ask Pathfinder what an agent should do next:
+
+```bash
+npm exec -- pathfinder agent next
+npm exec -- pathfinder agent next --json
+```
+
+`agent next --json` is the canonical first command for coding agents. It inspects only local
+Pathfinder and Git state, then returns a deterministic phase, reason, relevant workstream/slice
+ids, recommended commands, and concise instructions. It does not invoke an AI provider, run
+commands automatically, or mutate code.
+
 Add, list, and resolve local review comments for a slice:
 
 ```bash
@@ -307,6 +319,8 @@ npm run lint --if-present
 npm run build
 npm exec -- pathfinder help
 npm exec -- pathfinder current
+npm exec -- pathfinder agent next
+npm exec -- pathfinder agent next --json
 npm exec -- pathfinder requirement set add-billing-foundation --file ./requirements.md
 npm exec -- pathfinder requirement show add-billing-foundation
 npm exec -- pathfinder plan import --file ./PLAN.md

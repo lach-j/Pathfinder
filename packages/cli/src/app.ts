@@ -7,6 +7,7 @@ import { serveReviewServer } from "@pathfinder/local-server";
 import { PathfinderStore } from "@pathfinder/state";
 
 import {
+  formatAgentNext,
   formatComment,
   formatCurrentContext,
   formatDeterministicReview,
@@ -85,6 +86,11 @@ export async function run(args: string[]): Promise<void> {
     return;
   }
 
+  if (area === "agent") {
+    await runAgent(action, rest);
+    return;
+  }
+
   if (area === "diff") {
     await runDiff(action, rest);
     return;
@@ -101,6 +107,24 @@ export async function run(args: string[]): Promise<void> {
   }
 
   throw usageError(`Unknown command '${area}'.`);
+}
+
+async function runAgent(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "next") {
+    const options = parseOptions(args);
+    const git = new GitAdapter({ cwd: process.cwd() });
+    const recommendation = await store.getAgentNext((baseRef) => git.getCommittedSummaryAgainstBase(baseRef));
+
+    if (options.json) {
+      console.log(JSON.stringify(recommendation, null, 2));
+      return;
+    }
+
+    process.stdout.write(formatAgentNext(recommendation));
+    return;
+  }
+
+  throw usageError("Unknown agent command. Expected next.");
 }
 
 async function runDiff(action: string | undefined, args: string[]): Promise<void> {

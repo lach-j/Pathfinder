@@ -6,6 +6,7 @@ import {
   assertNonEmptyText,
   categorizeRepositoryPath,
   findNextActionableSlice,
+  getAgentNextRecommendation,
   generateDeterministicReview,
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
@@ -50,6 +51,186 @@ test("finds the first actionable slice by creation time", () => {
   assert.equal(isSliceActionable(slices[1], slices), false);
   assert.equal(isSliceActionable(slices[2], slices), false);
   assert.equal(findNextActionableSlice(slices)?.id, "dependent");
+});
+
+test("recommends agent next phases for setup and slice selection", () => {
+  assert.deepEqual(getAgentNextRecommendation({ isInitialized: false, workstreams: [] }), {
+    phase: "uninitialized",
+    reason: "Pathfinder state was not found.",
+    commands: ["pathfinder init"],
+    agentInstruction: "Stop implementation work until Pathfinder is initialized for this repository.",
+    humanInstruction: "Run pathfinder init from the repository root, then create or import a workstream plan."
+  });
+
+  assert.equal(
+    getAgentNextRecommendation({
+      isInitialized: true,
+      workstreams: []
+    }).phase,
+    "needs_workstream"
+  );
+
+  const workstream = testWorkstream("inventory-alerts");
+  const nextSlice = testSlice("add-report", "proposed", "2026-01-01T00:00:00.000Z");
+  const recommendation = getAgentNextRecommendation({
+    isInitialized: true,
+    workstreams: [workstream],
+    activeWorkstream: workstream,
+    slices: [nextSlice],
+    nextSlice,
+    planMarkdown: "# Plan",
+    openComments: [],
+    reviewSessions: []
+  });
+
+  assert.equal(recommendation.phase, "needs_slice_selection");
+  assert.equal(recommendation.workstreamId, "inventory-alerts");
+  assert.equal(recommendation.sliceId, "add-report");
+  assert.deepEqual(recommendation.commands, [
+    "pathfinder slice next inventory-alerts",
+    "pathfinder slice active inventory-alerts add-report"
+  ]);
+});
+
+test("recommends implementation, feedback, and PR phases for agents", () => {
+  const workstream = testWorkstream("inventory-alerts", "add-report");
+  const activeSlice = testSlice("add-report", "in_progress", "2026-01-01T00:00:00.000Z");
+
+  assert.equal(
+    getAgentNextRecommendation({
+      isInitialized: true,
+      workstreams: [workstream],
+      activeWorkstream: workstream,
+      slices: [activeSlice],
+      activeSlice,
+      planMarkdown: "# Plan",
+      openComments: [],
+      reviewSessions: []
+    }).phase,
+    "ready_to_implement"
+  );
+
+  const session = {
+    id: "review-add-report",
+    workstreamId: "inventory-alerts",
+    sliceId: "add-report",
+    baseRef: "main",
+    headRef: "feature-report",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    changedFiles: [
+      {
+        path: "src/report.ts",
+        status: "modified" as const,
+        category: "source" as const
+      }
+    ],
+    createdAt: "2026-01-01T00:00:00.000Z"
+  };
+  const feedback = getAgentNextRecommendation({
+    isInitialized: true,
+    workstreams: [workstream],
+    activeWorkstream: workstream,
+    slices: [activeSlice],
+    activeSlice,
+    planMarkdown: "# Plan",
+    openComments: [
+      {
+        id: "handle-empty-case",
+        sliceId: "add-report",
+        target: {
+          type: "line",
+          sessionId: "review-add-report",
+          filePath: "src/report.ts",
+          lineNumber: 1,
+          side: "new"
+        },
+        body: "Handle empty data.",
+        resolved: false,
+        createdAt: "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    reviewSessions: [session]
+  });
+
+  assert.equal(feedback.phase, "feedback");
+  assert.equal(feedback.reviewSessionId, "review-add-report");
+  assert.deepEqual(feedback.commands, [
+    "pathfinder feedback export inventory-alerts --session review-add-report --file ./.pathfinder-feedback.md"
+  ]);
+
+  assert.equal(
+    getAgentNextRecommendation({
+      isInitialized: true,
+      workstreams: [testWorkstream("inventory-alerts")],
+      activeWorkstream: testWorkstream("inventory-alerts"),
+      slices: [testSlice("add-report", "complete", "2026-01-01T00:00:00.000Z")],
+      planMarkdown: "# Plan",
+      openComments: [],
+      reviewSessions: []
+    }).phase,
+    "ready_for_pr"
+  );
+});
+
+test("recommends review session and human review phases for agents", () => {
+  const workstream = testWorkstream("inventory-alerts", "add-report");
+  const activeSlice = {
+    ...testSlice("add-report", "review", "2026-01-01T00:00:00.000Z"),
+    baseRef: "main"
+  };
+  const needsReviewSession = getAgentNextRecommendation({
+    isInitialized: true,
+    workstreams: [workstream],
+    activeWorkstream: workstream,
+    slices: [activeSlice],
+    activeSlice,
+    planMarkdown: "# Plan",
+    openComments: [],
+    reviewSessions: [],
+    repositorySummary: {
+      baseRef: "main",
+      headRef: "feature-report",
+      headCommit: "abc123",
+      mergeBase: "abc000",
+      files: [
+        {
+          path: "src/report.ts",
+          status: "added",
+          category: "source"
+        }
+      ]
+    }
+  });
+
+  assert.equal(needsReviewSession.phase, "needs_review_session");
+  assert.deepEqual(needsReviewSession.commands, ["pathfinder review start --base main"]);
+
+  const needsHumanReview = getAgentNextRecommendation({
+    isInitialized: true,
+    workstreams: [workstream],
+    activeWorkstream: workstream,
+    slices: [activeSlice],
+    activeSlice,
+    planMarkdown: "# Plan",
+    openComments: [],
+    reviewSessions: [
+      {
+        id: "review-add-report",
+        workstreamId: "inventory-alerts",
+        sliceId: "add-report",
+        baseRef: "main",
+        headRef: "feature-report",
+        headCommit: "abc123",
+        mergeBase: "abc000",
+        changedFiles: [],
+        createdAt: "2026-01-01T00:00:00.000Z"
+      }
+    ]
+  });
+
+  assert.equal(needsHumanReview.phase, "needs_human_review");
+  assert.equal(needsHumanReview.reviewSessionId, "review-add-report");
 });
 
 test("parses stored stage plans into a workstream title and stages", () => {
@@ -808,6 +989,16 @@ function testSlice(
     ...(dependsOnSliceIds ? { dependsOnSliceIds } : {}),
     createdAt,
     updatedAt: createdAt
+  };
+}
+
+function testWorkstream(id: string, activeSliceId?: string) {
+  return {
+    id,
+    title: id,
+    ...(activeSliceId ? { activeSliceId } : {}),
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z"
   };
 }
 

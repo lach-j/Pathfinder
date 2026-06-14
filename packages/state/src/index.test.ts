@@ -287,6 +287,80 @@ test("returns clear current context when no active slice is set", async () => {
   assert.deepEqual(context.evidence, []);
 });
 
+test("returns agent next setup phases without mutating state", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+
+  assert.equal((await store.getAgentNext()).phase, "uninitialized");
+
+  await store.initProject();
+
+  const noWorkstream = await store.getAgentNext();
+
+  assert.equal(noWorkstream.phase, "needs_workstream");
+  assert.deepEqual(noWorkstream.commands, [
+    "pathfinder workstream create --title \"<workstream-title>\"",
+    "pathfinder plan import --file ./PLAN.md"
+  ]);
+});
+
+test("returns agent next recommendations from active Pathfinder state", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Agent Flow");
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nImplement one slice.\n", "utf8");
+  await store.setPlanFromFile(workstream.id, "./plan.md");
+  const slice = await store.addSlice(workstream.id, "Add Report", "Report reorder candidates.");
+
+  assert.equal((await store.getAgentNext()).phase, "needs_slice_selection");
+
+  await store.setActiveSlice(workstream.id, slice.id);
+  await store.setSliceBranchMetadata(workstream.id, slice.id, {
+    branchName: "pathfinder/agent-flow/add-report",
+    baseRef: "main"
+  });
+
+  const ready = await store.getAgentNext(async (baseRef) => ({
+    baseRef,
+    headRef: "feature",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: []
+  }));
+
+  assert.equal(ready.phase, "ready_to_implement");
+  assert.equal(ready.workstreamId, workstream.id);
+  assert.equal(ready.sliceId, slice.id);
+
+  await store.startReviewSession({
+    baseRef: "main",
+    headRef: "feature",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "src/report.ts",
+        status: "added",
+        category: "source"
+      }
+    ]
+  });
+  await store.addComment(workstream.id, {
+    body: "Handle empty data.",
+    target: {
+      type: "file",
+      sessionId: "review-add-report",
+      filePath: "src/report.ts"
+    }
+  });
+
+  const feedback = await store.getAgentNext();
+
+  assert.equal(feedback.phase, "feedback");
+  assert.equal(feedback.reviewSessionId, "review-add-report");
+});
+
 test("adds and lists slice evidence in human-readable state", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);
