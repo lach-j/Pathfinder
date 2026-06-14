@@ -318,6 +318,79 @@ test("diagnoses fully installed agent integration setup", async () => {
   );
 });
 
+test("diagnoses missing personal agent setup without writing files", async () => {
+  const repo = await createTempRepo();
+  const configRoot = await mkdtemp(path.join(os.tmpdir(), "pathfinder-home-"));
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-user-home-"));
+  const store = new PathfinderStore(repo, { configRoot, userHome });
+
+  const result = await store.getAgentDoctor(undefined, { personal: true });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.next.phase, "uninitialized");
+  assert.deepEqual(
+    result.checks.map((check) => [check.id, check.status, check.fixCommand]),
+    [
+      ["cli-command", "pass", undefined],
+      ["state-mode", "missing", "pathfinder init --personal"],
+      ["external-project-state", "missing", "pathfinder init --personal"],
+      ["user-claude-instructions", "missing", "pathfinder agent install --user claude"],
+      ["user-opencode-instructions", "pass", undefined],
+      ["repo-footprint", "pass", undefined],
+      ["agent-next", "pass", undefined]
+    ]
+  );
+  await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
+  await assert.rejects(() => readFile(path.join(repo, ".pathfinder", "project.json"), "utf8"));
+});
+
+test("diagnoses fully installed personal agent setup", async () => {
+  const repo = await createTempRepo();
+  const configRoot = await mkdtemp(path.join(os.tmpdir(), "pathfinder-home-"));
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-user-home-"));
+  const store = new PathfinderStore(repo, { configRoot, userHome });
+
+  await store.initProject({ personal: true });
+  await store.installUserAgentIntegration({ tool: "claude" });
+
+  const result = await store.getAgentDoctor(undefined, { personal: true });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.next.phase, "needs_workstream");
+  assert.deepEqual(
+    result.checks.map((check) => [check.id, check.status]),
+    [
+      ["cli-command", "pass"],
+      ["state-mode", "pass"],
+      ["external-project-state", "pass"],
+      ["user-claude-instructions", "pass"],
+      ["user-opencode-instructions", "pass"],
+      ["repo-footprint", "pass"],
+      ["agent-next", "pass"]
+    ]
+  );
+});
+
+test("personal agent doctor reports repo-local Pathfinder footprint", async () => {
+  const repo = await createTempRepo();
+  const configRoot = await mkdtemp(path.join(os.tmpdir(), "pathfinder-home-"));
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-user-home-"));
+  const store = new PathfinderStore(repo, { configRoot, userHome });
+
+  await store.initProject({ personal: true });
+  await store.installUserAgentIntegration({ tool: "claude" });
+  await store.bootstrapAgentInstructions();
+  await store.installAgentCommands({ tool: "claude" });
+
+  const result = await store.getAgentDoctor(undefined, { personal: true });
+  const footprint = result.checks.find((check) => check.id === "repo-footprint");
+
+  assert.equal(result.ok, false);
+  assert.equal(footprint?.status, "error");
+  assert.match(footprint?.message ?? "", /AGENTS\.md managed Pathfinder block/);
+  assert.match(footprint?.message ?? "", /\.claude\/commands\/pathfinder-plan\.md/);
+});
+
 test("creates workstreams with markdown and JSON state files", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

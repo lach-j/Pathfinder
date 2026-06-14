@@ -157,6 +157,10 @@ export interface AgentDoctorResult {
   };
 }
 
+export interface AgentDoctorOptions {
+  personal?: boolean;
+}
+
 export interface DeterministicReviewRecord {
   review: Review;
   result: DeterministicReviewResult;
@@ -369,20 +373,27 @@ export class PathfinderStore {
     return { tools };
   }
 
-  async getAgentDoctor(provider?: RepositorySummaryProvider): Promise<AgentDoctorResult> {
+  async getAgentDoctor(
+    provider?: RepositorySummaryProvider,
+    options: AgentDoctorOptions = {}
+  ): Promise<AgentDoctorResult> {
     const gitRoot = await findGitRoot(this.cwd);
     if (!gitRoot) {
       throw new PathfinderError("Agent doctor must be run inside a Git repository.");
     }
 
-    const checks: AgentDoctorCheck[] = [
-      await this.checkPathfinderProject(gitRoot),
-      await this.checkAgentBootstrap(gitRoot)
-    ];
+    const checks = options.personal
+      ? await this.getPersonalAgentDoctorChecks(gitRoot)
+      : [
+          await this.checkPathfinderProject(gitRoot),
+          await this.checkAgentBootstrap(gitRoot)
+        ];
 
-    const commandStatus = await this.listAgentCommands();
-    for (const tool of commandStatus.tools) {
-      checks.push(checkAgentCommandTool(tool));
+    if (!options.personal) {
+      const commandStatus = await this.listAgentCommands();
+      for (const tool of commandStatus.tools) {
+        checks.push(checkAgentCommandTool(tool));
+      }
     }
 
     const nextCheck = await this.checkAgentNext(provider);
@@ -1585,6 +1596,165 @@ export class PathfinderStore {
     };
   }
 
+  private async getPersonalAgentDoctorChecks(gitRoot: string): Promise<AgentDoctorCheck[]> {
+    const externalResolution = await resolveStateRootForInit(this.cwd, "external", this.options);
+    const externalProjectPath = path.join(externalResolution.stateRoot, "project.json");
+    const hasExternalProject = await exists(externalProjectPath);
+    const hasRepoProject = await exists(path.join(gitRoot, ".pathfinder", "project.json"));
+
+    return [
+      {
+        id: "cli-command",
+        status: "pass",
+        message: "Pathfinder CLI command is running."
+      },
+      checkPersonalStateMode(hasExternalProject, hasRepoProject),
+      {
+        id: "external-project-state",
+        status: hasExternalProject ? "pass" : "missing",
+        message: hasExternalProject
+          ? `External Pathfinder project state exists at ${externalResolution.stateRoot}.`
+          : `External Pathfinder project state was not found at ${externalResolution.stateRoot}.`,
+        ...(hasExternalProject ? {} : { fixCommand: "pathfinder init --personal" })
+      },
+      await this.checkUserAgentInstructions("claude"),
+      await this.checkUserAgentInstructions("opencode"),
+      await this.checkRepoFootprint(gitRoot)
+    ];
+  }
+
+  private async checkUserAgentInstructions(tool: AgentUserInstallTool): Promise<AgentDoctorCheck> {
+    const definition = getAgentUserInstallToolDefinitions(tool)[0];
+    const id = `user-${tool}-instructions`;
+    const fixCommand = `pathfinder agent install --user ${tool}`;
+
+    if (definition.files.length === 0) {
+      return {
+        id,
+        status: "pass",
+        message: `${definition.displayName} user-level integration is manual for this Pathfinder version.`
+      };
+    }
+
+    const files = await Promise.all(definition.files.map((file) => this.planUserAgentInstallFile(file)));
+    const missing = files.filter((file) => !file.installed);
+    const userOwned = files.filter((file) => file.installed && !file.managed);
+    const outdated = files.filter((file) => file.installed && file.managed && file.changed);
+
+    if (missing.length > 0) {
+      return {
+        id,
+        status: "missing",
+        message: `${definition.displayName} user-level Pathfinder instructions are missing: ${missing.map((file) => file.path).join(", ")}.`,
+        fixCommand
+      };
+    }
+
+    if (userOwned.length > 0) {
+      return {
+        id,
+        status: "warning",
+        message: `${definition.displayName} user-level instruction paths exist but are not Pathfinder-managed: ${userOwned.map((file) => file.path).join(", ")}.`,
+        fixCommand
+      };
+    }
+
+    if (outdated.length > 0) {
+      return {
+        id,
+        status: "warning",
+        message: `${definition.displayName} user-level Pathfinder instructions are installed but need updating: ${outdated.map((file) => file.path).join(", ")}.`,
+        fixCommand
+      };
+    }
+
+    return {
+      id,
+      status: "pass",
+      message: `${definition.displayName} user-level Pathfinder instructions are installed.`
+    };
+  }
+
+  private async checkRepoFootprint(gitRoot: string): Promise<AgentDoctorCheck> {
+    const footprints = [
+      ...(await this.findRepoStateFootprint(gitRoot)),
+      ...(await this.findRepoAgentInstructionFootprint(gitRoot)),
+      ...(await this.findRepoCommandFootprint(gitRoot))
+    ];
+
+    if (footprints.length === 0) {
+      return {
+        id: "repo-footprint",
+        status: "pass",
+        message: "No Pathfinder repo-local footprint was found."
+      };
+    }
+
+    return {
+      id: "repo-footprint",
+      status: "error",
+      message: `Pathfinder repo-local footprint was found: ${footprints.join(", ")}.`
+    };
+  }
+
+  private async findRepoStateFootprint(gitRoot: string): Promise<string[]> {
+    const statePath = path.join(gitRoot, ".pathfinder");
+    if (!(await exists(statePath))) {
+      return [];
+    }
+
+    return [".pathfinder/"];
+  }
+
+  private async findRepoAgentInstructionFootprint(gitRoot: string): Promise<string[]> {
+    const agentsPath = path.join(gitRoot, "AGENTS.md");
+    if (!(await exists(agentsPath))) {
+      return [];
+    }
+
+    const markdown = await readFile(agentsPath, "utf8");
+    const markers = [
+      AGENT_BOOTSTRAP_START,
+      AGENT_BOOTSTRAP_END,
+      AGENT_USER_INSTALL_MANAGED_START,
+      AGENT_USER_INSTALL_MANAGED_END
+    ];
+
+    return markers.some((marker) => markdown.includes(marker)) ? ["AGENTS.md managed Pathfinder block"] : [];
+  }
+
+  private async findRepoCommandFootprint(gitRoot: string): Promise<string[]> {
+    const footprints: string[] = [];
+    const commandDirectories = [".claude/commands", ".opencode/commands"];
+
+    for (const commandDirectory of commandDirectories) {
+      const absoluteDirectory = path.join(gitRoot, ...commandDirectory.split("/"));
+      if (!(await exists(absoluteDirectory))) {
+        continue;
+      }
+
+      const entries = await readdir(absoluteDirectory, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isFile() || !entry.name.startsWith("pathfinder-")) {
+          continue;
+        }
+
+        const relativePath = `${commandDirectory}/${entry.name}`;
+        const filePath = path.join(absoluteDirectory, entry.name);
+        if (!(await exists(filePath))) {
+          continue;
+        }
+
+        const markdown = await readFile(filePath, "utf8");
+        if (markdown.includes(AGENT_COMMAND_MANAGED_START) || markdown.includes(AGENT_COMMAND_MANAGED_END)) {
+          footprints.push(relativePath);
+        }
+      }
+    }
+
+    return footprints;
+  }
+
   private async checkAgentBootstrap(gitRoot: string): Promise<AgentDoctorCheck> {
     const agentsPath = path.join(gitRoot, "AGENTS.md");
 
@@ -1692,6 +1862,31 @@ function checkAgentCommandTool(tool: AgentCommandsListResult["tools"][number]): 
     id,
     status: "pass",
     message: `${tool.displayName} Pathfinder command wrappers are installed.`
+  };
+}
+
+function checkPersonalStateMode(hasExternalProject: boolean, hasRepoProject: boolean): AgentDoctorCheck {
+  if (hasRepoProject) {
+    return {
+      id: "state-mode",
+      status: "error",
+      message: "Repo-local Pathfinder state exists; personal doctor expects external state with no repo-local state."
+    };
+  }
+
+  if (!hasExternalProject) {
+    return {
+      id: "state-mode",
+      status: "missing",
+      message: "External Pathfinder state is not initialized for this repository.",
+      fixCommand: "pathfinder init --personal"
+    };
+  }
+
+  return {
+    id: "state-mode",
+    status: "pass",
+    message: "State mode is external for this repository."
   };
 }
 

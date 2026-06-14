@@ -1,6 +1,6 @@
 # Slice 36: Personal Mode Doctor
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -91,3 +91,30 @@ pathfinder agent doctor --personal
 pathfinder agent doctor --personal --json
 ```
 
+## Completion Notes
+
+- Added `pathfinder agent doctor --personal` and `pathfinder agent doctor --personal --json`.
+- Personal doctor now checks CLI availability, external state mode, external project state, user-level Claude instructions, manual OpenCode status, repo-local Pathfinder footprint, and `agent next`.
+- Repo-footprint detection flags repo-local `.pathfinder/`, managed Pathfinder blocks in `AGENTS.md`, and managed `pathfinder-*` command files under `.claude/commands` or `.opencode/commands`.
+- Existing non-personal `agent doctor` behavior remains unchanged.
+- User-level agent instructions now mention `pathfinder agent doctor --personal --json` for personal/no-repo-footprint setup.
+- Added state and CLI coverage for missing personal setup, clean personal setup, and repo-footprint detection.
+- Updated README and CLI help for the personal doctor flag.
+
+Checks run:
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke test run with temporary `PATHFINDER_HOME` and `PATHFINDER_USER_HOME` values in a temporary Git repo:
+
+```bash
+pathfinder agent doctor --personal --json
+pathfinder init --personal --user claude
+pathfinder agent doctor --personal
+pathfinder agent doctor --personal --json
+```

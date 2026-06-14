@@ -167,6 +167,12 @@ When working in a Git repository and the user asks to plan, implement, continue,
 pathfinder agent doctor --json
 \`\`\`
 
+For personal/no-repo-footprint setup, prefer:
+
+\`\`\`bash
+pathfinder agent doctor --personal --json
+\`\`\`
+
 If Pathfinder is initialized or applicable, start with:
 
 \`\`\`bash

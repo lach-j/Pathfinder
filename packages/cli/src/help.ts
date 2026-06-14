@@ -9,7 +9,7 @@ Usage:
   pathfinder agent install --user claude|opencode|codex|all [--dry-run]
   pathfinder agent commands install [--tool claude|opencode] [--dry-run]
   pathfinder agent commands list
-  pathfinder agent doctor [--json]
+  pathfinder agent doctor [--personal] [--json]
   pathfinder current
   pathfinder agent next [--json]
   pathfinder agent prompt [--phase plan|implement|feedback|review|pr]

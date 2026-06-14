@@ -24,7 +24,7 @@ test("help lists the implemented commands", async () => {
     "pathfinder agent install --user claude|opencode|codex|all [--dry-run]",
     "pathfinder agent commands install [--tool claude|opencode] [--dry-run]",
     "pathfinder agent commands list",
-    "pathfinder agent doctor [--json]",
+    "pathfinder agent doctor [--personal] [--json]",
     "pathfinder current",
     "pathfinder agent next [--json]",
     "pathfinder agent prompt [--phase plan|implement|feedback|review|pr]",
@@ -116,6 +116,54 @@ test("diagnoses fully installed agent integration setup from the CLI", async () 
       ["agents-md", "pass"],
       ["claude-commands", "pass"],
       ["opencode-commands", "pass"],
+      ["agent-next", "pass"]
+    ]
+  );
+});
+
+test("diagnoses personal agent setup from the CLI", async () => {
+  const repo = await createTempGitRepo();
+  const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-user-home-"));
+  const env = { PATHFINDER_HOME: pathfinderHome, PATHFINDER_USER_HOME: userHome };
+
+  const missing = await runCli(["agent", "doctor", "--personal", "--json"], repo, env);
+  const missingParsed = JSON.parse(missing.stdout);
+
+  assert.equal(missingParsed.ok, false);
+  assert.deepEqual(
+    missingParsed.checks.map((check: { id: string; status: string }) => [check.id, check.status]),
+    [
+      ["cli-command", "pass"],
+      ["state-mode", "missing"],
+      ["external-project-state", "missing"],
+      ["user-claude-instructions", "missing"],
+      ["user-opencode-instructions", "pass"],
+      ["repo-footprint", "pass"],
+      ["agent-next", "pass"]
+    ]
+  );
+
+  await runCli(["init", "--personal", "--user", "claude"], repo, env);
+
+  const text = await runCli(["agent", "doctor", "--personal"], repo, env);
+  const json = await runCli(["agent", "doctor", "--personal", "--json"], repo, env);
+  const parsed = JSON.parse(json.stdout);
+
+  assert.match(text.stdout, /# Pathfinder Agent Doctor/);
+  assert.match(text.stdout, /\[pass\] state-mode/);
+  assert.match(text.stdout, /\[pass\] repo-footprint/);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.next.phase, "needs_workstream");
+  assert.deepEqual(
+    parsed.checks.map((check: { id: string; status: string }) => [check.id, check.status]),
+    [
+      ["cli-command", "pass"],
+      ["state-mode", "pass"],
+      ["external-project-state", "pass"],
+      ["user-claude-instructions", "pass"],
+      ["user-opencode-instructions", "pass"],
+      ["repo-footprint", "pass"],
       ["agent-next", "pass"]
     ]
   );

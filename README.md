@@ -161,12 +161,13 @@ pathfinder agent install --user codex
 pathfinder agent bootstrap
 pathfinder agent commands install --tool claude
 pathfinder agent doctor
+pathfinder agent doctor --personal
 ```
 
 `agent install --user claude` and `agent install --user codex` install user-level instructions.
 `agent bootstrap` writes repo-local `AGENTS.md` instructions.
 `agent commands install` writes optional repo-local slash/custom command wrappers for tools that support them.
-`agent doctor` checks whether the current repo and agent integration are ready.
+`agent doctor` checks whether the current repo and agent integration are ready. Use `agent doctor --personal` after personal setup to verify external state, user-level instructions, and no repo-local Pathfinder footprint.
 
 ## Local State
 

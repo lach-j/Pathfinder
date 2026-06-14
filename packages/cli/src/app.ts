@@ -382,7 +382,10 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
   if (action === "doctor") {
     const options = parseOptions(args);
     const git = new GitAdapter({ cwd: process.cwd() });
-    const result = await store.getAgentDoctor((baseRef) => git.getCommittedSummaryAgainstBase(baseRef));
+    const result = await store.getAgentDoctor(
+      (baseRef) => git.getCommittedSummaryAgainstBase(baseRef),
+      { personal: options.personal }
+    );
 
     if (options.json) {
       console.log(JSON.stringify(result, null, 2));
