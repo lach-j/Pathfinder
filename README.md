@@ -61,7 +61,7 @@ Use repo-local setup when the repository itself should carry Pathfinder state an
 pathfinder init --repo --agents
 ```
 
-You should not need to run `pathfinder config set state.mode external` for normal personal setup. `pathfinder init --personal` handles that.
+After setup, Pathfinder discovers the right state location for the current repo automatically.
 
 ## Using Claude Code
 

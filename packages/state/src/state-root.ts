@@ -1,17 +1,13 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { PathfinderError, StateMode, createTimestamp, isStateMode } from "@pathfinder/core";
+import { PathfinderError, StateMode, createTimestamp } from "@pathfinder/core";
 
 import { exists } from "./file-system.js";
 import { findGitRoot } from "./git-root.js";
 import { readJson, writeJson } from "./json-file.js";
-
-export interface PathfinderConfig {
-  stateMode?: StateMode;
-}
 
 export interface PathfinderStoreOptions {
   configRoot?: string;
@@ -38,76 +34,34 @@ export interface StateRootResolution {
   projectIdentity?: ProjectIdentity;
 }
 
-export async function getPathfinderConfig(options: PathfinderStoreOptions = {}): Promise<PathfinderConfig> {
-  const configPath = path.join(getPathfinderHome(options), "config.json");
-  if (!(await exists(configPath))) {
-    return {};
-  }
-
-  const config = await readJson<PathfinderConfig>(configPath);
-  if (config.stateMode !== undefined && !isStateMode(config.stateMode)) {
-    throw new PathfinderError(
-      `Invalid Pathfinder config state.mode '${config.stateMode}'. Expected repo or external.`
-    );
-  }
-
-  return config;
-}
-
-export async function getConfiguredStateMode(options: PathfinderStoreOptions = {}): Promise<StateMode> {
-  return (await getPathfinderConfig(options)).stateMode ?? "repo";
-}
-
-export async function setConfiguredStateMode(
-  mode: StateMode,
-  options: PathfinderStoreOptions = {}
-): Promise<PathfinderConfig> {
-  const home = getPathfinderHome(options);
-  const configPath = path.join(home, "config.json");
-  const current = await getPathfinderConfig(options);
-  const next = {
-    ...current,
-    stateMode: mode
-  } satisfies PathfinderConfig;
-
-  await mkdir(home, { recursive: true });
-  await writeJson(configPath, next);
-  return next;
-}
-
 export async function resolveExistingStateRoot(
   cwd: string,
   options: PathfinderStoreOptions = {}
 ): Promise<StateRootResolution> {
   const gitRoot = await requireGitRoot(cwd);
-  const mode = await getConfiguredStateMode(options);
   const repoProjectPath = path.join(gitRoot, ".pathfinder", "project.json");
 
-  if (mode === "repo") {
-    const stateRoot = path.join(gitRoot, ".pathfinder");
-    if (!(await exists(repoProjectPath))) {
-      throw new PathfinderError("Pathfinder state not found. Run 'pathfinder init' first.");
-    }
-
-    return { mode, gitRoot, stateRoot };
+  if (await exists(repoProjectPath)) {
+    return {
+      mode: "repo",
+      gitRoot,
+      stateRoot: path.join(gitRoot, ".pathfinder")
+    };
   }
 
   const identity = await getProjectIdentity(gitRoot);
   const stateRoot = externalStateRoot(identity.projectId, options);
   const externalProjectPath = path.join(stateRoot, "project.json");
-  if (!(await exists(externalProjectPath))) {
-    if (await exists(repoProjectPath)) {
-      throw new PathfinderError(
-        "Pathfinder state not found in external mode for this repository, but repo-local state exists. Run 'pathfinder config set state.mode repo' to use it, or choose a different repository for external state."
-      );
-    }
-
-    throw new PathfinderError(
-      "Pathfinder state not found in external mode for this repository. Run 'pathfinder init --personal' first, or run 'pathfinder config set state.mode repo' to use repo-local state."
-    );
+  if (await exists(externalProjectPath)) {
+    return {
+      mode: "external",
+      gitRoot,
+      stateRoot,
+      projectIdentity: identity
+    };
   }
 
-  return { mode, gitRoot, stateRoot, projectIdentity: identity };
+  throw new PathfinderError("Pathfinder state not found. Run 'pathfinder init' first.");
 }
 
 export async function resolveStateRootForInit(

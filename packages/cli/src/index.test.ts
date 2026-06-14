@@ -20,8 +20,6 @@ test("help lists the implemented commands", async () => {
     "pathfinder init [--interactive]",
     "pathfinder init --personal [--user claude|opencode|all]",
     "pathfinder init --repo [--agents]",
-    "pathfinder config get state.mode",
-    "pathfinder config set state.mode repo|external",
     "pathfinder agent bootstrap [--dry-run]",
     "pathfinder agent install --user claude|opencode|all [--dry-run]",
     "pathfinder agent commands install [--tool claude|opencode] [--dry-run]",
@@ -238,23 +236,17 @@ test("init --personal --user claude sets up personal state and user-level instru
   await assert.rejects(() => readFile(path.join(repo, ".claude", "commands", "pathfinder-plan.md"), "utf8"));
 });
 
-test("uses external state from config and init --personal", async () => {
+test("uses external state after init --personal without global config", async () => {
   const repo = await createTempGitRepo();
   const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));
   const env = { PATHFINDER_HOME: pathfinderHome };
 
-  const defaultMode = await runCli(["config", "get", "state.mode"], repo, env);
-  const setMode = await runCli(["config", "set", "state.mode", "external"], repo, env);
-  const externalMode = await runCli(["config", "get", "state.mode"], repo, env);
   const init = await runCli(["init", "--personal"], repo, env);
   const workstream = await runCli(["workstream", "create", "--title", "Demo"], repo, env);
   const current = await runCli(["current"], repo, env);
   const projectIds = await sortedFiles(path.join(pathfinderHome, "projects"));
   const projectRoot = path.join(pathfinderHome, "projects", projectIds[0]);
 
-  assert.equal(defaultMode.stdout.trim(), "repo");
-  assert.equal(setMode.stdout.trim(), "state.mode=external");
-  assert.equal(externalMode.stdout.trim(), "external");
   assert.match(init.stdout, /Initialised Pathfinder/);
   assert.match(workstream.stdout, /demo\tDemo/);
   assert.match(current.stdout, /Project:/);
@@ -268,7 +260,6 @@ test("writes feedback export to external state by default in external mode", asy
   const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));
   const env = { PATHFINDER_HOME: pathfinderHome };
 
-  await runCli(["config", "set", "state.mode", "external"], repo, env);
   await runCli(["init", "--personal"], repo, env);
   await runCli(["workstream", "create", "--title", "Feedback Mode"], repo, env);
 
@@ -377,7 +368,6 @@ test("agent next and prompt reference external feedback path in external mode", 
   const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));
   const env = { PATHFINDER_HOME: pathfinderHome };
 
-  await runCli(["config", "set", "state.mode", "external"], repo, env);
   await runCli(["init", "--personal"], repo, env);
   await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo, env);
   await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");

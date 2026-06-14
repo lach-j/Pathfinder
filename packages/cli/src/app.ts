@@ -8,8 +8,7 @@ import {
   ReviewCommentTarget,
   isAgentCommandTool,
   isAgentPromptPhase,
-  isReviewCommentSide,
-  isStateMode
+  isReviewCommentSide
 } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { serveReviewServer } from "@pathfinder/local-server";
@@ -48,11 +47,6 @@ export async function run(args: string[]): Promise<void> {
   if (area === "init") {
     const options = parseOptions([action, ...rest].filter((value): value is string => Boolean(value)));
     await runInit(options);
-    return;
-  }
-
-  if (area === "config") {
-    await runConfig(action, rest);
     return;
   }
 
@@ -285,42 +279,6 @@ async function applyInitSetup(setup: InitSetup): Promise<void> {
     const result = await store.installAgentCommands({ tool });
     process.stdout.write(formatAgentCommandsInstall(result));
   }
-}
-
-async function runConfig(action: string | undefined, args: string[]): Promise<void> {
-  if (action === "get") {
-    const [key, ...extra] = args;
-    requireArgument(key, "config key");
-    expectNoExtraArgs(extra);
-
-    if (key !== "state.mode") {
-      throw usageError("Unknown config key. Expected state.mode.");
-    }
-
-    console.log(await store.getStateMode());
-    return;
-  }
-
-  if (action === "set") {
-    const [key, value, ...extra] = args;
-    requireArgument(key, "config key");
-    requireArgument(value, "config value");
-    expectNoExtraArgs(extra);
-
-    if (key !== "state.mode") {
-      throw usageError("Unknown config key. Expected state.mode.");
-    }
-
-    if (!isStateMode(value)) {
-      throw usageError("Invalid state.mode value. Expected repo or external.");
-    }
-
-    await store.setStateMode(value);
-    console.log(`state.mode=${value}`);
-    return;
-  }
-
-  throw usageError("Unknown config command. Expected get or set.");
 }
 
 async function runAgent(action: string | undefined, args: string[]): Promise<void> {
