@@ -252,7 +252,7 @@ export class PathfinderStore {
   }
 
   async initProject(options: InitProjectOptions = {}): Promise<Project> {
-    const mode = options.personal ? "external" : await this.getStateMode();
+    const mode = options.personal ? "external" : "repo";
     const resolution = await resolveStateRootForInit(this.cwd, mode, this.options).catch((error) => {
       if (error instanceof PathfinderError && error.message === "This command must be run inside a Git repository.") {
         throw new PathfinderError("pathfinder init must be run inside a Git repository.");
@@ -289,6 +289,8 @@ export class PathfinderStore {
     if (mode === "external" && resolution.projectIdentity) {
       await writeExternalProjectMetadata(stateRoot, resolution.projectIdentity);
       await this.setStateMode("external");
+    } else {
+      await this.setStateMode("repo");
     }
 
     return project;

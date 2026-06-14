@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import { createInterface } from "node:readline/promises";
 
 import {
   AgentPromptPhase,
@@ -46,32 +47,7 @@ export async function run(args: string[]): Promise<void> {
 
   if (area === "init") {
     const options = parseOptions([action, ...rest].filter((value): value is string => Boolean(value)));
-
-    if (options.dryRun) {
-      throw usageError("Unknown option '--dry-run'.");
-    }
-
-    if (options.personal && options.agents) {
-      throw usageError("Use either --personal or --agents, not both.");
-    }
-
-    if (options.agents) {
-      try {
-        const project = await store.initProject();
-        console.log(`Initialised Pathfinder for ${project.name}.`);
-      } catch (error) {
-        if (!(error instanceof PathfinderError && error.message === "Pathfinder state already exists in this repository.")) {
-          throw error;
-        }
-      }
-
-      const result = await store.bootstrapAgentInstructions();
-      console.log(`${result.changed ? "Updated" : "No changes needed for"} ${result.path}.`);
-      return;
-    }
-
-    const project = await store.initProject({ personal: options.personal });
-    console.log(`Initialised Pathfinder for ${project.name}.`);
+    await runInit(options);
     return;
   }
 
@@ -148,6 +124,167 @@ export async function run(args: string[]): Promise<void> {
   }
 
   throw usageError(`Unknown command '${area}'.`);
+}
+
+type InitMode = "repo" | "personal";
+type InitAgent = "none" | "claude" | "opencode" | "all";
+
+interface InitSetup {
+  mode: InitMode;
+  agent: InitAgent;
+  repoBootstrap: boolean;
+  repoCommands: boolean;
+}
+
+async function runInit(options: ReturnType<typeof parseOptions>): Promise<void> {
+  if (options.dryRun) {
+    throw usageError("Unknown option '--dry-run'.");
+  }
+
+  if (options.tool) {
+    throw usageError("Unknown option '--tool' for init. Use --user claude|opencode|all with --personal.");
+  }
+
+  if (options.personal && options.repo) {
+    throw usageError("Use either --personal or --repo, not both.");
+  }
+
+  if (options.personal && options.agents) {
+    throw usageError("Use --personal --user claude|opencode|all for personal agent setup.");
+  }
+
+  if (options.user && options.user !== "all" && !isAgentCommandTool(options.user)) {
+    throw usageError("Invalid --user value. Expected claude, opencode, or all.");
+  }
+
+  if (options.user && !options.personal) {
+    throw usageError("Use --user only with --personal.");
+  }
+
+  const setup = shouldPromptForInit(options) ? await promptInitSetup() : getInitSetupFromOptions(options);
+  await applyInitSetup(setup);
+}
+
+function shouldPromptForInit(options: ReturnType<typeof parseOptions>): boolean {
+  if (options.interactive) {
+    return true;
+  }
+
+  return (
+    !options.personal &&
+    !options.repo &&
+    !options.agents &&
+    !options.user &&
+    Boolean(process.stdin.isTTY && process.stdout.isTTY)
+  );
+}
+
+function getInitSetupFromOptions(options: ReturnType<typeof parseOptions>): InitSetup {
+  const mode: InitMode = options.personal ? "personal" : "repo";
+  const user = options.user === "all" || isAgentCommandTool(options.user ?? "") ? options.user as InitAgent : "none";
+
+  return {
+    mode,
+    agent: mode === "personal" ? user : "none",
+    repoBootstrap: mode === "repo" && Boolean(options.agents),
+    repoCommands: false
+  };
+}
+
+async function promptInitSetup(): Promise<InitSetup> {
+  const readline = createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  try {
+    console.log("Pathfinder setup");
+    console.log("");
+    console.log("1. Personal - keep Pathfinder state and agent setup outside this repo");
+    console.log("2. Repo-local - write .pathfinder/ and optional repo agent helpers");
+    const modeChoice = await askChoice(readline, "Choose setup mode", ["personal", "repo"], "personal");
+    const mode = modeChoice as InitMode;
+
+    console.log("");
+    console.log("1. Claude Code");
+    console.log("2. OpenCode");
+    console.log("3. All supported agents");
+    console.log("4. None");
+    const agentChoice = await askChoice(readline, "Set up an agent integration", ["claude", "opencode", "all", "none"], "claude");
+    const agent = agentChoice as InitAgent;
+
+    return {
+      mode,
+      agent,
+      repoBootstrap: mode === "repo" && agent !== "none",
+      repoCommands: mode === "repo" && agent !== "none"
+    };
+  } finally {
+    readline.close();
+  }
+}
+
+async function askChoice(
+  readline: ReturnType<typeof createInterface>,
+  label: string,
+  values: string[],
+  defaultValue: string
+): Promise<string> {
+  const defaultIndex = values.indexOf(defaultValue) + 1;
+  const answer = (await readline.question(`${label} [${defaultIndex}]: `)).trim().toLowerCase();
+  if (!answer) {
+    return defaultValue;
+  }
+
+  const number = Number(answer);
+  if (Number.isInteger(number) && number >= 1 && number <= values.length) {
+    return values[number - 1];
+  }
+
+  const match = values.find((value) => value === answer);
+  if (match) {
+    return match;
+  }
+
+  throw usageError(`Invalid choice '${answer}'.`);
+}
+
+async function applyInitSetup(setup: InitSetup): Promise<void> {
+  if (setup.mode === "repo" && setup.repoBootstrap) {
+    try {
+      const project = await store.initProject();
+      console.log(`Initialised Pathfinder for ${project.name}.`);
+    } catch (error) {
+      if (!(error instanceof PathfinderError && error.message === "Pathfinder state already exists in this repository.")) {
+        throw error;
+      }
+    }
+  } else {
+    const project = await store.initProject({ personal: setup.mode === "personal" });
+    console.log(`Initialised Pathfinder for ${project.name}.`);
+  }
+
+  if (setup.mode === "personal") {
+    console.log("State: personal external Pathfinder state.");
+    if (setup.agent !== "none") {
+      const tool = setup.agent === "all" ? undefined : setup.agent;
+      const result = await store.installUserAgentIntegration({ tool });
+      process.stdout.write(formatAgentUserInstall(result));
+    }
+    return;
+  }
+
+  console.log("State: repo-local .pathfinder/.");
+  if (setup.repoBootstrap) {
+    const result = await store.bootstrapAgentInstructions();
+    console.log(`${result.changed ? "Updated" : "No changes needed for"} ${result.path}.`);
+  }
+
+  if (setup.repoCommands) {
+    const tool = setup.agent === "all" ? undefined : setup.agent === "none" ? undefined : setup.agent;
+    const result = await store.installAgentCommands({ tool });
+    process.stdout.write(formatAgentCommandsInstall(result));
+  }
 }
 
 async function runConfig(action: string | undefined, args: string[]): Promise<void> {

@@ -16,6 +16,8 @@ export interface OptionMap {
   open?: boolean;
   agents?: boolean;
   personal?: boolean;
+  repo?: boolean;
+  interactive?: boolean;
   dryRun?: boolean;
   dependsOn?: string[];
   kind?: string;
@@ -53,6 +55,16 @@ export function parseOptions(args: string[]): OptionMap {
 
     if (flag === "--personal") {
       options.personal = true;
+      continue;
+    }
+
+    if (flag === "--repo") {
+      options.repo = true;
+      continue;
+    }
+
+    if (flag === "--interactive") {
+      options.interactive = true;
       continue;
     }
 

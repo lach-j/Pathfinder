@@ -17,7 +17,9 @@ test("help lists the implemented commands", async () => {
   const result = await runCli(["help"]);
 
   for (const command of [
-    "pathfinder init [--agents|--personal]",
+    "pathfinder init [--interactive]",
+    "pathfinder init --personal [--user claude|opencode|all]",
+    "pathfinder init --repo [--agents]",
     "pathfinder config get state.mode",
     "pathfinder config set state.mode repo|external",
     "pathfinder agent bootstrap [--dry-run]",
@@ -212,6 +214,28 @@ test("init --agents initialises state and bootstraps instructions", async () => 
   assert.match(result.stdout, /Updated .*AGENTS\.md\./);
   assert.match(project, /"schemaVersion": 1/);
   assert.match(agents, /pathfinder agent next --json/);
+});
+
+test("init --personal --user claude sets up personal state and user-level instructions", async () => {
+  const repo = await createTempGitRepo();
+  const pathfinderHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-home-"));
+  const userHome = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-user-home-"));
+  const env = { PATHFINDER_HOME: pathfinderHome, PATHFINDER_USER_HOME: userHome };
+
+  const result = await runCli(["init", "--personal", "--user", "claude"], repo, env);
+  const projectIds = await sortedFiles(path.join(pathfinderHome, "projects"));
+  const projectRoot = path.join(pathfinderHome, "projects", projectIds[0]);
+  const claudeInstructions = await readFile(path.join(userHome, ".claude", "CLAUDE.md"), "utf8");
+
+  assert.match(result.stdout, /Initialised Pathfinder/);
+  assert.match(result.stdout, /State: personal external Pathfinder state\./);
+  assert.match(result.stdout, /wrote: claude -> \.claude\/CLAUDE\.md/);
+  assert.equal(projectIds.length, 1);
+  assert.match(await readFile(path.join(projectRoot, "project.json"), "utf8"), /"schemaVersion": 1/);
+  assert.match(claudeInstructions, /pathfinder agent next --json/);
+  await assert.rejects(() => readFile(path.join(repo, ".pathfinder", "project.json"), "utf8"));
+  await assert.rejects(() => readFile(path.join(repo, "AGENTS.md"), "utf8"));
+  await assert.rejects(() => readFile(path.join(repo, ".claude", "commands", "pathfinder-plan.md"), "utf8"));
 });
 
 test("uses external state from config and init --personal", async () => {

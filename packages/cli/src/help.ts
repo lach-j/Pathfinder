@@ -2,7 +2,9 @@ export function printHelp(): void {
   console.log(`Pathfinder
 
 Usage:
-  pathfinder init [--agents|--personal]
+  pathfinder init [--interactive]
+  pathfinder init --personal [--user claude|opencode|all]
+  pathfinder init --repo [--agents]
   pathfinder config get state.mode
   pathfinder config set state.mode repo|external
   pathfinder agent bootstrap [--dry-run]
