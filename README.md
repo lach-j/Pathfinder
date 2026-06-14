@@ -35,6 +35,20 @@ On Windows the binary path is usually:
 <temp-prefix>/pathfinder.cmd
 ```
 
+Create a GitHub Release artifact by pushing a version tag. The release workflow runs the checks, builds from source, packs the tarball, and uploads it to the matching GitHub Release:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Install from the release asset:
+
+```bash
+npm install -g https://github.com/<owner>/<repo>/releases/download/v0.1.0/pathfinder-0.1.0.tgz
+pathfinder help
+```
+
 Source package layout:
 
 ```text

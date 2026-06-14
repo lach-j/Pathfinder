@@ -1,6 +1,6 @@
 # Slice 32: GitHub Release Artifact Workflow
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -115,3 +115,27 @@ git push origin v0.1.0
 
 Then install from the generated release asset URL.
 
+## Implementation Notes
+
+- Added `.github/workflows/release.yml` as a tag-triggered release workflow for `v*` tags.
+- The workflow uses Node 22, `npm ci`, typecheck, tests, optional lint, build, `npm pack`, and `softprops/action-gh-release` to upload `*.tgz`.
+- Release permissions are declared as `contents: write`; npm publishing remains out of scope.
+- README documents creating a release tag and installing from the generated GitHub Release tarball.
+
+## Verification
+
+Run on 2026-06-14:
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Manual GitHub release verification still requires pushing a tag:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```

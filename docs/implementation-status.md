@@ -123,7 +123,7 @@ The next product focus is personal installation and no-repo-footprint usage:
 | 29 | done | `docs/slices/29-native-agent-command-wrappers.md` |
 | 30 | done | `docs/slices/30-agent-integration-doctor.md` |
 | 31 | done | `docs/slices/31-release-packaging.md` |
-| 32 | ready | `docs/slices/32-github-release-artifact-workflow.md` |
+| 32 | done | `docs/slices/32-github-release-artifact-workflow.md` |
 | 33 | ready | `docs/slices/33-automated-versioning.md` |
 | 34 | ready | `docs/slices/34-external-state-mode.md` |
 | 35 | ready | `docs/slices/35-no-repo-footprint-agent-mode.md` |
