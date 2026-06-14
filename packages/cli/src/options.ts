@@ -17,6 +17,7 @@ export interface OptionMap {
   dependsOn?: string[];
   kind?: string;
   path?: string;
+  phase?: string;
 }
 
 export function parseOptions(args: string[]): OptionMap {
@@ -72,6 +73,8 @@ export function parseOptions(args: string[]): OptionMap {
       options.kind = value;
     } else if (flag === "--path") {
       options.path = value;
+    } else if (flag === "--phase") {
+      options.phase = value;
     } else {
       throw usageError(`Unknown option '${flag}'.`);
     }

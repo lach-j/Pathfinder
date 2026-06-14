@@ -287,6 +287,17 @@ export interface AgentNextInput {
   stateError?: string;
 }
 
+export type AgentPromptPhase = "plan" | "implement" | "feedback" | "review" | "pr";
+
+export interface AgentPromptInput {
+  phase?: AgentPromptPhase;
+  recommendation: AgentNextRecommendation;
+  workstream?: Workstream;
+  activeSlice?: Slice;
+  requirementsPath?: string;
+  planPath?: string;
+}
+
 export interface ImportedStagePlanStage {
   stageNumber: number;
   title: string;

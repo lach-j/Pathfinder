@@ -1,6 +1,6 @@
 # Slice 27: Agent Prompt Rendering
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -101,6 +101,31 @@ Prompt content:
 - Prompt output includes specific commands and constraints.
 - Tests cover at least implement and feedback prompts with realistic state.
 - README documents using `pathfinder agent prompt` as a fallback when native slash commands are unavailable.
+
+## Implementation Notes
+
+- Added a pure core markdown prompt renderer for plan, implement, feedback, review, and PR modes.
+- Added state orchestration that reuses `getAgentNext()` and supplies active workstream, slice, and `.pathfinder/` artifact paths where available.
+- Added `pathfinder agent prompt [--phase plan|implement|feedback|review|pr]`.
+- Kept output tool-neutral and local-only: no MCP, hooks, agent invocation, external APIs, or generated tool-specific command files.
+- Updated README with `agent prompt` fallback usage.
+
+## Completed Checks
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke tested:
+
+```bash
+npm exec -- pathfinder agent prompt
+npm exec -- pathfinder agent prompt --phase implement
+npm exec -- pathfinder agent prompt --phase feedback
+```
 
 ## Checks
 

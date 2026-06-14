@@ -114,12 +114,20 @@ Ask Pathfinder what an agent should do next:
 ```bash
 npm exec -- pathfinder agent next
 npm exec -- pathfinder agent next --json
+npm exec -- pathfinder agent prompt
+npm exec -- pathfinder agent prompt --phase implement
 ```
 
 `agent next --json` is the canonical first command for coding agents. It inspects only local
 Pathfinder and Git state, then returns a deterministic phase, reason, relevant workstream/slice
 ids, recommended commands, and concise instructions. It does not invoke an AI provider, run
 commands automatically, or mutate code.
+
+`agent prompt` renders deterministic markdown instructions for the current `agent next` phase.
+Use it as a tool-neutral fallback when native slash commands or agent-specific wrappers are not
+available. Explicit phases are also available with `--phase plan`, `--phase implement`,
+`--phase feedback`, `--phase review`, and `--phase pr`; missing state is shown as placeholders
+instead of being guessed.
 
 Add, list, and resolve local review comments for a slice:
 
@@ -321,6 +329,9 @@ npm exec -- pathfinder help
 npm exec -- pathfinder current
 npm exec -- pathfinder agent next
 npm exec -- pathfinder agent next --json
+npm exec -- pathfinder agent prompt
+npm exec -- pathfinder agent prompt --phase implement
+npm exec -- pathfinder agent prompt --phase feedback
 npm exec -- pathfinder requirement set add-billing-foundation --file ./requirements.md
 npm exec -- pathfinder requirement show add-billing-foundation
 npm exec -- pathfinder plan import --file ./PLAN.md

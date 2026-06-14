@@ -20,6 +20,7 @@ test("help lists the implemented MVP commands", async () => {
     "pathfinder init",
     "pathfinder current",
     "pathfinder agent next [--json]",
+    "pathfinder agent prompt [--phase plan|implement|feedback|review|pr]",
     "pathfinder workstream create",
     "pathfinder workstream list",
     "pathfinder workstream show",
@@ -103,6 +104,53 @@ test("prints agent next recommendation for active implementation state", async (
   assert.equal(parsed.workstreamId, "inventory-alerts");
   assert.equal(parsed.sliceId, "add-report");
   assert.deepEqual(parsed.commands, ["pathfinder current", "pathfinder review start --base <base-ref>"]);
+});
+
+test("prints agent prompts in automatic and explicit phase modes", async () => {
+  const repo = await createTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+
+  const explicitImplement = await runCli(["agent", "prompt", "--phase", "implement"], repo);
+
+  assert.match(explicitImplement.stdout, /# Pathfinder Agent Prompt: implement/);
+  assert.match(explicitImplement.stdout, /`pathfinder current`/);
+  assert.match(explicitImplement.stdout, /Implement only slice `add-report`/);
+
+  await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--slice",
+      "add-report",
+      "--body",
+      "Add tests."
+    ],
+    repo
+  );
+
+  const automaticFeedback = await runCli(["agent", "prompt"], repo);
+
+  assert.match(automaticFeedback.stdout, /# Pathfinder Agent Prompt: feedback/);
+  assert.match(automaticFeedback.stdout, /`pathfinder feedback export inventory-alerts --session <review-session-id> --file \.\/\.pathfinder-feedback\.md`/);
+  assert.match(automaticFeedback.stdout, /Do not resolve comments/);
 });
 
 test("sets and shows workstream requirements", async () => {

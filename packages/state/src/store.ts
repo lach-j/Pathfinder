@@ -5,6 +5,7 @@ import {
   DeterministicReviewResult,
   Evidence,
   AgentNextRecommendation,
+  AgentPromptPhase,
   ImportedStagePlan,
   PathfinderError,
   Project,
@@ -25,6 +26,7 @@ import {
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
   getReviewCommentAnchorStatus,
+  renderAgentPrompt,
   isEvidenceKind,
   isReviewCommentSide,
   isSliceStatus,
@@ -976,6 +978,39 @@ export class PathfinderStore {
       reviewSessions,
       ...repository
     });
+  }
+
+  async getAgentPrompt(
+    phase?: AgentPromptPhase,
+    provider?: RepositorySummaryProvider
+  ): Promise<string> {
+    const recommendation = await this.getAgentNext(provider);
+    const workstreamId = recommendation.workstreamId;
+
+    if (!workstreamId || workstreamId.startsWith("<")) {
+      return renderAgentPrompt({ phase, recommendation });
+    }
+
+    try {
+      const workstream = await this.getWorkstream(workstreamId);
+      const slices = await this.listSlices(workstreamId);
+      const activeSliceId = recommendation.sliceId ?? workstream.activeSliceId;
+      const activeSlice = activeSliceId && !activeSliceId.startsWith("<")
+        ? slices.find((slice) => slice.id === activeSliceId)
+        : undefined;
+      const root = await this.requireWorkstreamRoot(workstreamId);
+
+      return renderAgentPrompt({
+        phase,
+        recommendation,
+        workstream,
+        activeSlice,
+        requirementsPath: path.join(root, "requirements.md"),
+        planPath: path.join(root, "plan.md")
+      });
+    } catch {
+      return renderAgentPrompt({ phase, recommendation });
+    }
   }
 
   private async validateCommentTarget(

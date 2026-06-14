@@ -361,6 +361,52 @@ test("returns agent next recommendations from active Pathfinder state", async ()
   assert.equal(feedback.reviewSessionId, "review-add-report");
 });
 
+test("renders agent prompts from Pathfinder state", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Agent Prompt");
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nImplement one slice.\n", "utf8");
+  await store.setPlanFromFile(workstream.id, "./plan.md");
+  const slice = await store.addSlice(workstream.id, "Add Prompt", "Render agent prompts.");
+  await store.setActiveSlice(workstream.id, slice.id);
+
+  const implement = await store.getAgentPrompt("implement");
+
+  assert.match(implement, /# Pathfinder Agent Prompt: implement/);
+  assert.match(implement, /Agent Prompt \(`agent-prompt`\)/);
+  assert.match(implement, /Add Prompt \(`add-prompt`, proposed\)/);
+  assert.match(implement, /\.pathfinder[\\/]workstreams[\\/]agent-prompt[\\/]plan\.md/);
+
+  const session = await store.startReviewSession({
+    baseRef: "main",
+    headRef: "feature",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "src/prompt.ts",
+        status: "added",
+        category: "source"
+      }
+    ]
+  });
+  await store.addComment(workstream.id, {
+    body: "Handle missing context.",
+    target: {
+      type: "file",
+      sessionId: session.id,
+      filePath: "src/prompt.ts"
+    }
+  });
+
+  const feedback = await store.getAgentPrompt();
+
+  assert.match(feedback, /# Pathfinder Agent Prompt: feedback/);
+  assert.match(feedback, /`pathfinder review refresh agent-prompt review-add-prompt`/);
+  assert.match(feedback, /Do not resolve comments/);
+});
+
 test("adds and lists slice evidence in human-readable state", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

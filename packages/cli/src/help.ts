@@ -5,6 +5,7 @@ Usage:
   pathfinder init
   pathfinder current
   pathfinder agent next [--json]
+  pathfinder agent prompt [--phase plan|implement|feedback|review|pr]
   pathfinder workstream create --title "..."
   pathfinder workstream list
   pathfinder workstream show <id>

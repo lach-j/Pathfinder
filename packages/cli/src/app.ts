@@ -1,7 +1,13 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { PathfinderError, ReviewCommentTarget, isReviewCommentSide } from "@pathfinder/core";
+import {
+  AgentPromptPhase,
+  PathfinderError,
+  ReviewCommentTarget,
+  isAgentPromptPhase,
+  isReviewCommentSide
+} from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { serveReviewServer } from "@pathfinder/local-server";
 import { PathfinderStore } from "@pathfinder/state";
@@ -124,7 +130,24 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
-  throw usageError("Unknown agent command. Expected next.");
+  if (action === "prompt") {
+    const options = parseOptions(args);
+    const git = new GitAdapter({ cwd: process.cwd() });
+
+    let promptPhase: AgentPromptPhase | undefined;
+    if (options.phase) {
+      if (!isAgentPromptPhase(options.phase)) {
+        throw usageError("Invalid --phase value. Expected plan, implement, feedback, review, or pr.");
+      }
+      promptPhase = options.phase as AgentPromptPhase;
+    }
+
+    const prompt = await store.getAgentPrompt(promptPhase, (baseRef) => git.getCommittedSummaryAgainstBase(baseRef));
+    process.stdout.write(prompt);
+    return;
+  }
+
+  throw usageError("Unknown agent command. Expected next or prompt.");
 }
 
 async function runDiff(action: string | undefined, args: string[]): Promise<void> {

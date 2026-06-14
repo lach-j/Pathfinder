@@ -17,6 +17,7 @@ import {
   nextAvailableId,
   parseUnifiedDiff,
   parseStagePlanMarkdown,
+  renderAgentPrompt,
   Slice,
   toUrlSafeId
 } from "./index.js";
@@ -231,6 +232,56 @@ test("recommends review session and human review phases for agents", () => {
 
   assert.equal(needsHumanReview.phase, "needs_human_review");
   assert.equal(needsHumanReview.reviewSessionId, "review-add-report");
+});
+
+test("renders deterministic agent prompts for implement and feedback phases", () => {
+  const workstream = testWorkstream("inventory-alerts", "add-report");
+  const activeSlice = testSlice("add-report", "in_progress", "2026-01-01T00:00:00.000Z");
+  const implement = renderAgentPrompt({
+    phase: "implement",
+    recommendation: {
+      phase: "ready_to_implement",
+      reason: "Active slice is ready for implementation and has no open feedback.",
+      workstreamId: "inventory-alerts",
+      sliceId: "add-report",
+      commands: ["pathfinder current", "pathfinder review start --base <base-ref>"],
+      agentInstruction: "Implement only the active slice.",
+      humanInstruction: "Review the local diff."
+    },
+    workstream,
+    activeSlice,
+    requirementsPath: "/repo/.pathfinder/workstreams/inventory-alerts/requirements.md",
+    planPath: "/repo/.pathfinder/workstreams/inventory-alerts/plan.md"
+  });
+
+  assert.match(implement, /# Pathfinder Agent Prompt: implement/);
+  assert.match(implement, /Use Pathfinder as the source of truth/);
+  assert.match(implement, /Do not resolve Pathfinder comments automatically/);
+  assert.match(implement, /`pathfinder current`/);
+  assert.match(implement, /Implement only slice `add-report`/);
+  assert.match(implement, /`npm run typecheck`/);
+
+  const feedback = renderAgentPrompt({
+    recommendation: {
+      phase: "feedback",
+      reason: "Active review session has open comments.",
+      workstreamId: "inventory-alerts",
+      sliceId: "add-report",
+      reviewSessionId: "review-add-report",
+      commands: [
+        "pathfinder feedback export inventory-alerts --session review-add-report --file ./.pathfinder-feedback.md"
+      ],
+      agentInstruction: "Read feedback.",
+      humanInstruction: "Review fixes."
+    },
+    workstream,
+    activeSlice
+  });
+
+  assert.match(feedback, /# Pathfinder Agent Prompt: feedback/);
+  assert.match(feedback, /`pathfinder feedback export inventory-alerts --session review-add-report --file \.\/\.pathfinder-feedback\.md`/);
+  assert.match(feedback, /Address every open feedback item/);
+  assert.match(feedback, /Do not resolve comments/);
 });
 
 test("parses stored stage plans into a workstream title and stages", () => {

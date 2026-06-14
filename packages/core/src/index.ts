@@ -13,3 +13,4 @@ export * from "./review/deterministic-review.js";
 export * from "./feedback/markdown.js";
 export * from "./pr/markdown.js";
 export * from "./agent/next.js";
+export * from "./agent/prompt.js";
