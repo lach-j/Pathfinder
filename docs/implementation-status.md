@@ -33,7 +33,8 @@ packages/
   core/          domain types and validation
   git/           local Git adapter
   state/         filesystem persistence under .pathfinder/
-  local-server/  local-only HTTP API and browser UI assets
+  ui/            React browser app for local Pathfinder views
+  local-server/  local-only HTTP API and static UI asset serving
   cli/           command-line interface
 ```
 

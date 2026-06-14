@@ -11,12 +11,13 @@
     "packages/core",
     "packages/git",
     "packages/state",
+    "packages/ui",
     "packages/local-server",
     "packages/cli"
   ],
   "scripts": {
-    "build": "tsc -b packages/core packages/git packages/state packages/local-server packages/cli",
-    "typecheck": "tsc -b --pretty false",
+    "build": "npm run build -w @pathfinder/ui && tsc -b packages/core packages/git packages/state packages/local-server packages/cli",
+    "typecheck": "tsc -b --pretty false && npm run typecheck -w @pathfinder/ui",
     "test": "npm run build && node --test packages/core/dist/*.test.js packages/git/dist/*.test.js packages/state/dist/*.test.js packages/cli/dist/*.test.js"
   },
   "devDependencies": {

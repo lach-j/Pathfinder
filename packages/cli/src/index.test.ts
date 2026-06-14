@@ -1036,6 +1036,12 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     const baseUrl = serverBaseUrl(server);
     const html = await fetch(`${baseUrl}/`);
     const htmlText = await html.text();
+    const scriptMatch = htmlText.match(/src="([^"]+\.js)"/);
+    const styleMatch = htmlText.match(/href="([^"]+\.css)"/);
+    assert.ok(scriptMatch);
+    assert.ok(styleMatch);
+    const script = await fetch(`${baseUrl}${scriptMatch[1]}`);
+    const style = await fetch(`${baseUrl}${styleMatch[1]}`);
     const current = await jsonFetch(`${baseUrl}/api/current`);
     const workstreams = await jsonFetch(`${baseUrl}/api/workstreams`);
     const sessions = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/review-sessions`);
@@ -1068,14 +1074,11 @@ test("serves local review JSON endpoints and mutates comments", async () => {
 
     assert.equal(html.status, 200);
     assert.match(htmlText, /Pathfinder Review/);
-    assert.match(htmlText, /id="app"/);
-    assert.match(htmlText, /Changed files/);
-    assert.match(htmlText, /Add file comment/);
-    assert.match(htmlText, /Add line comment/);
-    assert.match(htmlText, /Resolve/);
-    assert.match(htmlText, /Refresh/);
-    assert.match(htmlText, /Open comments/);
-    assert.match(htmlText, /Resolved comments/);
+    assert.match(htmlText, /id="root"/);
+    assert.equal(script.status, 200);
+    assert.match(script.headers.get("content-type") ?? "", /text\/javascript/);
+    assert.equal(style.status, 200);
+    assert.match(style.headers.get("content-type") ?? "", /text\/css/);
     assert.equal(current.activeSlice.id, "add-report");
     assert.equal(workstreams.workstreams[0].id, "inventory-alerts");
     assert.equal(sessions.sessions[0].id, "review-add-report");

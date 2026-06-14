@@ -1,10 +1,11 @@
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { PathfinderError, ReviewCommentTarget, isReviewCommentSide } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { PathfinderStore } from "@pathfinder/state";
-
-import { renderReviewViewerPage } from "./review-viewer/page.js";
 
 export interface ReviewServerOptions {
   cwd?: string;
@@ -31,6 +32,7 @@ interface CommentRequestBody {
 const defaultHost = "127.0.0.1";
 const defaultPort = 4783;
 const maxBodyBytes = 1024 * 1024;
+const uiDistDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../ui/dist");
 
 export async function serveReviewServer(options: ReviewServerOptions = {}): Promise<Server> {
   const cwd = options.cwd ?? process.cwd();
@@ -91,8 +93,8 @@ async function routeRequest(
     return;
   }
 
-  if (method === "GET" && parts.length === 0) {
-    writeHtml(response, renderReviewViewerPage());
+  if (method === "GET" && parts[0] !== "api") {
+    await serveUiAsset(parts, response);
     return;
   }
 
@@ -349,14 +351,6 @@ function writeJson(response: ServerResponse, statusCode: number, body: unknown):
   response.end(JSON.stringify(body, null, 2));
 }
 
-function writeHtml(response: ServerResponse, html: string): void {
-  response.writeHead(200, {
-    "content-type": "text/html; charset=utf-8",
-    "cache-control": "no-store"
-  });
-  response.end(html);
-}
-
 function writeError(response: ServerResponse, error: unknown): void {
   if (error instanceof PathfinderError) {
     writeJson(response, 400, { error: error.message });
@@ -366,3 +360,53 @@ function writeError(response: ServerResponse, error: unknown): void {
   writeJson(response, 500, { error: "Unexpected server error." });
 }
 
+async function serveUiAsset(parts: string[], response: ServerResponse): Promise<void> {
+  const relativePath = parts.length === 0 || parts[0] !== "assets"
+    ? "index.html"
+    : parts.join("/");
+  const filePath = path.resolve(uiDistDir, relativePath);
+
+  if (!isPathInside(uiDistDir, filePath)) {
+    writeJson(response, 404, { error: "Not found." });
+    return;
+  }
+
+  try {
+    const content = await readFile(filePath);
+    response.writeHead(200, {
+      "content-type": contentTypeFor(filePath),
+      "cache-control": relativePath === "index.html" ? "no-store" : "public, max-age=31536000, immutable"
+    });
+    response.end(content);
+  } catch {
+    writeJson(response, 404, {
+      error: "Pathfinder UI assets were not found. Run npm run build before starting the local server."
+    });
+  }
+}
+
+function isPathInside(root: string, candidate: string): boolean {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function contentTypeFor(filePath: string): string {
+  const extension = path.extname(filePath);
+  if (extension === ".html") {
+    return "text/html; charset=utf-8";
+  }
+
+  if (extension === ".js") {
+    return "text/javascript; charset=utf-8";
+  }
+
+  if (extension === ".css") {
+    return "text/css; charset=utf-8";
+  }
+
+  if (extension === ".svg") {
+    return "image/svg+xml";
+  }
+
+  return "application/octet-stream";
+}

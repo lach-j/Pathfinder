@@ -21,7 +21,8 @@ Source package layout:
 packages/core          domain types, validation, pure planning/review/PR logic
 packages/state         local .pathfinder/ filesystem persistence
 packages/git           local Git adapter
-packages/local-server  local-only HTTP API and browser UI assets
+packages/ui            React browser app for local Pathfinder views
+packages/local-server  local-only HTTP API and static UI asset serving
 packages/cli           command routing, argument parsing, terminal output
 ```
 
@@ -166,9 +167,16 @@ The server binds to `127.0.0.1` and is not a hosted backend. It does not add aut
 cloud sync, or external API calls; it only exposes local Pathfinder state and local Git diffs
 from the current repository.
 
-The CLI command starts the local server from `packages/local-server`. Browser UI assets live under
-`packages/local-server/src/review-viewer/` so future local workspace views can grow outside the CLI
-package.
+The CLI command starts the local server from `packages/local-server`. Browser UI source lives under
+`packages/ui/src/` as a Vite React app, and the local server serves the built assets from
+`packages/ui/dist/`.
+
+For frontend-only development, run the API server and Vite dev server separately:
+
+```bash
+npm exec -- pathfinder review serve --port 4783
+npm run dev -w @pathfinder/ui
+```
 
 Open the printed URL, such as `http://127.0.0.1:4783`, to use the local
 diff viewer. The viewer shows the active workstream and slice, lets you switch
