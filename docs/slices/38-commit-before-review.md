@@ -1,6 +1,6 @@
 # Slice 38: Commit Before Review
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -86,3 +86,28 @@ git commit -m "Implement <slice>"
 pathfinder review start --base main
 ```
 
+## Implementation Summary
+
+- Added the scriptable `needs_commit` agent phase when an active slice has uncommitted Git changes and no open feedback.
+- Updated agent prompts to require committing implementation or feedback fixes before starting or refreshing committed-diff review.
+- Made `pathfinder review start --base <base-ref>` require a baseline commit, an active slice, and a clean worktree/index before creating a review session.
+- Documented the commit-before-review workflow in the README and covered dirty, staged, committed, and unborn-repository cases in tests.
+
+## Verification
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Manual smoke test completed in a temporary Git repository:
+
+```bash
+pathfinder agent next --json
+pathfinder review start --base main
+git add src/report.ts
+git commit -m "Implement Add Report"
+pathfinder review start --base main
+```

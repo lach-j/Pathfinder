@@ -710,6 +710,26 @@ test("returns agent next recommendations from active Pathfinder state", async ()
   assert.equal(ready.workstreamId, workstream.id);
   assert.equal(ready.sliceId, slice.id);
 
+  const needsCommit = await store.getAgentNext(
+    async (baseRef) => ({
+      baseRef,
+      headRef: "feature",
+      headCommit: "abc123",
+      mergeBase: "abc000",
+      files: []
+    }),
+    undefined,
+    async () => true
+  );
+
+  assert.equal(needsCommit.phase, "needs_commit");
+  assert.deepEqual(needsCommit.commands, [
+    "git status --short",
+    "git add <changed-files>",
+    "git commit -m \"Implement Add Report\"",
+    "pathfinder review start --base main"
+  ]);
+
   await store.startReviewSession({
     baseRef: "main",
     headRef: "feature",

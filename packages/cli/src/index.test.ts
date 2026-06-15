@@ -432,6 +432,48 @@ test("agent next recommends slice start with the suggested base when selecting a
   ]);
 });
 
+test("agent next reports needs_commit for dirty active slice work", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-dirty-agent-next"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+
+  const result = await runCli(["agent", "next", "--json"], repo);
+  const parsed = JSON.parse(result.stdout);
+
+  assert.equal(parsed.phase, "needs_commit");
+  assert.deepEqual(parsed.commands, [
+    "git status --short",
+    "git add <changed-files>",
+    "git commit -m \"Implement Add Report\"",
+    "pathfinder review start --base <base-ref>"
+  ]);
+
+  await git(repo, ["add", "src/report.ts"]);
+  const staged = await runCli(["agent", "next", "--json"], repo);
+  assert.equal(JSON.parse(staged.stdout).phase, "needs_commit");
+});
+
 test("prints agent prompts in automatic and explicit phase modes", async () => {
   const repo = await createTempGitRepo();
 
@@ -1816,6 +1858,8 @@ test("review session start reports missing active slice and invalid base refs", 
     repo
   );
   await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
 
   await assert.rejects(
     () => runCli(["review", "start", "--base", "missing"], repo),
@@ -1823,6 +1867,69 @@ test("review session start reports missing active slice and invalid base refs", 
       isExecError(error) &&
       error.code === 1 &&
       /Error: Base ref 'missing' was not found or is not a commit\./.test(error.stderr)
+  );
+});
+
+test("review start requires a clean committed worktree", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-review-cleanliness"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+
+  await assert.rejects(
+    () => runCli(["review", "start", "--base", "main"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Cannot start a review session with uncommitted changes/.test(error.stderr) &&
+      /Commit the slice changes, stash or remove unrelated changes/.test(error.stderr)
+  );
+
+  await git(repo, ["add", "src/report.ts"]);
+  await assert.rejects(
+    () => runCli(["review", "start", "--base", "main"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Cannot start a review session with uncommitted changes/.test(error.stderr)
+  );
+
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  const clean = await runCli(["review", "start", "--base", "main"], repo);
+
+  assert.match(clean.stdout, /# Pathfinder Review Session/);
+  assert.match(clean.stdout, /Head ref: feature-review-cleanliness/);
+  assert.match(clean.stdout, /Changed files: 1/);
+});
+
+test("review start reports unborn repositories clearly", async () => {
+  const repo = await createUnbornRealTempGitRepo();
+
+  await assert.rejects(
+    () => runCli(["review", "start", "--base", "main"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Cannot start a review session because this repository has no commits/.test(error.stderr) &&
+      /Create a first baseline commit/.test(error.stderr)
   );
 });
 
@@ -2008,6 +2115,12 @@ async function createRealTempGitRepo(): Promise<string> {
   await writeFile(path.join(repo, "README.md"), "# Test\n", "utf8");
   await git(repo, ["add", "README.md"]);
   await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "initial"]);
+  return repo;
+}
+
+async function createUnbornRealTempGitRepo(): Promise<string> {
+  const repo = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-git-unborn-"));
+  await git(repo, ["init", "--initial-branch=main"]);
   return repo;
 }
 

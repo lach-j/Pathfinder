@@ -180,6 +180,7 @@ export interface ImportedStagePlanState {
 
 export type RepositorySummaryProvider = (baseRef: string) => Promise<RepositorySummary>;
 export type SuggestedBaseRefProvider = () => Promise<string | undefined>;
+export type UncommittedChangesProvider = () => Promise<boolean>;
 
 export interface AddCommentInput {
   body: string;
@@ -376,8 +377,15 @@ export class PathfinderStore {
 
   async getAgentDoctor(
     provider?: RepositorySummaryProvider,
-    options: AgentDoctorOptions = {}
+    uncommittedChangesProviderOrOptions?: UncommittedChangesProvider | AgentDoctorOptions,
+    maybeOptions: AgentDoctorOptions = {}
   ): Promise<AgentDoctorResult> {
+    const uncommittedChangesProvider = typeof uncommittedChangesProviderOrOptions === "function"
+      ? uncommittedChangesProviderOrOptions
+      : undefined;
+    const options = typeof uncommittedChangesProviderOrOptions === "function"
+      ? maybeOptions
+      : (uncommittedChangesProviderOrOptions ?? {});
     const gitRoot = await findGitRoot(this.cwd);
     if (!gitRoot) {
       throw new PathfinderError("Agent doctor must be run inside a Git repository.");
@@ -397,7 +405,7 @@ export class PathfinderStore {
       }
     }
 
-    const nextCheck = await this.checkAgentNext(provider);
+    const nextCheck = await this.checkAgentNext(provider, uncommittedChangesProvider);
     checks.push(nextCheck.check);
 
     return {
@@ -1172,7 +1180,8 @@ export class PathfinderStore {
 
   async getAgentNext(
     provider?: RepositorySummaryProvider,
-    suggestedBaseRefProvider?: SuggestedBaseRefProvider
+    suggestedBaseRefProvider?: SuggestedBaseRefProvider,
+    uncommittedChangesProvider?: UncommittedChangesProvider
   ): Promise<AgentNextRecommendation> {
     let project: Project;
     try {
@@ -1219,6 +1228,9 @@ export class PathfinderStore {
     const reviewSessions = await this.listReviewSessions(activeWorkstream.id);
     const knownBaseRef = activeSlice?.baseRef ?? latestSessionForSlice(reviewSessions, activeSlice?.id)?.baseRef;
     const repository = knownBaseRef && provider ? await this.tryGetRepositorySummary(provider, knownBaseRef) : {};
+    const hasUncommittedChanges = activeSlice && uncommittedChangesProvider
+      ? await this.tryGetUncommittedChanges(uncommittedChangesProvider)
+      : undefined;
     const suggestedBaseRef = !activeSlice && suggestedBaseRefProvider
       ? await this.tryGetSuggestedBaseRef(suggestedBaseRefProvider)
       : undefined;
@@ -1233,6 +1245,7 @@ export class PathfinderStore {
       planMarkdown: await this.getPlan(activeWorkstream.id),
       openComments: (await this.listComments(activeWorkstream.id)).filter((comment) => !comment.resolved),
       reviewSessions,
+      hasUncommittedChanges,
       suggestedBaseRef,
       feedbackQueuePath: await this.getDefaultFeedbackQueuePath(),
       ...repository
@@ -1242,9 +1255,10 @@ export class PathfinderStore {
   async getAgentPrompt(
     phase?: AgentPromptPhase,
     provider?: RepositorySummaryProvider,
-    suggestedBaseRefProvider?: SuggestedBaseRefProvider
+    suggestedBaseRefProvider?: SuggestedBaseRefProvider,
+    uncommittedChangesProvider?: UncommittedChangesProvider
   ): Promise<string> {
-    const recommendation = await this.getAgentNext(provider, suggestedBaseRefProvider);
+    const recommendation = await this.getAgentNext(provider, suggestedBaseRefProvider, uncommittedChangesProvider);
     const workstreamId = recommendation.workstreamId;
 
     if (!workstreamId || workstreamId.startsWith("<")) {
@@ -1591,6 +1605,14 @@ export class PathfinderStore {
     }
   }
 
+  private async tryGetUncommittedChanges(provider: UncommittedChangesProvider): Promise<boolean | undefined> {
+    try {
+      return await provider();
+    } catch {
+      return undefined;
+    }
+  }
+
   private async checkPathfinderProject(gitRoot: string): Promise<AgentDoctorCheck> {
     try {
       const resolution = await resolveExistingStateRoot(this.cwd, this.options);
@@ -1813,12 +1835,15 @@ export class PathfinderStore {
     };
   }
 
-  private async checkAgentNext(provider?: RepositorySummaryProvider): Promise<{
+  private async checkAgentNext(
+    provider?: RepositorySummaryProvider,
+    uncommittedChangesProvider?: UncommittedChangesProvider
+  ): Promise<{
     check: AgentDoctorCheck;
     phase: AgentNextRecommendation["phase"];
   }> {
     try {
-      const recommendation = await this.getAgentNext(provider);
+      const recommendation = await this.getAgentNext(provider, undefined, uncommittedChangesProvider);
       return {
         check: {
           id: "agent-next",

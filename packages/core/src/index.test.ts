@@ -242,6 +242,33 @@ test("recommends review session and human review phases for agents", () => {
   assert.equal(needsReviewSession.phase, "needs_review_session");
   assert.deepEqual(needsReviewSession.commands, ["pathfinder review start --base main"]);
 
+  const needsCommit = getAgentNextRecommendation({
+    isInitialized: true,
+    workstreams: [workstream],
+    activeWorkstream: workstream,
+    slices: [activeSlice],
+    activeSlice,
+    planMarkdown: "# Plan",
+    openComments: [],
+    reviewSessions: [],
+    hasUncommittedChanges: true,
+    repositorySummary: {
+      baseRef: "main",
+      headRef: "feature-report",
+      headCommit: "abc123",
+      mergeBase: "abc000",
+      files: []
+    }
+  });
+
+  assert.equal(needsCommit.phase, "needs_commit");
+  assert.deepEqual(needsCommit.commands, [
+    "git status --short",
+    "git add <changed-files>",
+    "git commit -m \"Implement add-report\"",
+    "pathfinder review start --base main"
+  ]);
+
   const needsHumanReview = getAgentNextRecommendation({
     isInitialized: true,
     workstreams: [workstream],
@@ -267,6 +294,33 @@ test("recommends review session and human review phases for agents", () => {
 
   assert.equal(needsHumanReview.phase, "needs_human_review");
   assert.equal(needsHumanReview.reviewSessionId, "review-add-report");
+
+  const needsCommitBeforeRefresh = getAgentNextRecommendation({
+    isInitialized: true,
+    workstreams: [workstream],
+    activeWorkstream: workstream,
+    slices: [activeSlice],
+    activeSlice,
+    planMarkdown: "# Plan",
+    openComments: [],
+    reviewSessions: [
+      {
+        id: "review-add-report",
+        workstreamId: "inventory-alerts",
+        sliceId: "add-report",
+        baseRef: "main",
+        headRef: "feature-report",
+        headCommit: "abc123",
+        mergeBase: "abc000",
+        changedFiles: [],
+        createdAt: "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    hasUncommittedChanges: true
+  });
+
+  assert.equal(needsCommitBeforeRefresh.phase, "needs_commit");
+  assert.deepEqual(needsCommitBeforeRefresh.commands.at(-1), "pathfinder review refresh inventory-alerts review-add-report");
 });
 
 test("renders deterministic agent prompts for implement and feedback phases", () => {
@@ -296,6 +350,8 @@ test("renders deterministic agent prompts for implement and feedback phases", ()
   assert.match(implement, /slice start <workstream-id> <slice-id> --base <base-ref>/);
   assert.match(implement, /Implement only slice `add-report`/);
   assert.match(implement, /`npm run typecheck`/);
+  assert.match(implement, /git commit -m "Implement <slice-title>"/);
+  assert.match(implement, /commit the implementation before review/);
 
   const feedback = renderAgentPrompt({
     recommendation: {

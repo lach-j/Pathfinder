@@ -124,8 +124,13 @@ pathfinder slice start <workstream-id> <slice-id> --base main
 Start a review session for the active slice:
 
 ```bash
+git status --short
+git add <changed-files>
+git commit -m "Implement <slice>"
 pathfinder review start --base main
 ```
+
+Review sessions use committed Git diffs. `pathfinder review start` refuses to run while the worktree or index has uncommitted changes.
 
 Open the local review UI:
 

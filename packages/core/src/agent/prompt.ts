@@ -35,7 +35,7 @@ export function renderAgentPrompt(input: AgentPromptInput): string {
     "- Do not resolve Pathfinder comments automatically; leave resolution for the human after review.",
     "- Do not call external APIs, add hosted services, or add authentication, billing, cloud sync, organisations, roles, or permissions.",
     "- Run repository checks before handing work back.",
-    "- When implementation or feedback fixes are complete, start or refresh the Pathfinder review session.",
+    "- Commit implementation or feedback fixes before starting or refreshing a Pathfinder review session.",
     "",
     "## Commands To Run",
     "",
@@ -77,7 +77,7 @@ export function promptPhaseForNextPhase(phase: AgentNextPhase): AgentPromptPhase
     return "pr";
   }
 
-  if (phase === "ready_to_implement" || phase === "needs_slice_selection") {
+  if (phase === "ready_to_implement" || phase === "needs_slice_selection" || phase === "needs_commit") {
     return "implement";
   }
 
@@ -119,6 +119,9 @@ function commandsForPromptPhase(phase: AgentPromptPhase, context: PromptCommandC
       ...context.recommendedCommands,
       "pathfinder current",
       ...checkCommands,
+      "git status --short",
+      "git add <changed-files>",
+      "git commit -m \"Implement <slice-title>\"",
       `pathfinder review start --base <base-ref>`
     ];
   }
@@ -130,6 +133,9 @@ function commandsForPromptPhase(phase: AgentPromptPhase, context: PromptCommandC
       "npm run typecheck",
       "npm test",
       "npm run lint --if-present",
+      "git status --short",
+      "git add <changed-files>",
+      "git commit -m \"Address Pathfinder feedback\"",
       `pathfinder review refresh ${context.workstreamId} ${context.reviewSessionId}`
     ];
   }
@@ -177,8 +183,9 @@ function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInst
       "2. Run `pathfinder current` and read the active requirements, plan, and slice description after the slice branch is checked out.",
       `3. Implement only slice \`${context.sliceId}\`; avoid adjacent refactors and unrelated cleanup.`,
       "4. Run `npm run typecheck`, `npm test`, and `npm run lint --if-present`.",
-      "5. When the implementation is ready, run `pathfinder review start --base <base-ref>` or refresh the existing review session if Pathfinder reports one.",
-      "6. Summarize changed files, checks, and manual verification steps."
+      "5. Inspect `git status --short`, stage only the slice files, and commit the implementation before review.",
+      "6. After the commit, run `pathfinder review start --base <base-ref>` or refresh the existing review session if Pathfinder reports one.",
+      "7. Summarize changed files, checks, and manual verification steps."
     ];
   }
 
@@ -187,17 +194,19 @@ function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInst
       `1. Export and read \`${context.feedbackQueuePath}\`.`,
       "2. Address every open feedback item in that file while staying scoped to the active slice.",
       "3. Run `npm run typecheck`, `npm test`, and `npm run lint --if-present`.",
-      `4. Refresh the review session with \`pathfinder review refresh ${context.workstreamId} ${context.reviewSessionId}\`.`,
-      "5. Do not resolve comments; the human reviewer resolves them after verifying the refreshed diff."
+      "4. Inspect `git status --short`, stage only feedback fixes, and commit them.",
+      `5. Refresh the review session with \`pathfinder review refresh ${context.workstreamId} ${context.reviewSessionId}\`.`,
+      "6. Do not resolve comments; the human reviewer resolves them after verifying the refreshed diff."
     ];
   }
 
   if (phase === "review") {
     return [
-      "1. Ensure a review session exists for the active slice; start one with `pathfinder review start --base <base-ref>` if needed.",
-      "2. Run `pathfinder review serve` so the human can inspect the local diff UI.",
-      "3. If using CLI-only review, inspect `pathfinder diff show --session <review-session-id>` and open comments with `pathfinder comment list`.",
-      "4. Pause implementation until the human adds feedback, marks the slice complete, or asks for another action."
+      "1. Ensure the worktree and index are clean; Pathfinder review sessions use committed diffs only.",
+      "2. Ensure a review session exists for the active slice; start one with `pathfinder review start --base <base-ref>` if needed.",
+      "3. Run `pathfinder review serve` so the human can inspect the local diff UI.",
+      "4. If using CLI-only review, inspect `pathfinder diff show --session <review-session-id>` and open comments with `pathfinder comment list`.",
+      "5. Pause implementation until the human adds feedback, marks the slice complete, or asks for another action."
     ];
   }
 

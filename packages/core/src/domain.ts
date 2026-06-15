@@ -259,6 +259,7 @@ export type AgentNextPhase =
   | "needs_plan"
   | "needs_slice_selection"
   | "ready_to_implement"
+  | "needs_commit"
   | "needs_review_session"
   | "needs_human_review"
   | "feedback"
@@ -289,6 +290,7 @@ export interface AgentNextInput {
   reviewSessions?: ReviewSession[];
   repositorySummary?: RepositorySummary;
   repositorySummaryError?: string;
+  hasUncommittedChanges?: boolean;
   suggestedBaseRef?: string;
   feedbackQueuePath?: string;
   stateError?: string;

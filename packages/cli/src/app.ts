@@ -377,7 +377,8 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     const git = new GitAdapter({ cwd: process.cwd() });
     const recommendation = await store.getAgentNext(
       (baseRef) => git.getCommittedSummaryAgainstBase(baseRef),
-      () => git.getSuggestedBaseRef()
+      () => git.getSuggestedBaseRef(),
+      () => git.hasUncommittedChanges()
     );
 
     if (options.json) {
@@ -394,6 +395,7 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     const git = new GitAdapter({ cwd: process.cwd() });
     const result = await store.getAgentDoctor(
       (baseRef) => git.getCommittedSummaryAgainstBase(baseRef),
+      () => git.hasUncommittedChanges(),
       { personal: options.personal }
     );
 
@@ -421,7 +423,8 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     const prompt = await store.getAgentPrompt(
       promptPhase,
       (baseRef) => git.getCommittedSummaryAgainstBase(baseRef),
-      () => git.getSuggestedBaseRef()
+      () => git.getSuggestedBaseRef(),
+      () => git.hasUncommittedChanges()
     );
     process.stdout.write(prompt);
     return;
@@ -900,6 +903,11 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
     const options = parseOptions(args);
     requireOption(options.base, "--base");
     const git = new GitAdapter({ cwd: process.cwd() });
+    await requireBaselineCommit(git, "start a review session");
+    if (!(await store.getActiveSlice())) {
+      throw new PathfinderError("No active slice set. Use 'pathfinder slice active <workstream-id> <slice-id>' first.");
+    }
+    await requireCleanCommittedReviewRepo(git, "start a review session");
     const repositorySummary = await git.getCommittedSummaryAgainstBase(options.base);
     const session = await store.startReviewSession(repositorySummary);
     process.stdout.write(formatReviewSessionSummary(session));
@@ -1000,6 +1008,23 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
   }
 
   throw usageError("Unknown review command. Expected serve, start, refresh, sessions, session, run, create, list, or show.");
+}
+
+async function requireBaselineCommit(git: GitAdapter, action: string): Promise<void> {
+  if (!(await git.hasCommits())) {
+    throw new PathfinderError(
+      `Cannot ${action} because this repository has no commits. Create a first baseline commit before using committed-diff review.`
+    );
+  }
+}
+
+async function requireCleanCommittedReviewRepo(git: GitAdapter, action: string): Promise<void> {
+  await requireBaselineCommit(git, action);
+  if (await git.hasUncommittedChanges()) {
+    throw new PathfinderError(
+      `Cannot ${action} with uncommitted changes. Commit the slice changes, stash or remove unrelated changes, then rerun the review command.`
+    );
+  }
 }
 
 function parsePort(value: string | undefined): number {

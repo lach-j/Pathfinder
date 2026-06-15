@@ -122,6 +122,29 @@ export function getAgentNextRecommendation(input: AgentNextInput): AgentNextReco
       });
     }
 
+    if (input.hasUncommittedChanges) {
+      const baseRef = input.repositorySummary?.baseRef ?? activeSlice.baseRef ?? latestSession?.baseRef ?? "<base-ref>";
+      const followUpCommand = latestSession
+        ? `pathfinder review refresh ${workstream.id} ${latestSession.id}`
+        : `pathfinder review start --base ${baseRef}`;
+
+      return recommendation({
+        phase: "needs_commit",
+        reason: "The active slice has uncommitted changes. Pathfinder review sessions use committed diffs.",
+        workstreamId: workstream.id,
+        sliceId: activeSlice.id,
+        ...(latestSession ? { reviewSessionId: latestSession.id } : {}),
+        commands: [
+          "git status --short",
+          "git add <changed-files>",
+          `git commit -m "Implement ${activeSlice.title}"`,
+          followUpCommand
+        ],
+        agentInstruction: `Commit the scoped changes for slice ${activeSlice.id} before starting or refreshing Pathfinder review. Do not automatically include unrelated files.`,
+        humanInstruction: "Review the pending Git changes, commit only the slice work, then rerun the Pathfinder review command."
+      });
+    }
+
     if (allSlicesComplete) {
       return readyForPr(workstream.id);
     }
@@ -178,7 +201,7 @@ export function getAgentNextRecommendation(input: AgentNextInput): AgentNextReco
       workstreamId: workstream.id,
       sliceId: activeSlice.id,
       commands: ["pathfinder current", `pathfinder review start --base ${baseRef}`],
-      agentInstruction: "Implement only the active slice, keep changes scoped, run checks, then start a review session when changes are ready.",
+      agentInstruction: "Implement only the active slice, keep changes scoped, run checks, commit the slice work, then start a review session.",
       humanInstruction: "After implementation, review the local diff in Pathfinder."
     });
   }
