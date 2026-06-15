@@ -261,6 +261,7 @@ export type AgentNextPhase =
   | "ready_to_implement"
   | "needs_commit"
   | "needs_review_session"
+  | "awaiting_human_approval"
   | "needs_human_review"
   | "feedback"
   | "ready_for_pr"
@@ -268,6 +269,7 @@ export type AgentNextPhase =
 
 export interface AgentNextRecommendation {
   phase: AgentNextPhase;
+  compatibilityPhase?: AgentNextPhase;
   reason: string;
   workstreamId?: string;
   sliceId?: string;

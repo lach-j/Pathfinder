@@ -189,6 +189,13 @@ test("detects dirty state and creates a branch from a base ref", async () => {
   await writeFile(path.join(repo, "tracked.txt"), "dirty\n", "utf8");
   assert.equal(await adapter.hasUncommittedChanges(), true);
   await git(repo, ["checkout", "--", "tracked.txt"]);
+  await mkdir(path.join(repo, ".pathfinder"), { recursive: true });
+  await writeFile(path.join(repo, ".pathfinder", "review-sessions.json"), "{}\n", "utf8");
+  assert.equal(await adapter.hasUncommittedChanges(), true);
+  assert.equal(await adapter.hasUncommittedChangesOutside([".pathfinder/"]), false);
+  await writeFile(path.join(repo, "tracked.txt"), "dirty\n", "utf8");
+  assert.equal(await adapter.hasUncommittedChangesOutside([".pathfinder/"]), true);
+  await git(repo, ["checkout", "--", "tracked.txt"]);
 
   await adapter.createAndCheckoutBranch("pathfinder/workstream/slice", "main");
 

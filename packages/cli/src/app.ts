@@ -28,6 +28,7 @@ import {
   formatEvidence,
   formatRepositorySummary,
   formatReview,
+  formatReviewApproval,
   formatReviewSession,
   formatReviewSessionSummary,
   formatAgentUserInstall,
@@ -378,7 +379,7 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     const recommendation = await store.getAgentNext(
       (baseRef) => git.getCommittedSummaryAgainstBase(baseRef),
       () => git.getSuggestedBaseRef(),
-      () => git.hasUncommittedChanges()
+      () => git.hasUncommittedChangesOutside(agentIgnoredDirtyPathPrefixes())
     );
 
     if (options.json) {
@@ -395,7 +396,7 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
     const git = new GitAdapter({ cwd: process.cwd() });
     const result = await store.getAgentDoctor(
       (baseRef) => git.getCommittedSummaryAgainstBase(baseRef),
-      () => git.hasUncommittedChanges(),
+      () => git.hasUncommittedChangesOutside(agentIgnoredDirtyPathPrefixes()),
       { personal: options.personal }
     );
 
@@ -424,13 +425,17 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
       promptPhase,
       (baseRef) => git.getCommittedSummaryAgainstBase(baseRef),
       () => git.getSuggestedBaseRef(),
-      () => git.hasUncommittedChanges()
+      () => git.hasUncommittedChangesOutside(agentIgnoredDirtyPathPrefixes())
     );
     process.stdout.write(prompt);
     return;
   }
 
   throw usageError("Unknown agent command. Expected bootstrap, commands, doctor, install, next, or prompt.");
+}
+
+function agentIgnoredDirtyPathPrefixes(): string[] {
+  return [".pathfinder/", ".pathfinder-feedback.md"];
 }
 
 async function runDiff(action: string | undefined, args: string[]): Promise<void> {
@@ -936,6 +941,16 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
     return;
   }
 
+  if (action === "approve") {
+    const [workstreamId, ...optionArgs] = args;
+    requireArgument(workstreamId, "workstream id");
+    const options = parseOptions(optionArgs);
+    requireOption(options.session, "--session");
+    const result = await store.approveReviewSession(workstreamId, options.session);
+    process.stdout.write(formatReviewApproval(result));
+    return;
+  }
+
   if (action === "sessions") {
     const [workstreamId, ...extra] = args;
     requireArgument(workstreamId, "workstream id");
@@ -1007,7 +1022,7 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
     return;
   }
 
-  throw usageError("Unknown review command. Expected serve, start, refresh, sessions, session, run, create, list, or show.");
+  throw usageError("Unknown review command. Expected serve, start, refresh, approve, sessions, session, run, create, list, or show.");
 }
 
 async function requireBaselineCommit(git: GitAdapter, action: string): Promise<void> {

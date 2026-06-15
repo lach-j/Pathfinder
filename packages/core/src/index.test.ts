@@ -269,7 +269,7 @@ test("recommends review session and human review phases for agents", () => {
     "pathfinder review start --base main"
   ]);
 
-  const needsHumanReview = getAgentNextRecommendation({
+  const awaitingApproval = getAgentNextRecommendation({
     isInitialized: true,
     workstreams: [workstream],
     activeWorkstream: workstream,
@@ -292,8 +292,17 @@ test("recommends review session and human review phases for agents", () => {
     ]
   });
 
-  assert.equal(needsHumanReview.phase, "needs_human_review");
-  assert.equal(needsHumanReview.reviewSessionId, "review-add-report");
+  assert.equal(awaitingApproval.phase, "awaiting_human_approval");
+  assert.equal(awaitingApproval.compatibilityPhase, "needs_human_review");
+  assert.equal(awaitingApproval.reviewSessionId, "review-add-report");
+  assert.deepEqual(awaitingApproval.commands, [
+    "pathfinder review serve",
+    "pathfinder diff show --session review-add-report",
+    "pathfinder comment list inventory-alerts --session review-add-report --open",
+    "pathfinder review approve inventory-alerts --session review-add-report"
+  ]);
+  assert.match(awaitingApproval.agentInstruction, /vague "continue" is not approval/);
+  assert.match(awaitingApproval.humanInstruction, /explicitly tell the agent "approved"/);
 
   const needsCommitBeforeRefresh = getAgentNextRecommendation({
     isInitialized: true,
@@ -321,6 +330,31 @@ test("recommends review session and human review phases for agents", () => {
 
   assert.equal(needsCommitBeforeRefresh.phase, "needs_commit");
   assert.deepEqual(needsCommitBeforeRefresh.commands.at(-1), "pathfinder review refresh inventory-alerts review-add-report");
+
+  const completeActiveSlice = getAgentNextRecommendation({
+    isInitialized: true,
+    workstreams: [workstream],
+    activeWorkstream: workstream,
+    slices: [
+      {
+        ...activeSlice,
+        status: "complete"
+      },
+      testSlice("next-slice", "proposed", "2026-01-02T00:00:00.000Z")
+    ],
+    activeSlice: {
+      ...activeSlice,
+      status: "complete"
+    },
+    nextSlice: testSlice("next-slice", "proposed", "2026-01-02T00:00:00.000Z"),
+    planMarkdown: "# Plan",
+    openComments: [],
+    reviewSessions: [],
+    hasUncommittedChanges: true
+  });
+
+  assert.equal(completeActiveSlice.phase, "needs_slice_selection");
+  assert.equal(completeActiveSlice.sliceId, "next-slice");
 });
 
 test("renders deterministic agent prompts for implement and feedback phases", () => {
@@ -374,6 +408,31 @@ test("renders deterministic agent prompts for implement and feedback phases", ()
   assert.match(feedback, /`pathfinder feedback export inventory-alerts --session review-add-report --file \.\/\.pathfinder-feedback\.md`/);
   assert.match(feedback, /Address every open feedback item/);
   assert.match(feedback, /Do not resolve comments/);
+
+  const review = renderAgentPrompt({
+    recommendation: {
+      phase: "awaiting_human_approval",
+      compatibilityPhase: "needs_human_review",
+      reason: "Active review session exists and has no open comments.",
+      workstreamId: "inventory-alerts",
+      sliceId: "add-report",
+      reviewSessionId: "review-add-report",
+      commands: [
+        "pathfinder review serve",
+        "pathfinder diff show --session review-add-report",
+        "pathfinder comment list inventory-alerts --session review-add-report --open",
+        "pathfinder review approve inventory-alerts --session review-add-report"
+      ],
+      agentInstruction: "Pause.",
+      humanInstruction: "Approve."
+    },
+    workstream,
+    activeSlice
+  });
+
+  assert.match(review, /# Pathfinder Agent Prompt: review/);
+  assert.match(review, /pathfinder review approve inventory-alerts --session review-add-report/);
+  assert.match(review, /Generic messages like "continue" are not approval/);
 
   const externalFeedback = renderAgentPrompt({
     recommendation: {

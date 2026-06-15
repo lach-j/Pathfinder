@@ -1,6 +1,6 @@
 # Slice 39: Human Review Approval Gate
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -84,3 +84,28 @@ pathfinder review approve <workstream-id> --session <review-session-id>
 pathfinder agent next --json
 ```
 
+## Completion Notes
+
+- Added `awaiting_human_approval` agent-next output with `compatibilityPhase: "needs_human_review"` for existing integrations.
+- Added `pathfinder review approve <workstream-id> --session <review-session-id>`, which refuses open session comments, records manual evidence, and marks the active slice complete.
+- Updated agent prompt/recommendation text so vague "continue" messages are not treated as approval.
+- Filtered Pathfinder-owned local state writes out of agent dirty checks so review sessions and approval records do not hide the approval gate.
+- Updated README/help text and core/state/git/CLI tests for the approval workflow.
+
+Checks run:
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```
+
+Smoke verified in a temporary Git repo:
+
+```bash
+pathfinder agent next --json
+pathfinder comment list smoke-review --session review-first-slice --open
+pathfinder review approve smoke-review --session review-first-slice
+pathfinder agent next --json
+```

@@ -206,6 +206,12 @@ export interface RefreshedReviewSession {
   comments: ReviewComment[];
 }
 
+export interface ReviewApprovalResult {
+  session: ReviewSession;
+  slice: Slice;
+  evidence: Evidence;
+}
+
 interface SlicesFile {
   slices: Slice[];
 }
@@ -966,6 +972,49 @@ export class PathfinderStore {
     }
 
     return session;
+  }
+
+  async approveReviewSession(workstreamId: string, sessionId: string): Promise<ReviewApprovalResult> {
+    const active = await this.getActiveSlice();
+
+    if (!active) {
+      throw new PathfinderError("No active slice set. Use 'pathfinder slice active <workstream-id> <slice-id>' first.");
+    }
+
+    if (active.workstream.id !== workstreamId) {
+      throw new PathfinderError(
+        `Review session approval requires the active workstream '${active.workstream.id}', but '${workstreamId}' was provided.`
+      );
+    }
+
+    const session = await this.getReviewSession(workstreamId, sessionId);
+
+    if (session.sliceId !== active.slice.id) {
+      throw new PathfinderError(
+        `Review session '${sessionId}' belongs to slice '${session.sliceId}', but active slice is '${active.slice.id}'.`
+      );
+    }
+
+    const openSessionComments = await this.listComments(workstreamId, {
+      sessionId,
+      openOnly: true
+    });
+
+    if (openSessionComments.length > 0) {
+      throw new PathfinderError(
+        `Cannot approve review session '${sessionId}' while ${openSessionComments.length} open review comment(s) remain. Resolve or address them first.`
+      );
+    }
+
+    const evidence = await this.addEvidence(
+      workstreamId,
+      active.slice.id,
+      "manual",
+      `Human approved review session ${sessionId}.`
+    );
+    const slice = await this.updateSliceStatus(workstreamId, active.slice.id, "complete");
+
+    return { session, slice, evidence };
   }
 
   async findReviewSession(sessionId: string): Promise<ReviewSession> {

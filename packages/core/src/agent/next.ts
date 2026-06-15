@@ -122,6 +122,14 @@ export function getAgentNextRecommendation(input: AgentNextInput): AgentNextReco
       });
     }
 
+    if (allSlicesComplete) {
+      return readyForPr(workstream.id);
+    }
+
+    if (activeSlice.status === "complete") {
+      return selectNextSlice(workstream.id, input.nextSlice);
+    }
+
     if (input.hasUncommittedChanges) {
       const baseRef = input.repositorySummary?.baseRef ?? activeSlice.baseRef ?? latestSession?.baseRef ?? "<base-ref>";
       const followUpCommand = latestSession
@@ -145,28 +153,23 @@ export function getAgentNextRecommendation(input: AgentNextInput): AgentNextReco
       });
     }
 
-    if (allSlicesComplete) {
-      return readyForPr(workstream.id);
-    }
-
-    if (activeSlice.status === "complete") {
-      return selectNextSlice(workstream.id, input.nextSlice);
-    }
-
     if (latestSession) {
+      const approveCommand = `pathfinder review approve ${workstream.id} --session ${latestSession.id}`;
       return recommendation({
-        phase: "needs_human_review",
-        reason: "Active review session exists and has no open comments.",
+        phase: "awaiting_human_approval",
+        compatibilityPhase: "needs_human_review",
+        reason: "Active review session exists and has no open comments; a human must approve it before the slice can complete.",
         workstreamId: workstream.id,
         sliceId: activeSlice.id,
         reviewSessionId: latestSession.id,
         commands: [
           "pathfinder review serve",
           `pathfinder diff show --session ${latestSession.id}`,
-          `pathfinder comment list ${workstream.id} --session ${latestSession.id} --open`
+          `pathfinder comment list ${workstream.id} --session ${latestSession.id} --open`,
+          approveCommand
         ],
-        agentInstruction: "Pause implementation. The current diff needs human review before more agent work.",
-        humanInstruction: "Open the local review UI or inspect the session diff, then add comments or mark the slice complete."
+        agentInstruction: `Pause implementation. Open the review for the human, or wait until they explicitly approve and then run ${approveCommand}. A vague "continue" is not approval.`,
+        humanInstruction: `Open the local review UI or inspect the diff. If the review is acceptable, approve it with '${approveCommand}' or explicitly tell the agent "approved".`
       });
     }
 

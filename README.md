@@ -138,6 +138,12 @@ Open the local review UI:
 pathfinder review serve
 ```
 
+When the review has no open comments and the human accepts the diff, record that explicit approval:
+
+```bash
+pathfinder review approve <workstream-id> --session <review-session-id>
+```
+
 Export open review feedback for the agent:
 
 ```bash

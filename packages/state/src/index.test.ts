@@ -1262,6 +1262,57 @@ test("starts, lists, and gets local review sessions for the active slice", async
   assert.match(stored, /"changedFiles": \[/);
 });
 
+test("approves review sessions only after session comments are closed", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add session approval.");
+  await store.updateSliceStatus(workstream.id, slice.id, "review");
+  await store.setActiveSlice(workstream.id, slice.id);
+  const session = await store.startReviewSession({
+    baseRef: "main",
+    headRef: "feature-review",
+    headCommit: "abc123",
+    mergeBase: "abc000",
+    files: [
+      {
+        path: "src/index.ts",
+        status: "added",
+        category: "source"
+      }
+    ]
+  });
+  const diff = structuredDiff([structuredDiffFile("src/index.ts", [1])]);
+  const comment = await store.addComment(workstream.id, {
+    body: "Needs a fix before approval.",
+    target: {
+      type: "line",
+      sessionId: session.id,
+      filePath: "src/index.ts",
+      lineNumber: 1,
+      side: "new"
+    },
+    structuredDiff: diff
+  });
+
+  await assert.rejects(
+    () => store.approveReviewSession(workstream.id, session.id),
+    /Cannot approve review session 'review-first-slice' while 1 open review comment\(s\) remain/
+  );
+
+  await store.resolveComment(workstream.id, comment.id);
+  const approval = await store.approveReviewSession(workstream.id, session.id);
+  const evidence = await store.listEvidence(workstream.id);
+
+  assert.equal(approval.session.id, session.id);
+  assert.equal(approval.slice.status, "complete");
+  assert.equal(approval.evidence.kind, "manual");
+  assert.equal(approval.evidence.description, `Human approved review session ${session.id}.`);
+  assert.deepEqual(evidence.map((item) => item.id), ["human-approved-review-session-review-first-slice"]);
+  assert.equal((await store.listSlices(workstream.id))[0]?.status, "complete");
+});
+
 test("refreshes review sessions and marks stale comment anchors", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

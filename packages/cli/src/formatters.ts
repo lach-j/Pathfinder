@@ -12,7 +12,7 @@ import {
   StructuredDiff,
   StructuredDiffLine
 } from "@pathfinder/core";
-import { CurrentContext } from "@pathfinder/state";
+import { CurrentContext, ReviewApprovalResult } from "@pathfinder/state";
 import {
   AgentCommandsInstallResult,
   AgentCommandsListResult,
@@ -65,6 +65,22 @@ export function formatReviewSessionSummary(session: ReviewSession): string {
     const pathText = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
     return `- ${formatChangeStatus(file.status)}\t${file.category}\t${pathText}`;
   }));
+
+  return `${lines.join("\n")}\n`;
+}
+
+export function formatReviewApproval(result: ReviewApprovalResult): string {
+  const lines = [
+    "# Pathfinder Review Approval",
+    "",
+    `Session: ${result.session.id}`,
+    `Workstream: ${result.session.workstreamId}`,
+    `Slice: ${result.slice.id}`,
+    `Slice status: ${result.slice.status}`,
+    `Evidence: ${result.evidence.id}`,
+    "",
+    "Human approval recorded locally. This was an explicit review decision, not hidden automation."
+  ];
 
   return `${lines.join("\n")}\n`;
 }

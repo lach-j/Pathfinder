@@ -69,7 +69,7 @@ export function promptPhaseForNextPhase(phase: AgentNextPhase): AgentPromptPhase
     return "feedback";
   }
 
-  if (phase === "needs_human_review" || phase === "needs_review_session") {
+  if (phase === "awaiting_human_approval" || phase === "needs_human_review" || phase === "needs_review_session") {
     return "review";
   }
 
@@ -146,7 +146,8 @@ function commandsForPromptPhase(phase: AgentPromptPhase, context: PromptCommandC
       `pathfinder review start --base <base-ref>`,
       "pathfinder review serve",
       `pathfinder diff show --session ${context.reviewSessionId}`,
-      `pathfinder comment list ${context.workstreamId} --session ${context.reviewSessionId} --open`
+      `pathfinder comment list ${context.workstreamId} --session ${context.reviewSessionId} --open`,
+      `pathfinder review approve ${context.workstreamId} --session ${context.reviewSessionId}`
     ];
   }
 
@@ -206,7 +207,8 @@ function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInst
       "2. Ensure a review session exists for the active slice; start one with `pathfinder review start --base <base-ref>` if needed.",
       "3. Run `pathfinder review serve` so the human can inspect the local diff UI.",
       "4. If using CLI-only review, inspect `pathfinder diff show --session <review-session-id>` and open comments with `pathfinder comment list`.",
-      "5. Pause implementation until the human adds feedback, marks the slice complete, or asks for another action."
+      "5. Pause implementation until the human adds feedback or explicitly approves the review.",
+      `6. Approval is a real human decision gate. Generic messages like "continue" are not approval; only run \`pathfinder review approve ${context.workstreamId} --session ${context.reviewSessionId}\` after the human clearly says the review is approved.`
     ];
   }
 

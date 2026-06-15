@@ -76,6 +76,15 @@ export class GitAdapter {
     return result.stdout.trim().length > 0;
   }
 
+  async hasUncommittedChangesOutside(ignoredPathPrefixes: string[]): Promise<boolean> {
+    await this.requireGitRepository();
+    const result = await this.runGit(["status", "--porcelain"]);
+    const changedPaths = parsePorcelainChangedPaths(result.stdout);
+    return changedPaths.some((changedPath) =>
+      !ignoredPathPrefixes.some((prefix) => changedPath === prefix || changedPath.startsWith(prefix))
+    );
+  }
+
   async hasCommits(): Promise<boolean> {
     await this.requireGitRepository();
     return this.isCommit("HEAD");
@@ -178,6 +187,23 @@ export class GitAdapter {
       return undefined;
     }
   }
+}
+
+function parsePorcelainChangedPaths(output: string): string[] {
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter(Boolean)
+    .flatMap((line) => {
+      const statusPath = line.slice(3);
+      const renameSeparator = " -> ";
+      if (statusPath.includes(renameSeparator)) {
+        const [from, to] = statusPath.split(renameSeparator);
+        return [from, to].filter((value): value is string => Boolean(value));
+      }
+
+      return [statusPath];
+    });
 }
 
 function commandErrorMessage(error: unknown): string {

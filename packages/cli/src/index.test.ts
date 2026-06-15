@@ -51,6 +51,7 @@ test("help lists the implemented commands", async () => {
     "pathfinder review serve [--port 4783]",
     "pathfinder review start --base <base-ref>",
     "pathfinder review refresh <workstream-id> <session-id>",
+    "pathfinder review approve <workstream-id> --session <session-id>",
     "pathfinder review sessions",
     "pathfinder review session",
     "pathfinder review create",
@@ -1918,6 +1919,64 @@ test("review start requires a clean committed worktree", async () => {
   assert.match(clean.stdout, /# Pathfinder Review Session/);
   assert.match(clean.stdout, /Head ref: feature-review-cleanliness/);
   assert.match(clean.stdout, /Changed files: 1/);
+});
+
+test("review approve records approval and advances agent next", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Chart",
+      "--description",
+      "Chart reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-approval"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+
+  const session = await runCli(["review", "start", "--base", "main"], repo);
+  assert.match(session.stdout, /Session: review-add-report/);
+
+  const beforeApproval = JSON.parse((await runCli(["agent", "next", "--json"], repo)).stdout);
+  assert.equal(beforeApproval.phase, "awaiting_human_approval");
+  assert.equal(beforeApproval.compatibilityPhase, "needs_human_review");
+  assert.deepEqual(beforeApproval.commands.at(-1), "pathfinder review approve inventory-alerts --session review-add-report");
+
+  const approval = await runCli(["review", "approve", "inventory-alerts", "--session", "review-add-report"], repo);
+  assert.match(approval.stdout, /# Pathfinder Review Approval/);
+  assert.match(approval.stdout, /Slice status: complete/);
+  assert.match(approval.stdout, /explicit review decision/);
+
+  const afterApproval = JSON.parse((await runCli(["agent", "next", "--json"], repo)).stdout);
+  assert.equal(afterApproval.phase, "needs_slice_selection");
+  assert.equal(afterApproval.sliceId, "add-chart");
 });
 
 test("review start reports unborn repositories clearly", async () => {
