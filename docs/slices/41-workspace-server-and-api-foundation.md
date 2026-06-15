@@ -1,6 +1,6 @@
 # Slice 41: Workspace Server And API Foundation
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -119,3 +119,9 @@ pathfinder review serve --port 4783
 pathfinder help
 ```
 
+## Completion Notes
+
+- Added `pathfinder workspace serve` as the primary server command while preserving `pathfinder review serve`.
+- Added workspace read APIs for current repository context, workstream overviews, and active-slice mutation.
+- Added read-only stored PR draft access so `pr.md` can be served without regenerating or mutating it.
+- Updated README/help output and tests for the workspace server/API foundation.

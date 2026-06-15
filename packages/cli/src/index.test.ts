@@ -8,7 +8,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { serveReviewServer } from "@pathfinder/local-server";
+import { serveReviewServer, serveWorkspaceServer } from "@pathfinder/local-server";
 
 const execFileAsync = promisify(execFile);
 const cliPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "index.js");
@@ -49,6 +49,7 @@ test("help lists the implemented commands", async () => {
     "pathfinder comment list",
     "pathfinder comment resolve",
     "pathfinder review serve [--port 4783]",
+    "pathfinder workspace serve [--port 4783]",
     "pathfinder review start --base <base-ref>",
     "pathfinder review refresh <workstream-id> <session-id>",
     "pathfinder review approve <workstream-id> --session <session-id>",
@@ -76,6 +77,7 @@ test("prints command-group help", async () => {
   const workstream = await runCli(["workstream", "--help"]);
   const slice = await runCli(["slice", "--help"]);
   const review = await runCli(["review", "--help"]);
+  const workspace = await runCli(["workspace", "--help"]);
   const comment = await runCli(["comment", "--help"]);
   const agent = await runCli(["agent", "--help"]);
 
@@ -85,6 +87,8 @@ test("prints command-group help", async () => {
   assert.match(slice.stdout, /pathfinder slice next <workstream-id> \[--json\]/);
   assert.match(review.stdout, /Pathfinder review commands/);
   assert.match(review.stdout, /pathfinder review sessions <workstream-id> \[--json\]/);
+  assert.match(workspace.stdout, /Pathfinder workspace commands/);
+  assert.match(workspace.stdout, /pathfinder workspace serve \[--port 4783\]/);
   assert.match(comment.stdout, /Pathfinder comment commands/);
   assert.match(comment.stdout, /pathfinder comment list <workstream-id> \[--session <session-id>\] \[--open\] \[--json\]/);
   assert.match(agent.stdout, /Pathfinder agent commands/);
@@ -1738,6 +1742,10 @@ test("serves local review JSON endpoints and mutates comments", async () => {
 
   await runCli(["init"], repo);
   await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await writeFile(path.join(repo, "requirements.md"), "# Requirements\n\nReport reorder candidates.\n", "utf8");
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");
+  await runCli(["requirement", "set", "inventory-alerts", "--file", "./requirements.md"], repo);
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo);
   await runCli(
     [
       "slice",
@@ -1751,6 +1759,21 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     repo
   );
   await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await runCli(
+    [
+      "evidence",
+      "add",
+      "inventory-alerts",
+      "--slice",
+      "add-report",
+      "--kind",
+      "test",
+      "--description",
+      "npm test passed"
+    ],
+    repo
+  );
+  await runCli(["review", "create", "inventory-alerts", "--slice", "add-report", "--summary", "Manual review passed"], repo);
   await git(repo, ["add", "."]);
   await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
   await git(repo, ["checkout", "-b", "feature-review-server"]);
@@ -1759,8 +1782,9 @@ test("serves local review JSON endpoints and mutates comments", async () => {
   await git(repo, ["add", "src/report.ts"]);
   await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
   await runCli(["review", "start", "--base", "main"], repo);
+  await runCli(["pr", "generate", "inventory-alerts"], repo);
 
-  const server = await serveReviewServer({ cwd: repo, port: 0, silent: true });
+  const server = await serveWorkspaceServer({ cwd: repo, port: 0, silent: true });
   try {
     const baseUrl = serverBaseUrl(server);
     const html = await fetch(`${baseUrl}/`);
@@ -1772,7 +1796,13 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     const script = await fetch(`${baseUrl}${scriptMatch[1]}`);
     const style = await fetch(`${baseUrl}${styleMatch[1]}`);
     const current = await jsonFetch(`${baseUrl}/api/current`);
+    const workspace = await jsonFetch(`${baseUrl}/api/workspace`);
     const workstreams = await jsonFetch(`${baseUrl}/api/workstreams`);
+    const overview = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/overview`);
+    const active = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/slices/add-report/active`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
     const sessions = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/review-sessions`);
     const diff = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/review-sessions/review-add-report/diff`);
     const added = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/comments`, {
@@ -1809,7 +1839,24 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     assert.equal(style.status, 200);
     assert.match(style.headers.get("content-type") ?? "", /text\/css/);
     assert.equal(current.activeSlice.id, "add-report");
+    assert.equal(workspace.project.activeWorkstreamId, "inventory-alerts");
+    assert.equal(workspace.activeWorkstream.id, "inventory-alerts");
+    assert.equal(workspace.activeSlice.id, "add-report");
+    assert.equal(workspace.workstreams[0].id, "inventory-alerts");
     assert.equal(workstreams.workstreams[0].id, "inventory-alerts");
+    assert.equal(overview.workstream.id, "inventory-alerts");
+    assert.match(overview.requirements.markdown, /Report reorder candidates\./);
+    assert.match(overview.requirements.path, /requirements\.md$/);
+    assert.match(overview.plan.markdown, /Add report\./);
+    assert.match(overview.plan.path, /plan\.md$/);
+    assert.equal(overview.slices[0].id, "add-report");
+    assert.equal(overview.reviewSessions[0].id, "review-add-report");
+    assert.equal(overview.reviews[0].id, "manual-review-passed");
+    assert.equal(overview.evidence[0].id, "npm-test-passed");
+    assert.match(overview.prDraft.markdown, /## Summary/);
+    assert.match(overview.prDraft.path, /pr\.md$/);
+    assert.equal(active.slice.id, "add-report");
+    assert.equal(active.workstream.activeSliceId, "add-report");
     assert.equal(sessions.sessions[0].id, "review-add-report");
     assert.equal(diff.session.id, "review-add-report");
     assert.equal(diff.diff.files[0].path, "src/report.ts");

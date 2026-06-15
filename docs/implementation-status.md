@@ -147,7 +147,7 @@ After agent workflow stability, the next focus is expanding the local browser UI
 | 38 | done | `docs/slices/38-commit-before-review.md` |
 | 39 | done | `docs/slices/39-human-review-approval-gate.md` |
 | 40 | done | `docs/slices/40-agent-prompt-command-stability.md` |
-| 41 | ready | `docs/slices/41-workspace-server-and-api-foundation.md` |
+| 41 | done | `docs/slices/41-workspace-server-and-api-foundation.md` |
 | 42 | ready | `docs/slices/42-workspace-shell-current-repo.md` |
 | 43 | ready | `docs/slices/43-workstream-dependency-canvas.md` |
 | 44 | ready | `docs/slices/44-artifact-preview-panel.md` |

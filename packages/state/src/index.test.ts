@@ -1587,6 +1587,23 @@ test("generates and writes local PR markdown", async () => {
   assert.match(result.markdown, /- Open comment `confirm-generated-output` \(slice `first-slice`\): Confirm generated output\./);
 });
 
+test("reads stored PR markdown without regenerating it", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("PR Draft Read");
+  await store.addSlice(workstream.id, "First Slice", "Leave the stored draft alone.");
+  const prPath = path.join(repo, ".pathfinder", "workstreams", workstream.id, "pr.md");
+  await writeFile(prPath, "Custom PR draft.\n", "utf8");
+
+  const stored = await store.getStoredPrMarkdown(workstream.id);
+  const afterRead = await readFile(prPath, "utf8");
+
+  assert.equal(stored.path, prPath);
+  assert.equal(stored.markdown, "Custom PR draft.\n");
+  assert.equal(afterRead, "Custom PR draft.\n");
+});
+
 test("generates PR markdown with repository summary", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

@@ -135,8 +135,10 @@ Review sessions use committed Git diffs. `pathfinder review start` refuses to ru
 Open the local review UI:
 
 ```bash
-pathfinder review serve
+pathfinder workspace serve
 ```
+
+`pathfinder review serve` remains available as a compatibility alias.
 
 When the review has no open comments and the human accepts the diff, record that explicit approval:
 
@@ -171,6 +173,7 @@ pathfinder slice next <workstream-id> --json
 pathfinder slice start <workstream-id> <slice-id> --base <base-ref>
 pathfinder review sessions <workstream-id> --json
 pathfinder comment list <workstream-id> --session <session-id> --open --json
+pathfinder workspace serve
 pathfinder review serve
 pathfinder feedback export <workstream-id>
 pathfinder pr generate <workstream-id>

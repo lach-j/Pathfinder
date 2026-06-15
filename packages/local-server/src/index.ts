@@ -1,7 +1,11 @@
 export {
   createReviewServer,
+  createWorkspaceServer,
   handleReviewServerRequest,
   serveReviewServer,
-  type ReviewServerOptions
+  serveWorkspaceServer,
+  type ReviewServerOptions,
+  type WorkspaceResponse,
+  type WorkspaceServerOptions,
+  type WorkstreamOverviewResponse
 } from "./review-server.js";
-

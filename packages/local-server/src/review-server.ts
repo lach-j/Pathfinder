@@ -3,7 +3,18 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { PathfinderError, ReviewCommentTarget, isReviewCommentSide } from "@pathfinder/core";
+import {
+  Evidence,
+  PathfinderError,
+  Project,
+  Review,
+  ReviewComment,
+  ReviewCommentTarget,
+  ReviewSession,
+  Slice,
+  Workstream,
+  isReviewCommentSide
+} from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { PathfinderStore } from "@pathfinder/state";
 
@@ -14,9 +25,39 @@ export interface ReviewServerOptions {
   silent?: boolean;
 }
 
+export type WorkspaceServerOptions = ReviewServerOptions;
+
 interface ReviewServerDependencies {
   store: PathfinderStore;
   git: GitAdapter;
+}
+
+export interface WorkspaceResponse {
+  project: Project;
+  activeWorkstream?: Workstream;
+  activeSlice?: Slice;
+  workstreams: Workstream[];
+}
+
+export interface WorkstreamOverviewResponse {
+  workstream: Workstream;
+  requirements: {
+    markdown: string;
+    path: string;
+  };
+  plan: {
+    markdown: string;
+    path: string;
+  };
+  slices: Slice[];
+  comments: ReviewComment[];
+  reviewSessions: ReviewSession[];
+  reviews: Review[];
+  evidence: Evidence[];
+  prDraft: {
+    markdown: string;
+    path: string;
+  };
 }
 
 interface CommentRequestBody {
@@ -39,10 +80,18 @@ const uiDistDirCandidates = [
 ];
 
 export async function serveReviewServer(options: ReviewServerOptions = {}): Promise<Server> {
+  return startWorkspaceServer(options, "review");
+}
+
+export async function serveWorkspaceServer(options: WorkspaceServerOptions = {}): Promise<Server> {
+  return startWorkspaceServer(options, "workspace");
+}
+
+async function startWorkspaceServer(options: WorkspaceServerOptions, label: "review" | "workspace"): Promise<Server> {
   const cwd = options.cwd ?? process.cwd();
   const host = options.host ?? defaultHost;
   const port = options.port ?? defaultPort;
-  const server = createReviewServer({
+  const server = createWorkspaceServer({
     store: new PathfinderStore(cwd),
     git: new GitAdapter({ cwd })
   });
@@ -58,13 +107,17 @@ export async function serveReviewServer(options: ReviewServerOptions = {}): Prom
   const address = server.address();
   const actualPort = typeof address === "object" && address ? address.port : port;
   if (!options.silent) {
-    console.log(`Pathfinder review server running at http://${host}:${actualPort}`);
+    console.log(`Pathfinder ${label} server running at http://${host}:${actualPort}`);
   }
 
   return server;
 }
 
 export function createReviewServer(dependencies: ReviewServerDependencies): Server {
+  return createWorkspaceServer(dependencies);
+}
+
+export function createWorkspaceServer(dependencies: ReviewServerDependencies): Server {
   return createServer((request, response) => {
     void handleReviewServerRequest(request, response, dependencies);
   });
@@ -112,6 +165,11 @@ async function routeRequest(
     return;
   }
 
+  if (method === "GET" && parts.length === 2 && parts[1] === "workspace") {
+    writeJson(response, 200, await getWorkspaceResponse(dependencies.store));
+    return;
+  }
+
   if (method === "GET" && parts.length === 2 && parts[1] === "workstreams") {
     writeJson(response, 200, { workstreams: await dependencies.store.listWorkstreams() });
     return;
@@ -134,6 +192,21 @@ async function routeWorkstreamRequest(
   dependencies: ReviewServerDependencies
 ): Promise<void> {
   const [workstreamId, area, id, action] = parts;
+
+  if (method === "GET" && !area) {
+    writeJson(response, 200, { workstream: await dependencies.store.getWorkstream(workstreamId) });
+    return;
+  }
+
+  if (method === "GET" && area === "overview" && !id) {
+    writeJson(response, 200, await getWorkstreamOverviewResponse(dependencies.store, workstreamId));
+    return;
+  }
+
+  if (method === "POST" && area === "slices" && id && action === "active") {
+    writeJson(response, 200, await dependencies.store.setActiveSlice(workstreamId, id));
+    return;
+  }
 
   if (method === "GET" && area === "review-sessions" && !id) {
     writeJson(response, 200, {
@@ -193,6 +266,51 @@ async function routeWorkstreamRequest(
   }
 
   writeJson(response, 404, { error: "Not found." });
+}
+
+async function getWorkspaceResponse(store: PathfinderStore): Promise<WorkspaceResponse> {
+  const project = await store.getProject();
+  const workstreams = await store.listWorkstreams();
+  const activeWorkstream = project.activeWorkstreamId
+    ? await store.getWorkstream(project.activeWorkstreamId)
+    : undefined;
+  const activeSlice = activeWorkstream?.activeSliceId
+    ? (await store.listSlices(activeWorkstream.id)).find((slice) => slice.id === activeWorkstream.activeSliceId)
+    : undefined;
+
+  if (activeWorkstream?.activeSliceId && !activeSlice) {
+    throw new PathfinderError(
+      `Active slice '${activeWorkstream.activeSliceId}' was not found in workstream '${activeWorkstream.id}'.`
+    );
+  }
+
+  return {
+    project,
+    ...(activeWorkstream ? { activeWorkstream } : {}),
+    ...(activeSlice ? { activeSlice } : {}),
+    workstreams
+  };
+}
+
+async function getWorkstreamOverviewResponse(
+  store: PathfinderStore,
+  workstreamId: string
+): Promise<WorkstreamOverviewResponse> {
+  const requirements = await store.getRequirementsDocument(workstreamId);
+  const plan = await store.getPlanDocument(workstreamId);
+  const prDraft = await store.getStoredPrMarkdown(workstreamId);
+
+  return {
+    workstream: await store.getWorkstream(workstreamId),
+    requirements,
+    plan,
+    slices: await store.listSlices(workstreamId),
+    comments: await store.listComments(workstreamId),
+    reviewSessions: await store.listReviewSessions(workstreamId),
+    reviews: await store.listReviews(workstreamId),
+    evidence: await store.listEvidence(workstreamId),
+    prDraft
+  };
 }
 
 async function addCommentFromRequest(

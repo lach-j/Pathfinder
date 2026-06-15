@@ -83,6 +83,11 @@ export interface GeneratedPrMarkdown {
   path: string;
 }
 
+export interface StoredMarkdownFile {
+  markdown: string;
+  path: string;
+}
+
 export interface FeedbackQueueExport {
   markdown: string;
   defaultPath?: string;
@@ -491,14 +496,24 @@ export class PathfinderStore {
   }
 
   async getRequirements(workstreamId: string): Promise<string> {
+    return (await this.getRequirementsDocument(workstreamId)).markdown;
+  }
+
+  async getRequirementsDocument(workstreamId: string): Promise<StoredMarkdownFile> {
     const root = await this.requireWorkstreamRoot(workstreamId);
     const requirementsPath = path.join(root, "requirements.md");
 
     if (!(await exists(requirementsPath))) {
-      return "";
+      return {
+        markdown: "",
+        path: requirementsPath
+      };
     }
 
-    return readFile(requirementsPath, "utf8");
+    return {
+      markdown: await readFile(requirementsPath, "utf8"),
+      path: requirementsPath
+    };
   }
 
   async setPlanFromFile(workstreamId: string, sourceFile: string): Promise<void> {
@@ -571,8 +586,24 @@ export class PathfinderStore {
   }
 
   async getPlan(workstreamId: string): Promise<string> {
+    return (await this.getPlanDocument(workstreamId)).markdown;
+  }
+
+  async getPlanDocument(workstreamId: string): Promise<StoredMarkdownFile> {
     const root = await this.requireWorkstreamRoot(workstreamId);
-    return readFile(path.join(root, "plan.md"), "utf8");
+    const planPath = path.join(root, "plan.md");
+
+    if (!(await exists(planPath))) {
+      return {
+        markdown: "",
+        path: planPath
+      };
+    }
+
+    return {
+      markdown: await readFile(planPath, "utf8"),
+      path: planPath
+    };
   }
 
   async addSlice(
@@ -1066,6 +1097,23 @@ export class PathfinderStore {
     return {
       markdown,
       path: outputPath
+    };
+  }
+
+  async getStoredPrMarkdown(workstreamId: string): Promise<StoredMarkdownFile> {
+    const root = await this.requireWorkstreamRoot(workstreamId);
+    const prPath = path.join(root, "pr.md");
+
+    if (!(await exists(prPath))) {
+      return {
+        markdown: "",
+        path: prPath
+      };
+    }
+
+    return {
+      markdown: await readFile(prPath, "utf8"),
+      path: prPath
     };
   }
 

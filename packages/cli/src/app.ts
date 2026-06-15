@@ -14,7 +14,7 @@ import {
   isReviewCommentSide
 } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
-import { serveReviewServer } from "@pathfinder/local-server";
+import { serveReviewServer, serveWorkspaceServer } from "@pathfinder/local-server";
 import { PathfinderStore } from "@pathfinder/state";
 
 import {
@@ -93,6 +93,11 @@ export async function run(args: string[]): Promise<void> {
 
   if (area === "review") {
     await runReview(action, rest);
+    return;
+  }
+
+  if (area === "workspace") {
+    await runWorkspace(action, rest);
     return;
   }
 
@@ -1053,6 +1058,17 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
   }
 
   throw usageError("Unknown review command. Expected serve, start, refresh, approve, sessions, session, run, create, list, or show.");
+}
+
+async function runWorkspace(action: string | undefined, args: string[]): Promise<void> {
+  if (action === "serve") {
+    const options = parseOptions(args);
+    const port = parsePort(options.port);
+    await serveWorkspaceServer({ port });
+    return;
+  }
+
+  throw usageError("Unknown workspace command. Expected serve.");
 }
 
 async function requireBaselineCommit(git: GitAdapter, action: string): Promise<void> {

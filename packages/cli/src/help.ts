@@ -46,7 +46,11 @@ Usage:
   pathfinder review create <workstream-id> --slice <slice-id> --summary "..."
   pathfinder review run --base <base-ref>
   pathfinder review list <workstream-id>
-  pathfinder review show <workstream-id> <review-id>`
+  pathfinder review show <workstream-id> <review-id>`,
+  workspace: `Pathfinder workspace commands
+
+Usage:
+  pathfinder workspace serve [--port 4783]`
 };
 
 export type HelpArea = keyof typeof helpByArea;
@@ -109,5 +113,6 @@ Usage:
   pathfinder feedback export <workstream-id> [--session <session-id>] [--file ./feedback.md]
   pathfinder git diff [--base <base-ref>]
   pathfinder git summary --base <base-ref>
+  pathfinder workspace serve [--port 4783]
   pathfinder pr generate <workstream-id> [--base <base-ref>]`);
 }
