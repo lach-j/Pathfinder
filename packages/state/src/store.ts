@@ -179,6 +179,7 @@ export interface ImportedStagePlanState {
 }
 
 export type RepositorySummaryProvider = (baseRef: string) => Promise<RepositorySummary>;
+export type SuggestedBaseRefProvider = () => Promise<string | undefined>;
 
 export interface AddCommentInput {
   body: string;
@@ -1169,7 +1170,10 @@ export class PathfinderStore {
     };
   }
 
-  async getAgentNext(provider?: RepositorySummaryProvider): Promise<AgentNextRecommendation> {
+  async getAgentNext(
+    provider?: RepositorySummaryProvider,
+    suggestedBaseRefProvider?: SuggestedBaseRefProvider
+  ): Promise<AgentNextRecommendation> {
     let project: Project;
     try {
       project = await this.getProject();
@@ -1215,6 +1219,9 @@ export class PathfinderStore {
     const reviewSessions = await this.listReviewSessions(activeWorkstream.id);
     const knownBaseRef = activeSlice?.baseRef ?? latestSessionForSlice(reviewSessions, activeSlice?.id)?.baseRef;
     const repository = knownBaseRef && provider ? await this.tryGetRepositorySummary(provider, knownBaseRef) : {};
+    const suggestedBaseRef = !activeSlice && suggestedBaseRefProvider
+      ? await this.tryGetSuggestedBaseRef(suggestedBaseRefProvider)
+      : undefined;
 
     return getAgentNextRecommendation({
       isInitialized: true,
@@ -1226,6 +1233,7 @@ export class PathfinderStore {
       planMarkdown: await this.getPlan(activeWorkstream.id),
       openComments: (await this.listComments(activeWorkstream.id)).filter((comment) => !comment.resolved),
       reviewSessions,
+      suggestedBaseRef,
       feedbackQueuePath: await this.getDefaultFeedbackQueuePath(),
       ...repository
     });
@@ -1233,9 +1241,10 @@ export class PathfinderStore {
 
   async getAgentPrompt(
     phase?: AgentPromptPhase,
-    provider?: RepositorySummaryProvider
+    provider?: RepositorySummaryProvider,
+    suggestedBaseRefProvider?: SuggestedBaseRefProvider
   ): Promise<string> {
-    const recommendation = await this.getAgentNext(provider);
+    const recommendation = await this.getAgentNext(provider, suggestedBaseRefProvider);
     const workstreamId = recommendation.workstreamId;
 
     if (!workstreamId || workstreamId.startsWith("<")) {
@@ -1571,6 +1580,14 @@ export class PathfinderStore {
       return {
         repositorySummaryError: errorMessage(error)
       };
+    }
+  }
+
+  private async tryGetSuggestedBaseRef(provider: SuggestedBaseRefProvider): Promise<string | undefined> {
+    try {
+      return await provider();
+    } catch {
+      return undefined;
     }
   }
 

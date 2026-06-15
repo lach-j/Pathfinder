@@ -195,6 +195,29 @@ test("detects dirty state and creates a branch from a base ref", async () => {
   assert.equal((await git(repo, ["branch", "--show-current"])).trim(), "pathfinder/workstream/slice");
 });
 
+test("suggests a base ref and checks out existing slice branches", async () => {
+  const repo = await createTempRepo();
+  await writeFile(path.join(repo, "tracked.txt"), "base\n", "utf8");
+  await git(repo, ["add", "tracked.txt"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "initial"]);
+  const adapter = new GitAdapter({ cwd: repo });
+
+  assert.equal(await adapter.getSuggestedBaseRef(), "main");
+  assert.equal(await adapter.createOrCheckoutBranch("pathfinder/workstream/slice", "main"), "created");
+  await git(repo, ["checkout", "main"]);
+  assert.equal(await adapter.createOrCheckoutBranch("pathfinder/workstream/slice", "main"), "checked_out");
+  assert.equal((await git(repo, ["branch", "--show-current"])).trim(), "pathfinder/workstream/slice");
+});
+
+test("slice branch start fails clearly when the repository has no commits", async () => {
+  const repo = await createTempRepo();
+
+  await assert.rejects(
+    () => new GitAdapter({ cwd: repo }).createOrCheckoutBranch("pathfinder/workstream/slice", "main"),
+    (error: unknown) => error instanceof PathfinderError && /repository has no commits/.test(error.message)
+  );
+});
+
 test("fails clearly when a base ref is invalid", async () => {
   const repo = await createTempRepo();
 

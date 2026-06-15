@@ -7,6 +7,7 @@ import {
   AgentUserInstallTool,
   PathfinderError,
   ReviewCommentTarget,
+  Slice,
   isAgentCommandTool,
   isAgentUserInstallTool,
   isAgentPromptPhase,
@@ -133,6 +134,12 @@ interface InitSetup {
 }
 
 const supportedInitAgents: readonly InitAgent[] = ["claude", "opencode", "codex"];
+
+interface SliceBranchStartResult {
+  branchName: string;
+  updated: Slice;
+  action: "created" | "checked_out";
+}
 
 async function runInit(options: ReturnType<typeof parseOptions>): Promise<void> {
   if (options.dryRun) {
@@ -368,7 +375,10 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
   if (action === "next") {
     const options = parseOptions(args);
     const git = new GitAdapter({ cwd: process.cwd() });
-    const recommendation = await store.getAgentNext((baseRef) => git.getCommittedSummaryAgainstBase(baseRef));
+    const recommendation = await store.getAgentNext(
+      (baseRef) => git.getCommittedSummaryAgainstBase(baseRef),
+      () => git.getSuggestedBaseRef()
+    );
 
     if (options.json) {
       console.log(JSON.stringify(recommendation, null, 2));
@@ -408,7 +418,11 @@ async function runAgent(action: string | undefined, args: string[]): Promise<voi
       promptPhase = options.phase as AgentPromptPhase;
     }
 
-    const prompt = await store.getAgentPrompt(promptPhase, (baseRef) => git.getCommittedSummaryAgainstBase(baseRef));
+    const prompt = await store.getAgentPrompt(
+      promptPhase,
+      (baseRef) => git.getCommittedSummaryAgainstBase(baseRef),
+      () => git.getSuggestedBaseRef()
+    );
     process.stdout.write(prompt);
     return;
   }
@@ -686,8 +700,8 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     }
 
     console.log(formatSlice(slice));
-    console.log(`Set active: pathfinder slice active ${workstreamId} ${slice.id}`);
-    console.log(`Start branch: pathfinder slice branch ${workstreamId} ${slice.id} --base <base-ref>`);
+    console.log(`Start slice: pathfinder slice start ${workstreamId} ${slice.id} --base <base-ref>`);
+    console.log(`Set active manually: pathfinder slice active ${workstreamId} ${slice.id}`);
     return;
   }
 
@@ -708,27 +722,21 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     requireArgument(sliceId, "slice id");
     const options = parseOptions(optionArgs);
     requireOption(options.base, "--base");
-    const slices = await store.listSlices(workstreamId);
-    const slice = slices.find((candidate) => candidate.id === sliceId);
+    const { branchName, updated, action: branchAction } = await startSliceBranch(workstreamId, sliceId, options.base);
+    console.log(`${branchAction === "created" ? "Started" : "Checked out"} branch ${branchName} for slice ${workstreamId}/${updated.id}.`);
+    return;
+  }
 
-    if (!slice) {
-      throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
-    }
-
-    const git = new GitAdapter({ cwd: process.cwd() });
-    if (await git.hasUncommittedChanges()) {
-      throw new PathfinderError(
-        "Cannot start a slice branch with uncommitted changes. Commit, stash, or remove local changes first."
-      );
-    }
-
-    const branchName = `pathfinder/${workstreamId}/${sliceId}`;
-    await git.createAndCheckoutBranch(branchName, options.base);
-    const updated = await store.setSliceBranchMetadata(workstreamId, sliceId, {
-      branchName,
-      baseRef: options.base
-    });
-    console.log(`Started branch ${branchName} for slice ${workstreamId}/${updated.id}.`);
+  if (action === "start") {
+    const [workstreamId, sliceId, ...optionArgs] = args;
+    requireArgument(workstreamId, "workstream id");
+    requireArgument(sliceId, "slice id");
+    const options = parseOptions(optionArgs);
+    requireOption(options.base, "--base");
+    const { branchName, updated, action: branchAction } = await startSliceBranch(workstreamId, sliceId, options.base);
+    const active = await store.setActiveSlice(workstreamId, sliceId);
+    console.log(`${branchAction === "created" ? "Started" : "Checked out"} branch ${branchName} for slice ${workstreamId}/${updated.id}.`);
+    console.log(`Active slice: ${active.workstream.id}/${active.slice.id}`);
     return;
   }
 
@@ -745,7 +753,48 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     return;
   }
 
-  throw usageError("Unknown slice command. Expected add, list, active, depend, next, status, branch, or show-active.");
+  throw usageError("Unknown slice command. Expected add, list, active, depend, next, status, branch, start, or show-active.");
+}
+
+async function startSliceBranch(
+  workstreamId: string,
+  sliceId: string,
+  baseRef: string
+): Promise<SliceBranchStartResult> {
+  const slices = await store.listSlices(workstreamId);
+  const slice = slices.find((candidate) => candidate.id === sliceId);
+
+  if (!slice) {
+    throw new PathfinderError(`Slice '${sliceId}' was not found in workstream '${workstreamId}'.`);
+  }
+
+  if (slice.baseRef && slice.baseRef !== baseRef) {
+    throw new PathfinderError(
+      `Slice '${sliceId}' is already recorded with base ref '${slice.baseRef}'. Refusing to start it from '${baseRef}'.`
+    );
+  }
+
+  const git = new GitAdapter({ cwd: process.cwd() });
+  if (!(await git.hasCommits())) {
+    throw new PathfinderError(
+      "Cannot start a slice branch because this repository has no commits. Create an initial baseline commit first."
+    );
+  }
+
+  if (await git.hasUncommittedChanges()) {
+    throw new PathfinderError(
+      "Cannot start a slice branch with uncommitted changes. Commit, stash, or remove local changes first."
+    );
+  }
+
+  const branchName = slice.branchName ?? `pathfinder/${workstreamId}/${sliceId}`;
+  const action = await git.createOrCheckoutBranch(branchName, baseRef);
+  const updated = await store.setSliceBranchMetadata(workstreamId, sliceId, {
+    branchName,
+    baseRef
+  });
+
+  return { branchName, updated, action };
 }
 
 async function runComment(action: string | undefined, args: string[]): Promise<void> {

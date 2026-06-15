@@ -685,7 +685,12 @@ test("returns agent next recommendations from active Pathfinder state", async ()
   await store.setPlanFromFile(workstream.id, "./plan.md");
   const slice = await store.addSlice(workstream.id, "Add Report", "Report reorder candidates.");
 
-  assert.equal((await store.getAgentNext()).phase, "needs_slice_selection");
+  const needsSelection = await store.getAgentNext(undefined, async () => "main");
+  assert.equal(needsSelection.phase, "needs_slice_selection");
+  assert.deepEqual(needsSelection.commands, [
+    "pathfinder slice next agent-flow",
+    "pathfinder slice start agent-flow add-report --base main"
+  ]);
 
   await store.setActiveSlice(workstream.id, slice.id);
   await store.setSliceBranchMetadata(workstream.id, slice.id, {

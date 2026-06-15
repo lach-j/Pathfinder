@@ -115,6 +115,12 @@ Ask Pathfinder what the agent should do next:
 pathfinder agent next --json
 ```
 
+Start the selected slice on its own branch before implementing:
+
+```bash
+pathfinder slice start <workstream-id> <slice-id> --base main
+```
+
 Start a review session for the active slice:
 
 ```bash
@@ -147,6 +153,7 @@ The main commands are:
 pathfinder init
 pathfinder agent next --json
 pathfinder agent prompt
+pathfinder slice start <workstream-id> <slice-id> --base <base-ref>
 pathfinder review serve
 pathfinder feedback export <workstream-id>
 pathfinder pr generate <workstream-id>

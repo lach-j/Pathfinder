@@ -43,6 +43,7 @@ test("help lists the implemented commands", async () => {
     "pathfinder slice next",
     "pathfinder slice status",
     "pathfinder slice branch",
+    "pathfinder slice start",
     "pathfinder slice show-active",
     "pathfinder comment add",
     "pathfinder comment list",
@@ -397,6 +398,38 @@ test("prints agent next recommendation for active implementation state", async (
   assert.equal(parsed.workstreamId, "inventory-alerts");
   assert.equal(parsed.sliceId, "add-report");
   assert.deepEqual(parsed.commands, ["pathfinder current", "pathfinder review start --base <base-ref>"]);
+});
+
+test("agent next recommends slice start with the suggested base when selecting a slice", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+
+  const result = await runCli(["agent", "next", "--json"], repo);
+  const parsed = JSON.parse(result.stdout);
+
+  assert.equal(parsed.phase, "needs_slice_selection");
+  assert.deepEqual(parsed.commands, [
+    "pathfinder slice next inventory-alerts",
+    "pathfinder slice start inventory-alerts add-report --base main"
+  ]);
 });
 
 test("prints agent prompts in automatic and explicit phase modes", async () => {
@@ -791,7 +824,7 @@ test("adds dependencies and selects the next actionable slice", async () => {
   assert.match(list.stdout, /add-report\tproposed\tAdd Report\tdepends-on:add-data-source/);
   assert.match(firstNext.stdout, /add-data-source\tproposed\tAdd Data Source/);
   assert.match(secondNext.stdout, /add-report\tproposed\tAdd Report\tdepends-on:add-data-source/);
-  assert.match(secondNext.stdout, /pathfinder slice active inventory-alerts add-report/);
+  assert.match(secondNext.stdout, /pathfinder slice start inventory-alerts add-report --base <base-ref>/);
 });
 
 test("adds dependencies after creation and reports duplicate dependency errors", async () => {
@@ -891,6 +924,65 @@ test("starts a slice branch and records branch metadata", async () => {
   assert.match(stored, /"baseRef": "main"/);
 });
 
+test("starts a slice branch and sets it active", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Reorder Report",
+      "--description",
+      "Create a local report for low stock items."
+    ],
+    repo
+  );
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+
+  const result = await runCli(["slice", "start", "inventory-alerts", "add-reorder-report", "--base", "main"], repo);
+  const current = await runCli(["current"], repo);
+
+  assert.match(result.stdout, /Started branch pathfinder\/inventory-alerts\/add-reorder-report/);
+  assert.equal((await git(repo, ["branch", "--show-current"])).trim(), "pathfinder/inventory-alerts/add-reorder-report");
+  assert.match(current.stdout, /Active slice: Add Reorder Report \(add-reorder-report\)/);
+  assert.match(current.stdout, /Status: proposed/);
+});
+
+test("slice start checks out an existing recorded branch", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Reorder Report",
+      "--description",
+      "Create a local report for low stock items."
+    ],
+    repo
+  );
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await runCli(["slice", "start", "inventory-alerts", "add-reorder-report", "--base", "main"], repo);
+  await git(repo, ["add", ".pathfinder"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "slice branch state"]);
+  await git(repo, ["checkout", "main"]);
+
+  const result = await runCli(["slice", "start", "inventory-alerts", "add-reorder-report", "--base", "main"], repo);
+
+  assert.match(result.stdout, /Checked out branch pathfinder\/inventory-alerts\/add-reorder-report/);
+  assert.equal((await git(repo, ["branch", "--show-current"])).trim(), "pathfinder/inventory-alerts/add-reorder-report");
+});
+
 test("refuses to start a slice branch with uncommitted changes", async () => {
   const repo = await createRealTempGitRepo();
 
@@ -918,6 +1010,68 @@ test("refuses to start a slice branch with uncommitted changes", async () => {
       isExecError(error) &&
       error.code === 1 &&
       /Cannot start a slice branch with uncommitted changes/.test(error.stderr)
+  );
+
+  await assert.rejects(
+    () => runCli(["slice", "start", "inventory-alerts", "add-reorder-report", "--base", "main"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Cannot start a slice branch with uncommitted changes/.test(error.stderr)
+  );
+});
+
+test("slice start refuses missing bases and unborn repositories clearly", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Reorder Report",
+      "--description",
+      "Create a local report for low stock items."
+    ],
+    repo
+  );
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+
+  await assert.rejects(
+    () => runCli(["slice", "start", "inventory-alerts", "add-reorder-report", "--base", "missing"], repo),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /Base ref 'missing' was not found or is not a commit/.test(error.stderr)
+  );
+
+  const unborn = await mkdtemp(path.join(os.tmpdir(), "pathfinder-cli-unborn-"));
+  await git(unborn, ["init", "--initial-branch=main"]);
+  await runCli(["init"], unborn);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], unborn);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Reorder Report",
+      "--description",
+      "Create a local report for low stock items."
+    ],
+    unborn
+  );
+
+  await assert.rejects(
+    () => runCli(["slice", "start", "inventory-alerts", "add-reorder-report", "--base", "main"], unborn),
+    (error: unknown) =>
+      isExecError(error) &&
+      error.code === 1 &&
+      /repository has no commits/.test(error.stderr)
   );
 });
 

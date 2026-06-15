@@ -1,6 +1,6 @@
 # Slice 37: Slice Start Branch Workflow
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -89,3 +89,8 @@ git branch --show-current
 pathfinder current
 ```
 
+## Completion Notes
+
+- Added `pathfinder slice start <workstream-id> <slice-id> --base <base-ref>` to create or switch to the deterministic slice branch, record branch metadata, then set the slice active.
+- Added clean-worktree, missing-base, no-commit, and recorded-base mismatch protections before changing active slice state.
+- Updated `agent next --json`, `agent prompt`, `slice next`, help text, README, and tests so branch start is the preferred slice-selection path.

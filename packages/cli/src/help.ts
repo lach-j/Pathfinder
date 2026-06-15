@@ -28,6 +28,7 @@ Usage:
   pathfinder slice next <workstream-id>
   pathfinder slice status <workstream-id> <slice-id> <status>
   pathfinder slice branch <workstream-id> <slice-id> --base <base-ref>
+  pathfinder slice start <workstream-id> <slice-id> --base <base-ref>
   pathfinder slice show-active
   pathfinder comment add <workstream-id> --slice <slice-id> --body "..."
   pathfinder comment add <workstream-id> --session <session-id> --file <path> [--line <line-number> --side old|new] --body "..."

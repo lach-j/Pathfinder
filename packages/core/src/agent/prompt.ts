@@ -116,8 +116,8 @@ function commandsForPromptPhase(phase: AgentPromptPhase, context: PromptCommandC
   if (phase === "implement") {
     return [
       "pathfinder agent next --json",
-      "pathfinder current",
       ...context.recommendedCommands,
+      "pathfinder current",
       ...checkCommands,
       `pathfinder review start --base <base-ref>`
     ];
@@ -173,11 +173,12 @@ function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInst
 
   if (phase === "implement") {
     return [
-      "1. Run `pathfinder current` and read the active requirements, plan, and slice description.",
-      `2. Implement only slice \`${context.sliceId}\`; avoid adjacent refactors and unrelated cleanup.`,
-      "3. Run `npm run typecheck`, `npm test`, and `npm run lint --if-present`.",
-      "4. When the implementation is ready, run `pathfinder review start --base <base-ref>` or refresh the existing review session if Pathfinder reports one.",
-      "5. Summarize changed files, checks, and manual verification steps."
+      "1. Run the recommended `pathfinder slice start <workstream-id> <slice-id> --base <base-ref>` command if Pathfinder is still in `needs_slice_selection`.",
+      "2. Run `pathfinder current` and read the active requirements, plan, and slice description after the slice branch is checked out.",
+      `3. Implement only slice \`${context.sliceId}\`; avoid adjacent refactors and unrelated cleanup.`,
+      "4. Run `npm run typecheck`, `npm test`, and `npm run lint --if-present`.",
+      "5. When the implementation is ready, run `pathfinder review start --base <base-ref>` or refresh the existing review session if Pathfinder reports one.",
+      "6. Summarize changed files, checks, and manual verification steps."
     ];
   }
 

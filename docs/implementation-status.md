@@ -135,7 +135,7 @@ After personal mode, the next focus is making normal agent-driven slice executio
 | 34 | done | `docs/slices/34-external-state-mode.md` |
 | 35 | done | `docs/slices/35-no-repo-footprint-agent-mode.md` |
 | 36 | done | `docs/slices/36-personal-mode-doctor.md` |
-| 37 | ready | `docs/slices/37-slice-start-branch-workflow.md` |
+| 37 | done | `docs/slices/37-slice-start-branch-workflow.md` |
 | 38 | ready | `docs/slices/38-commit-before-review.md` |
 | 39 | ready | `docs/slices/39-human-review-approval-gate.md` |
 | 40 | ready | `docs/slices/40-agent-prompt-command-stability.md` |

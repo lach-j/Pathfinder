@@ -76,10 +76,47 @@ export class GitAdapter {
     return result.stdout.trim().length > 0;
   }
 
+  async hasCommits(): Promise<boolean> {
+    await this.requireGitRepository();
+    return this.isCommit("HEAD");
+  }
+
+  async getSuggestedBaseRef(): Promise<string | undefined> {
+    await this.requireGitRepository();
+
+    const remoteDefault = await this.tryRunGit(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]);
+    const remoteDefaultRef = remoteDefault?.stdout.trim().replace(/^origin\//, "");
+    if (remoteDefaultRef && await this.isCommit(remoteDefaultRef)) {
+      return remoteDefaultRef;
+    }
+
+    for (const candidate of ["main", "master"]) {
+      if (await this.isCommit(candidate)) {
+        return candidate;
+      }
+    }
+
+    return undefined;
+  }
+
   async createAndCheckoutBranch(branchName: string, baseRef: string): Promise<void> {
     await this.requireGitRepository();
     await this.resolveCommit(baseRef);
     await this.runGit(["checkout", "-b", branchName, baseRef]);
+  }
+
+  async createOrCheckoutBranch(branchName: string, baseRef: string): Promise<"created" | "checked_out"> {
+    await this.requireGitRepository();
+    await this.requireAnyCommit();
+    await this.resolveCommit(baseRef);
+
+    if (await this.branchExists(branchName)) {
+      await this.runGit(["checkout", branchName]);
+      return "checked_out";
+    }
+
+    await this.runGit(["checkout", "-b", branchName, baseRef]);
+    return "created";
   }
 
   private async requireGitRepository(): Promise<void> {
@@ -89,12 +126,28 @@ export class GitAdapter {
     }
   }
 
+  private async requireAnyCommit(): Promise<void> {
+    if (!(await this.hasCommits())) {
+      throw new PathfinderError(
+        "Cannot start a slice branch because this repository has no commits. Create an initial baseline commit first."
+      );
+    }
+  }
+
   private async resolveCommit(ref: string): Promise<void> {
     try {
       await this.runGit(["rev-parse", "--verify", `${ref}^{commit}`]);
     } catch {
       throw new PathfinderError(`Base ref '${ref}' was not found or is not a commit.`);
     }
+  }
+
+  private async branchExists(branchName: string): Promise<boolean> {
+    return (await this.tryRunGit(["rev-parse", "--verify", `refs/heads/${branchName}`])) !== undefined;
+  }
+
+  private async isCommit(ref: string): Promise<boolean> {
+    return (await this.tryRunGit(["rev-parse", "--verify", `${ref}^{commit}`])) !== undefined;
   }
 
   private async runGit(args: string[]): Promise<{ stdout: string; stderr: string }> {
@@ -115,6 +168,14 @@ export class GitAdapter {
       }
 
       throw new PathfinderError(`Git command failed: ${message}`);
+    }
+  }
+
+  private async tryRunGit(args: string[]): Promise<{ stdout: string; stderr: string } | undefined> {
+    try {
+      return await this.runGit(args);
+    } catch {
+      return undefined;
     }
   }
 }

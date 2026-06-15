@@ -187,10 +187,14 @@ export function getAgentNextRecommendation(input: AgentNextInput): AgentNextReco
     return readyForPr(workstream.id);
   }
 
-  return selectNextSlice(workstream.id, input.nextSlice);
+  return selectNextSlice(workstream.id, input.nextSlice, input.suggestedBaseRef);
 }
 
-function selectNextSlice(workstreamId: string, nextSlice: Slice | undefined): AgentNextRecommendation {
+function selectNextSlice(
+  workstreamId: string,
+  nextSlice: Slice | undefined,
+  suggestedBaseRef?: string
+): AgentNextRecommendation {
   if (!nextSlice) {
     return recommendation({
       phase: "blocked",
@@ -202,6 +206,8 @@ function selectNextSlice(workstreamId: string, nextSlice: Slice | undefined): Ag
     });
   }
 
+  const baseRef = suggestedBaseRef ?? "<base-ref>";
+
   return recommendation({
     phase: "needs_slice_selection",
     reason: "An actionable slice exists but no active slice is set.",
@@ -209,10 +215,10 @@ function selectNextSlice(workstreamId: string, nextSlice: Slice | undefined): Ag
     sliceId: nextSlice.id,
     commands: [
       `pathfinder slice next ${workstreamId}`,
-      `pathfinder slice active ${workstreamId} ${nextSlice.id}`
+      `pathfinder slice start ${workstreamId} ${nextSlice.id} --base ${baseRef}`
     ],
-    agentInstruction: "Do not implement until the next slice is explicitly set active.",
-    humanInstruction: "Set the recommended slice active, then rerun pathfinder agent next."
+    agentInstruction: "Do not implement until the recommended slice branch is started and the slice is active.",
+    humanInstruction: "Start the recommended slice branch, then rerun pathfinder agent next."
   });
 }
 

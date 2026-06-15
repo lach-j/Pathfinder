@@ -289,6 +289,7 @@ export interface AgentNextInput {
   reviewSessions?: ReviewSession[];
   repositorySummary?: RepositorySummary;
   repositorySummaryError?: string;
+  suggestedBaseRef?: string;
   feedbackQueuePath?: string;
   stateError?: string;
 }

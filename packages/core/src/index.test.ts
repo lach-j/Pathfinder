@@ -83,7 +83,8 @@ test("recommends agent next phases for setup and slice selection", () => {
     nextSlice,
     planMarkdown: "# Plan",
     openComments: [],
-    reviewSessions: []
+    reviewSessions: [],
+    suggestedBaseRef: "main"
   });
 
   assert.equal(recommendation.phase, "needs_slice_selection");
@@ -91,7 +92,7 @@ test("recommends agent next phases for setup and slice selection", () => {
   assert.equal(recommendation.sliceId, "add-report");
   assert.deepEqual(recommendation.commands, [
     "pathfinder slice next inventory-alerts",
-    "pathfinder slice active inventory-alerts add-report"
+    "pathfinder slice start inventory-alerts add-report --base main"
   ]);
 });
 
@@ -292,6 +293,7 @@ test("renders deterministic agent prompts for implement and feedback phases", ()
   assert.match(implement, /Use Pathfinder as the source of truth/);
   assert.match(implement, /Do not resolve Pathfinder comments automatically/);
   assert.match(implement, /`pathfinder current`/);
+  assert.match(implement, /slice start <workstream-id> <slice-id> --base <base-ref>/);
   assert.match(implement, /Implement only slice `add-report`/);
   assert.match(implement, /`npm run typecheck`/);
 
