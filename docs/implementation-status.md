@@ -95,6 +95,14 @@ After personal mode, the next focus is making normal agent-driven slice executio
 3. Human review approval should be explicit, scriptable, and clear to both users and agents.
 4. Agent prompts and command output should avoid noisy, misleading, or unsupported instructions.
 
+After agent workflow stability, the next focus is expanding the local browser UI into a current-repository workspace:
+
+1. Add a workspace server/API foundation while keeping review-server compatibility.
+2. Replace the review-only app frame with a current-repo workspace shell.
+3. Visualize workstream slices and dependencies as the central workspace surface.
+4. Preview requirements, plans, evidence, feedback, stored PR drafts, and review sessions from the right panel.
+5. Add rich copy for stored PR drafts without turning Pathfinder into a Git hosting integration.
+
 ## Progress
 
 | Slice | Status | Handoff |
@@ -139,6 +147,12 @@ After personal mode, the next focus is making normal agent-driven slice executio
 | 38 | done | `docs/slices/38-commit-before-review.md` |
 | 39 | done | `docs/slices/39-human-review-approval-gate.md` |
 | 40 | done | `docs/slices/40-agent-prompt-command-stability.md` |
+| 41 | ready | `docs/slices/41-workspace-server-and-api-foundation.md` |
+| 42 | ready | `docs/slices/42-workspace-shell-current-repo.md` |
+| 43 | ready | `docs/slices/43-workstream-dependency-canvas.md` |
+| 44 | ready | `docs/slices/44-artifact-preview-panel.md` |
+| 45 | ready | `docs/slices/45-workspace-review-panel.md` |
+| 46 | ready | `docs/slices/46-pr-rich-copy.md` |
 
 Status values:
 
@@ -223,5 +237,14 @@ Next agent workflow stability order:
 38. Commit before review
 39. Human review approval gate
 40. Agent prompt and command stability
+
+Next workspace UI expansion order:
+
+41. Workspace server and API foundation
+42. Workspace shell for the current repository
+43. Workstream dependency canvas
+44. Artifact preview panel
+45. Workspace review panel
+46. PR rich copy
 
 The order can change if a slice doc says it has no dependency on earlier slices.
