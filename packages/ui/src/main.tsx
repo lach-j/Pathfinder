@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./styles/base.css";
 import "./styles/review.css";
+import "./styles/workspace.css";
 
 const root = document.querySelector("#root");
 
@@ -16,4 +17,3 @@ createRoot(root).render(
     <App />
   </StrictMode>
 );
-

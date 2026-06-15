@@ -1,6 +1,6 @@
 # Slice 42: Workspace Shell Current Repo
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -94,4 +94,3 @@ pathfinder workspace serve --port 4783
 ```
 
 Then open the browser app in a repository with at least one workstream and verify workstream and slice selection.
-

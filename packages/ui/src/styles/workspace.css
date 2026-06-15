@@ -1,0 +1,282 @@
+.workspace-app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr) minmax(280px, 340px);
+  background: var(--background);
+}
+
+.workspace-rail,
+.workspace-inspector {
+  min-width: 0;
+  background: var(--panel);
+  overflow: auto;
+}
+
+.workspace-rail {
+  border-right: 1px solid var(--border);
+}
+
+.workspace-inspector {
+  border-left: 1px solid var(--border);
+}
+
+.workspace-main {
+  min-width: 0;
+  overflow: auto;
+  padding: 18px;
+}
+
+.rail-content,
+.inspector-content {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.repo-block {
+  display: grid;
+  gap: 4px;
+}
+
+.repo-block h1,
+.surface-header h2,
+.inspector-heading h2,
+.workspace-empty h2 {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.rail-section {
+  display: grid;
+  gap: 10px;
+}
+
+.rail-heading {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.muted-copy,
+.surface-header p,
+.inspector-heading p,
+.workspace-empty p,
+.inspector-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.workstream-list {
+  display: grid;
+  gap: 4px;
+}
+
+.workstream-button,
+.slice-tile {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.workstream-button {
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+
+.workstream-button:hover,
+.workstream-button[aria-current="true"] {
+  border-color: var(--border);
+  background: var(--selected);
+}
+
+.workstream-title,
+.slice-title {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.workstream-meta,
+.slice-meta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.workspace-surface {
+  display: grid;
+  gap: 16px;
+}
+
+.surface-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+}
+
+.surface-stats,
+.inspector-counts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metric {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  min-width: 92px;
+  padding: 8px 10px;
+  display: grid;
+  gap: 2px;
+}
+
+.metric span:first-child {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.metric span:last-child {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.slice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.slice-tile {
+  min-height: 132px;
+  border-color: var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 12px;
+}
+
+.slice-tile:hover,
+.slice-tile[aria-current="true"] {
+  border-color: var(--focus);
+  background: #f8fbff;
+}
+
+.slice-tile-header,
+.inspector-actions {
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.slice-description {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.slice-status {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 7px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.slice-status-ready,
+.slice-status-in_progress {
+  border-color: #3d7c54;
+  color: #225f38;
+}
+
+.slice-status-review {
+  border-color: #9b6b1f;
+  color: #7b4d06;
+}
+
+.slice-status-complete {
+  border-color: #526170;
+  color: #46525f;
+}
+
+.inspector-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.inspector-actions .button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.detail-list {
+  border-top: 1px solid var(--border);
+  display: grid;
+  margin: 0;
+}
+
+.detail-list div {
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 3px;
+  padding: 10px 0;
+}
+
+.detail-list dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.detail-list dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.workspace-empty {
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 980px) {
+  .workspace-app {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-rail,
+  .workspace-inspector {
+    border: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .workspace-inspector {
+    border-top: 1px solid var(--border);
+  }
+
+  .surface-header {
+    grid-template-columns: 1fr;
+  }
+}
