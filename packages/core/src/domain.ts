@@ -300,6 +300,19 @@ export interface AgentNextInput {
 
 export type AgentPromptPhase = "plan" | "implement" | "feedback" | "review" | "pr";
 
+export interface AgentRepositoryCheckSignals {
+  hasPackageJson?: boolean;
+  hasPythonProjectMarker?: boolean;
+  hasPythonTests?: boolean;
+  hasPytestConfig?: boolean;
+  hasRuffConfig?: boolean;
+}
+
+export interface AgentCheckGuidance {
+  commands: string[];
+  instruction: string;
+}
+
 export interface AgentPromptInput {
   phase?: AgentPromptPhase;
   recommendation: AgentNextRecommendation;
@@ -308,6 +321,7 @@ export interface AgentPromptInput {
   requirementsPath?: string;
   planPath?: string;
   feedbackQueuePath?: string;
+  checkGuidance?: AgentCheckGuidance;
 }
 
 export interface ImportedStagePlanStage {

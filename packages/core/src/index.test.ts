@@ -11,6 +11,7 @@ import {
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
   getAgentCommandToolDefinitions,
+  getAgentCheckGuidance,
   getAgentUserInstallToolDefinitions,
   getReviewCommentAnchorStatus,
   isSliceActionable,
@@ -381,6 +382,7 @@ test("renders deterministic agent prompts for implement and feedback phases", ()
   assert.match(implement, /Use Pathfinder as the source of truth/);
   assert.match(implement, /Do not resolve Pathfinder comments automatically/);
   assert.match(implement, /`pathfinder current`/);
+  assert.equal((implement.match(/- `pathfinder current`/g) ?? []).length, 1);
   assert.match(implement, /slice start <workstream-id> <slice-id> --base <base-ref>/);
   assert.match(implement, /Implement only slice `add-report`/);
   assert.match(implement, /`npm run typecheck`/);
@@ -454,6 +456,32 @@ test("renders deterministic agent prompts for implement and feedback phases", ()
 
   assert.match(externalFeedback, /`pathfinder feedback export inventory-alerts --session review-add-report`/);
   assert.match(externalFeedback, /Export and read `\/home\/me\/\.pathfinder\/projects\/demo\/\.pathfinder-feedback\.md`/);
+});
+
+test("renders repository-aware check guidance in agent prompts", () => {
+  const workstream = testWorkstream("python-tool", "add-report");
+  const activeSlice = testSlice("add-report", "in_progress", "2026-01-01T00:00:00.000Z");
+  const prompt = renderAgentPrompt({
+    phase: "implement",
+    recommendation: {
+      phase: "ready_to_implement",
+      reason: "Active slice is ready.",
+      workstreamId: "python-tool",
+      sliceId: "add-report",
+      commands: ["pathfinder current"],
+      agentInstruction: "Implement only the active slice.",
+      humanInstruction: "Review the local diff."
+    },
+    workstream,
+    activeSlice,
+    checkGuidance: getAgentCheckGuidance({
+      hasPythonProjectMarker: true,
+      hasPythonTests: true
+    })
+  });
+
+  assert.match(prompt, /`python -m pytest`/);
+  assert.doesNotMatch(prompt, /npm run typecheck/);
 });
 
 test("defines managed native agent command wrappers", () => {

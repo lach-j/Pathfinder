@@ -72,6 +72,25 @@ test("help lists the implemented commands", async () => {
   }
 });
 
+test("prints command-group help", async () => {
+  const workstream = await runCli(["workstream", "--help"]);
+  const slice = await runCli(["slice", "--help"]);
+  const review = await runCli(["review", "--help"]);
+  const comment = await runCli(["comment", "--help"]);
+  const agent = await runCli(["agent", "--help"]);
+
+  assert.match(workstream.stdout, /Pathfinder workstream commands/);
+  assert.match(workstream.stdout, /pathfinder workstream show <id> \[--json\]/);
+  assert.match(slice.stdout, /Pathfinder slice commands/);
+  assert.match(slice.stdout, /pathfinder slice next <workstream-id> \[--json\]/);
+  assert.match(review.stdout, /Pathfinder review commands/);
+  assert.match(review.stdout, /pathfinder review sessions <workstream-id> \[--json\]/);
+  assert.match(comment.stdout, /Pathfinder comment commands/);
+  assert.match(comment.stdout, /pathfinder comment list <workstream-id> \[--session <session-id>\] \[--open\] \[--json\]/);
+  assert.match(agent.stdout, /Pathfinder agent commands/);
+  assert.match(agent.stdout, /pathfinder agent next \[--json\]/);
+});
+
 test("diagnoses missing agent integration setup from the CLI", async () => {
   const repo = await createTempGitRepo();
 
@@ -520,6 +539,93 @@ test("prints agent prompts in automatic and explicit phase modes", async () => {
   assert.match(automaticFeedback.stdout, /# Pathfinder Agent Prompt: feedback/);
   assert.match(automaticFeedback.stdout, /`pathfinder feedback export inventory-alerts --file \.\/\.pathfinder-feedback\.md`/);
   assert.match(automaticFeedback.stdout, /Do not resolve comments/);
+});
+
+test("agent prompt uses Python checks in Python-only repositories", async () => {
+  const repo = await createTempGitRepo();
+
+  await writeFile(path.join(repo, "pyproject.toml"), "[project]\nname = \"demo\"\n", "utf8");
+  await mkdir(path.join(repo, "tests"));
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Python Tool"], repo);
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");
+  await runCli(["plan", "set", "python-tool", "--file", "./plan.md"], repo);
+  await runCli(
+    ["slice", "add", "python-tool", "--title", "Add Report", "--description", "Report reorder candidates."],
+    repo
+  );
+  await runCli(["slice", "active", "python-tool", "add-report"], repo);
+
+  const prompt = await runCli(["agent", "prompt", "--phase", "implement"], repo);
+
+  assert.match(prompt.stdout, /`python -m pytest`/);
+  assert.doesNotMatch(prompt.stdout, /npm run typecheck/);
+  assert.doesNotMatch(prompt.stdout, /npm test/);
+  assert.doesNotMatch(prompt.stdout, /npm run lint --if-present/);
+});
+
+test("prints JSON for agent-friendly read-only commands", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await writeFile(path.join(repo, "plan.md"), "# Plan\n\nAdd report.\n", "utf8");
+  await runCli(["plan", "set", "inventory-alerts", "--file", "./plan.md"], repo);
+  await runCli(
+    [
+      "slice",
+      "add",
+      "inventory-alerts",
+      "--title",
+      "Add Report",
+      "--description",
+      "Report reorder candidates."
+    ],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-json-commands"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  await runCli(["review", "start", "--base", "main"], repo);
+  await runCli(
+    [
+      "comment",
+      "add",
+      "inventory-alerts",
+      "--session",
+      "review-add-report",
+      "--file",
+      "src/report.ts",
+      "--line",
+      "1",
+      "--side",
+      "new",
+      "--body",
+      "Handle empty report data."
+    ],
+    repo
+  );
+
+  const workstreamShow = JSON.parse((await runCli(["workstream", "show", "inventory-alerts", "--json"], repo)).stdout);
+  const workstreamList = JSON.parse((await runCli(["workstream", "list", "--json"], repo)).stdout);
+  const sliceList = JSON.parse((await runCli(["slice", "list", "inventory-alerts", "--json"], repo)).stdout);
+  const nextSlice = JSON.parse((await runCli(["slice", "next", "inventory-alerts", "--json"], repo)).stdout);
+  const sessions = JSON.parse((await runCli(["review", "sessions", "inventory-alerts", "--json"], repo)).stdout);
+  const comments = JSON.parse(
+    (await runCli(["comment", "list", "inventory-alerts", "--session", "review-add-report", "--open", "--json"], repo)).stdout
+  );
+
+  assert.equal(workstreamShow.id, "inventory-alerts");
+  assert.equal(workstreamList[0].id, "inventory-alerts");
+  assert.equal(sliceList[0].id, "add-report");
+  assert.equal(nextSlice.id, "add-report");
+  assert.equal(sessions[0].id, "review-add-report");
+  assert.equal(comments[0].id, "handle-empty-report-data");
 });
 
 test("agent next and prompt reference external feedback path in external mode", async () => {

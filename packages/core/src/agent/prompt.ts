@@ -1,4 +1,5 @@
 import { AgentNextPhase, AgentPromptInput, AgentPromptPhase } from "../domain.js";
+import { getAgentCheckGuidance } from "./checks.js";
 
 export function renderAgentPrompt(input: AgentPromptInput): string {
   const phase = input.phase ?? promptPhaseForNextPhase(input.recommendation.phase);
@@ -12,6 +13,7 @@ export function renderAgentPrompt(input: AgentPromptInput): string {
     input.requirementsPath ?? `.pathfinder/workstreams/${workstreamId}/requirements.md`;
   const planPath = input.planPath ?? `.pathfinder/workstreams/${workstreamId}/plan.md`;
   const feedbackQueuePath = input.feedbackQueuePath ?? input.recommendation.feedbackQueuePath ?? "./.pathfinder-feedback.md";
+  const checkGuidance = input.checkGuidance ?? getAgentCheckGuidance({ hasPackageJson: true });
 
   const lines = [
     `# Pathfinder Agent Prompt: ${phase}`,
@@ -34,7 +36,7 @@ export function renderAgentPrompt(input: AgentPromptInput): string {
     "- Keep changes scoped to the active slice unless the human explicitly changes the Pathfinder slice.",
     "- Do not resolve Pathfinder comments automatically; leave resolution for the human after review.",
     "- Do not call external APIs, add hosted services, or add authentication, billing, cloud sync, organisations, roles, or permissions.",
-    "- Run repository checks before handing work back.",
+    `- ${checkGuidance.instruction}`,
     "- Commit implementation or feedback fixes before starting or refreshing a Pathfinder review session.",
     "",
     "## Commands To Run",
@@ -46,6 +48,7 @@ export function renderAgentPrompt(input: AgentPromptInput): string {
       requirementsPath,
       planPath,
       feedbackQueuePath,
+      checkGuidance,
       recommendedCommands: input.recommendation.commands
     }).map((command) => `- \`${command}\``),
     "",
@@ -57,7 +60,8 @@ export function renderAgentPrompt(input: AgentPromptInput): string {
       reviewSessionId,
       requirementsPath,
       planPath,
-      feedbackQueuePath
+      feedbackQueuePath,
+      checkGuidance
     })
   ];
 
@@ -95,12 +99,11 @@ interface PromptCommandContext {
   requirementsPath: string;
   planPath: string;
   feedbackQueuePath: string;
+  checkGuidance: ReturnType<typeof getAgentCheckGuidance>;
   recommendedCommands: string[];
 }
 
 function commandsForPromptPhase(phase: AgentPromptPhase, context: PromptCommandContext): string[] {
-  const checkCommands = ["npm run typecheck", "npm test", "npm run lint --if-present"];
-
   if (phase === "plan") {
     return [
       "pathfinder agent next --json",
@@ -114,30 +117,28 @@ function commandsForPromptPhase(phase: AgentPromptPhase, context: PromptCommandC
   }
 
   if (phase === "implement") {
-    return [
+    return uniqueCommands([
       "pathfinder agent next --json",
       ...context.recommendedCommands,
       "pathfinder current",
-      ...checkCommands,
+      ...context.checkGuidance.commands,
       "git status --short",
       "git add <changed-files>",
       "git commit -m \"Implement <slice-title>\"",
       `pathfinder review start --base <base-ref>`
-    ];
+    ]);
   }
 
   if (phase === "feedback") {
-    return [
+    return uniqueCommands([
       "pathfinder agent next --json",
       feedbackExportCommand(context.workstreamId, context.reviewSessionId, context.feedbackQueuePath),
-      "npm run typecheck",
-      "npm test",
-      "npm run lint --if-present",
+      ...context.checkGuidance.commands,
       "git status --short",
       "git add <changed-files>",
       "git commit -m \"Address Pathfinder feedback\"",
       `pathfinder review refresh ${context.workstreamId} ${context.reviewSessionId}`
-    ];
+    ]);
   }
 
   if (phase === "review") {
@@ -165,6 +166,7 @@ interface PromptInstructionContext {
   requirementsPath: string;
   planPath: string;
   feedbackQueuePath: string;
+  checkGuidance: ReturnType<typeof getAgentCheckGuidance>;
 }
 
 function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInstructionContext): string[] {
@@ -183,7 +185,7 @@ function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInst
       "1. Run the recommended `pathfinder slice start <workstream-id> <slice-id> --base <base-ref>` command if Pathfinder is still in `needs_slice_selection`.",
       "2. Run `pathfinder current` and read the active requirements, plan, and slice description after the slice branch is checked out.",
       `3. Implement only slice \`${context.sliceId}\`; avoid adjacent refactors and unrelated cleanup.`,
-      "4. Run `npm run typecheck`, `npm test`, and `npm run lint --if-present`.",
+      `4. ${formatCheckInstruction(context.checkGuidance)}`,
       "5. Inspect `git status --short`, stage only the slice files, and commit the implementation before review.",
       "6. After the commit, run `pathfinder review start --base <base-ref>` or refresh the existing review session if Pathfinder reports one.",
       "7. Summarize changed files, checks, and manual verification steps."
@@ -194,7 +196,7 @@ function instructionsForPromptPhase(phase: AgentPromptPhase, context: PromptInst
     return [
       `1. Export and read \`${context.feedbackQueuePath}\`.`,
       "2. Address every open feedback item in that file while staying scoped to the active slice.",
-      "3. Run `npm run typecheck`, `npm test`, and `npm run lint --if-present`.",
+      `3. ${formatCheckInstruction(context.checkGuidance)}`,
       "4. Inspect `git status --short`, stage only feedback fixes, and commit them.",
       `5. Refresh the review session with \`pathfinder review refresh ${context.workstreamId} ${context.reviewSessionId}\`.`,
       "6. Do not resolve comments; the human reviewer resolves them after verifying the refreshed diff."
@@ -224,4 +226,16 @@ function feedbackExportCommand(workstreamId: string, reviewSessionId: string, fe
   const sessionFlag = reviewSessionId.startsWith("<") ? "" : ` --session ${reviewSessionId}`;
   const fileFlag = feedbackQueuePath === "./.pathfinder-feedback.md" ? " --file ./.pathfinder-feedback.md" : "";
   return `pathfinder feedback export ${workstreamId}${sessionFlag}${fileFlag}`;
+}
+
+function uniqueCommands(commands: string[]): string[] {
+  return [...new Set(commands)];
+}
+
+function formatCheckInstruction(guidance: ReturnType<typeof getAgentCheckGuidance>): string {
+  if (guidance.commands.length === 0) {
+    return guidance.instruction;
+  }
+
+  return `Run ${guidance.commands.map((command) => `\`${command}\``).join(", ")}.`;
 }

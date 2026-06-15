@@ -138,7 +138,7 @@ After personal mode, the next focus is making normal agent-driven slice executio
 | 37 | done | `docs/slices/37-slice-start-branch-workflow.md` |
 | 38 | done | `docs/slices/38-commit-before-review.md` |
 | 39 | done | `docs/slices/39-human-review-approval-gate.md` |
-| 40 | ready | `docs/slices/40-agent-prompt-command-stability.md` |
+| 40 | done | `docs/slices/40-agent-prompt-command-stability.md` |
 
 Status values:
 

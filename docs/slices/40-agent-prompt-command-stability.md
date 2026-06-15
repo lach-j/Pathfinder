@@ -1,6 +1,6 @@
 # Slice 40: Agent Prompt And Command Stability
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -92,3 +92,19 @@ pathfinder slice next <workstream-id> --json
 pathfinder review sessions <workstream-id> --json
 ```
 
+## Completion Notes
+
+- Deduplicated agent prompt command lists.
+- Added pure repository check guidance and state-layer local project detection so Node repositories get npm checks, Python repositories get detected Python checks, and unknown repositories are told to inspect and run applicable checks.
+- Added `--json` support for agent-friendly read-only list/show commands.
+- Added command-group help for agent, workstream, slice, comment, and review commands.
+- Verified personal doctor tests continue to treat external/no-repo-footprint mode as valid when installed.
+
+Checks run:
+
+```bash
+npm run typecheck
+npm test
+npm run lint --if-present
+npm run build
+```

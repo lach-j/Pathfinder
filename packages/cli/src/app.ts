@@ -44,7 +44,12 @@ export async function run(args: string[]): Promise<void> {
   const [area, action, ...rest] = args;
 
   if (!area || area === "help" || area === "--help" || area === "-h") {
-    printHelp();
+    printHelp(action);
+    return;
+  }
+
+  if (action === "help" || action === "--help" || action === "-h") {
+    printHelp(area);
     return;
   }
 
@@ -591,8 +596,12 @@ async function runWorkstream(action: string | undefined, args: string[]): Promis
   }
 
   if (action === "list") {
-    expectNoExtraArgs(args);
+    const options = parseOptions(args);
     const workstreams = await store.listWorkstreams();
+    if (options.json) {
+      console.log(JSON.stringify(workstreams, null, 2));
+      return;
+    }
     if (workstreams.length === 0) {
       console.log("No workstreams found.");
       return;
@@ -604,9 +613,9 @@ async function runWorkstream(action: string | undefined, args: string[]): Promis
   }
 
   if (action === "show") {
-    const [id, ...extra] = args;
+    const [id, ...optionArgs] = args;
     requireArgument(id, "workstream id");
-    expectNoExtraArgs(extra);
+    parseOptions(optionArgs);
     const workstream = await store.getWorkstream(id);
     console.log(JSON.stringify(workstream, null, 2));
     return;
@@ -661,10 +670,14 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
   }
 
   if (action === "list") {
-    const [workstreamId, ...extra] = args;
+    const [workstreamId, ...optionArgs] = args;
     requireArgument(workstreamId, "workstream id");
-    expectNoExtraArgs(extra);
+    const options = parseOptions(optionArgs);
     const slices = await store.listSlices(workstreamId);
+    if (options.json) {
+      console.log(JSON.stringify(slices, null, 2));
+      return;
+    }
     if (slices.length === 0) {
       console.log("No slices found.");
       return;
@@ -697,13 +710,22 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
   }
 
   if (action === "next") {
-    const [workstreamId, ...extra] = args;
+    const [workstreamId, ...optionArgs] = args;
     requireArgument(workstreamId, "workstream id");
-    expectNoExtraArgs(extra);
+    const options = parseOptions(optionArgs);
     const slice = await store.getNextSlice(workstreamId);
 
     if (!slice) {
+      if (options.json) {
+        console.log("null");
+        return;
+      }
       console.log("No actionable slices found. Proposed or ready slices may be blocked by incomplete dependencies.");
+      return;
+    }
+
+    if (options.json) {
+      console.log(JSON.stringify(slice, null, 2));
       return;
     }
 
@@ -873,6 +895,10 @@ async function runComment(action: string | undefined, args: string[]): Promise<v
       sessionId: options.session,
       openOnly: Boolean(options.open)
     });
+    if (options.json) {
+      console.log(JSON.stringify(comments, null, 2));
+      return;
+    }
     if (comments.length === 0) {
       console.log("No comments found.");
       return;
@@ -952,10 +978,14 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
   }
 
   if (action === "sessions") {
-    const [workstreamId, ...extra] = args;
+    const [workstreamId, ...optionArgs] = args;
     requireArgument(workstreamId, "workstream id");
-    expectNoExtraArgs(extra);
+    const options = parseOptions(optionArgs);
     const sessions = await store.listReviewSessions(workstreamId);
+    if (options.json) {
+      console.log(JSON.stringify(sessions, null, 2));
+      return;
+    }
     if (sessions.length === 0) {
       console.log("No review sessions found.");
       return;
@@ -967,10 +997,10 @@ async function runReview(action: string | undefined, args: string[]): Promise<vo
   }
 
   if (action === "session") {
-    const [workstreamId, sessionId, ...extra] = args;
+    const [workstreamId, sessionId, ...optionArgs] = args;
     requireArgument(workstreamId, "workstream id");
     requireArgument(sessionId, "session id");
-    expectNoExtraArgs(extra);
+    parseOptions(optionArgs);
     const session = await store.getReviewSession(workstreamId, sessionId);
     console.log(JSON.stringify(session, null, 2));
     return;

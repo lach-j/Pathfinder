@@ -11,6 +11,7 @@ import {
   AGENT_USER_INSTALL_MANAGED_START,
   AgentCommandTool,
   AgentCommandToolDefinition,
+  AgentRepositoryCheckSignals,
   AgentNextRecommendation,
   AgentPromptPhase,
   AgentUserInstallTool,
@@ -31,6 +32,7 @@ import {
   createTimestamp,
   findNextActionableSlice,
   getAgentCommandToolDefinitions,
+  getAgentCheckGuidance,
   getAgentNextRecommendation,
   getAgentUserInstallToolDefinitions,
   generateDeterministicReview,
@@ -1311,7 +1313,11 @@ export class PathfinderStore {
     const workstreamId = recommendation.workstreamId;
 
     if (!workstreamId || workstreamId.startsWith("<")) {
-      return renderAgentPrompt({ phase, recommendation });
+      return renderAgentPrompt({
+        phase,
+        recommendation,
+        checkGuidance: getAgentCheckGuidance(await this.getAgentRepositoryCheckSignals())
+      });
     }
 
     try {
@@ -1330,11 +1336,47 @@ export class PathfinderStore {
         activeSlice,
         requirementsPath: path.join(root, "requirements.md"),
         planPath: path.join(root, "plan.md"),
-        feedbackQueuePath: await this.getDefaultFeedbackQueuePath()
+        feedbackQueuePath: await this.getDefaultFeedbackQueuePath(),
+        checkGuidance: getAgentCheckGuidance(await this.getAgentRepositoryCheckSignals())
       });
     } catch {
-      return renderAgentPrompt({ phase, recommendation });
+      return renderAgentPrompt({
+        phase,
+        recommendation,
+        checkGuidance: getAgentCheckGuidance(await this.getAgentRepositoryCheckSignals())
+      });
     }
+  }
+
+  private async getAgentRepositoryCheckSignals(): Promise<AgentRepositoryCheckSignals> {
+    const hasPackageJson = await exists(path.join(this.cwd, "package.json"));
+    const hasPyproject = await exists(path.join(this.cwd, "pyproject.toml"));
+    const hasSetupPy = await exists(path.join(this.cwd, "setup.py"));
+    const hasSetupCfg = await exists(path.join(this.cwd, "setup.cfg"));
+    const hasRequirements = await exists(path.join(this.cwd, "requirements.txt"));
+    const hasPytestIni = await exists(path.join(this.cwd, "pytest.ini"));
+    const hasToxIni = await exists(path.join(this.cwd, "tox.ini"));
+    const hasTestsDirectory = await exists(path.join(this.cwd, "tests"));
+
+    return {
+      hasPackageJson,
+      hasPythonProjectMarker: hasPyproject || hasSetupPy || hasSetupCfg || hasRequirements || hasPytestIni || hasToxIni,
+      hasPythonTests: hasTestsDirectory,
+      hasPytestConfig: hasPytestIni || hasToxIni,
+      hasRuffConfig: await this.hasRuffConfig(hasPyproject, hasSetupCfg)
+    };
+  }
+
+  private async hasRuffConfig(hasPyproject: boolean, hasSetupCfg: boolean): Promise<boolean> {
+    if (await exists(path.join(this.cwd, "ruff.toml")) || await exists(path.join(this.cwd, ".ruff.toml"))) {
+      return true;
+    }
+
+    if (hasPyproject && (await readFile(path.join(this.cwd, "pyproject.toml"), "utf8")).includes("[tool.ruff")) {
+      return true;
+    }
+
+    return hasSetupCfg && (await readFile(path.join(this.cwd, "setup.cfg"), "utf8")).includes("[ruff]");
   }
 
   private async validateCommentTarget(

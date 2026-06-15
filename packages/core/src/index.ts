@@ -14,4 +14,5 @@ export * from "./feedback/markdown.js";
 export * from "./pr/markdown.js";
 export * from "./agent/next.js";
 export * from "./agent/prompt.js";
+export * from "./agent/checks.js";
 export * from "./agent/commands.js";

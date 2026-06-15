@@ -164,7 +164,13 @@ The main commands are:
 pathfinder init
 pathfinder agent next --json
 pathfinder agent prompt
+pathfinder workstream list --json
+pathfinder workstream show <workstream-id> --json
+pathfinder slice list <workstream-id> --json
+pathfinder slice next <workstream-id> --json
 pathfinder slice start <workstream-id> <slice-id> --base <base-ref>
+pathfinder review sessions <workstream-id> --json
+pathfinder comment list <workstream-id> --session <session-id> --open --json
 pathfinder review serve
 pathfinder feedback export <workstream-id>
 pathfinder pr generate <workstream-id>
