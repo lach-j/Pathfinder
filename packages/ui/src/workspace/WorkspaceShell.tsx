@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 
 import type { Slice, Workstream, WorkstreamOverviewResponse, WorkspaceResponse } from "../types";
 import { countsForSlice, countsForWorkstream, dependencyLabels } from "./workspace-model";
+import { SliceDependencyCanvas } from "./SliceDependencyCanvas";
 
 interface WorkspaceShellProps {
   workspace?: WorkspaceResponse;
@@ -176,31 +177,12 @@ function WorkspaceOverview({
         </div>
       </div>
 
-      {overview.slices.length === 0 ? (
-        <EmptyState title="No slices" message="This workstream does not have implementation slices yet." />
-      ) : (
-        <div className="slice-grid" aria-label="Workstream slices">
-          {overview.slices.map((slice) => (
-            <button
-              className="slice-tile"
-              type="button"
-              key={slice.id}
-              aria-current={slice.id === selectedSliceId}
-              onClick={() => onSelectSlice(slice.id)}
-            >
-              <span className="slice-tile-header">
-                <span className="slice-title">{slice.title}</span>
-                <StatusPill status={slice.status} />
-              </span>
-              <span className="slice-description">{slice.description || "No description recorded."}</span>
-              <span className="slice-meta">
-                {slice.id}
-                {slice.id === activeSliceId ? " · active" : ""}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+      <SliceDependencyCanvas
+        overview={overview}
+        activeSliceId={activeSliceId}
+        selectedSliceId={selectedSliceId}
+        onSelectSlice={onSelectSlice}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 # Slice 43: Workstream Dependency Canvas
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -91,4 +91,3 @@ pathfinder workspace serve --port 4783
 ```
 
 Verify a workstream with multiple dependent and independent slices renders correctly.
-
