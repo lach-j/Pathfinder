@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  BranchReviewSession,
   Evidence,
   PathfinderError,
   Project,
@@ -54,6 +55,15 @@ export interface WorkstreamOverviewResponse {
   reviewSessions: ReviewSession[];
   reviews: Review[];
   evidence: Evidence[];
+  prDraft: {
+    markdown: string;
+    path: string;
+  };
+}
+
+export interface BranchReviewOverviewResponse {
+  sessions: BranchReviewSession[];
+  comments: ReviewComment[];
   prDraft: {
     markdown: string;
     path: string;
@@ -177,6 +187,77 @@ async function routeRequest(
 
   if (parts[1] === "workstreams" && parts[2]) {
     await routeWorkstreamRequest(method, parts.slice(2), url, request, response, dependencies);
+    return;
+  }
+
+  if (parts[1] === "branch-review") {
+    await routeBranchReviewRequest(method, parts.slice(2), url, request, response, dependencies);
+    return;
+  }
+
+  writeJson(response, 404, { error: "Not found." });
+}
+
+async function routeBranchReviewRequest(
+  method: string,
+  parts: string[],
+  url: URL,
+  request: IncomingMessage,
+  response: ServerResponse,
+  dependencies: ReviewServerDependencies
+): Promise<void> {
+  const [area, id, action] = parts;
+
+  if (method === "GET" && !area) {
+    writeJson(response, 200, await getBranchReviewOverviewResponse(dependencies.store));
+    return;
+  }
+
+  if (method === "GET" && area === "sessions" && !id) {
+    writeJson(response, 200, {
+      sessions: await dependencies.store.listBranchReviewSessions()
+    });
+    return;
+  }
+
+  if (method === "GET" && area === "sessions" && id && action === "diff") {
+    const session = await dependencies.store.getBranchReviewSession(id);
+    const diff = await dependencies.git.getStructuredDiffBetweenRefs(session.mergeBase, session.headCommit);
+    writeJson(response, 200, { session, diff });
+    return;
+  }
+
+  if (method === "POST" && area === "sessions" && id && action === "refresh") {
+    const session = await dependencies.store.getBranchReviewSession(id);
+    const repositorySummary = await dependencies.git.getCommittedSummaryAgainstBase(session.baseRef);
+    const diff = await dependencies.git.getStructuredDiffBetweenRefs(
+      repositorySummary.mergeBase,
+      repositorySummary.headCommit
+    );
+    const refreshed = await dependencies.store.refreshBranchReviewSession(id, repositorySummary, diff);
+    writeJson(response, 200, { session: refreshed.session, comments: refreshed.comments, diff });
+    return;
+  }
+
+  if (method === "GET" && area === "comments" && !id) {
+    writeJson(response, 200, {
+      comments: await dependencies.store.listBranchReviewComments({
+        sessionId: optionalQueryValue(url, "session"),
+        openOnly: url.searchParams.get("open") === "true"
+      })
+    });
+    return;
+  }
+
+  if (method === "POST" && area === "comments" && !id) {
+    const comment = await addBranchReviewCommentFromRequest(request, dependencies);
+    writeJson(response, 201, { comment });
+    return;
+  }
+
+  if (method === "POST" && area === "comments" && id && action === "resolve") {
+    const comment = await dependencies.store.resolveBranchReviewComment(id);
+    writeJson(response, 200, { comment });
     return;
   }
 
@@ -313,6 +394,16 @@ async function getWorkstreamOverviewResponse(
   };
 }
 
+async function getBranchReviewOverviewResponse(store: PathfinderStore): Promise<BranchReviewOverviewResponse> {
+  const prDraft = await store.getStoredBranchReviewPrMarkdown();
+
+  return {
+    sessions: await store.listBranchReviewSessions(),
+    comments: await store.listBranchReviewComments(),
+    prDraft
+  };
+}
+
 async function addCommentFromRequest(
   workstreamId: string,
   request: IncomingMessage,
@@ -334,6 +425,27 @@ async function addCommentFromRequest(
     : undefined;
 
   return dependencies.store.addComment(workstreamId, {
+    body: text,
+    target,
+    structuredDiff
+  });
+}
+
+async function addBranchReviewCommentFromRequest(
+  request: IncomingMessage,
+  dependencies: ReviewServerDependencies
+) {
+  const body = await readJsonBody<CommentRequestBody>(request);
+  const text = requireString(body.body, "Comment body");
+  const target = commentTargetFromBody(body);
+  const session = target.type === "file" || target.type === "line"
+    ? await dependencies.store.getBranchReviewSession(target.sessionId)
+    : undefined;
+  const structuredDiff = session
+    ? await dependencies.git.getStructuredDiffBetweenRefs(session.mergeBase, session.headCommit)
+    : undefined;
+
+  return dependencies.store.addBranchReviewComment({
     body: text,
     target,
     structuredDiff

@@ -1994,6 +1994,68 @@ test("serves local review JSON endpoints and mutates comments", async () => {
   }
 });
 
+test("serves branch review JSON endpoints and mutates comments", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-branch-review-server"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  await runCli(["branch-review", "start", "--base", "main"], repo);
+
+  const server = await serveWorkspaceServer({ cwd: repo, port: 0, silent: true });
+  try {
+    const baseUrl = serverBaseUrl(server);
+    const overview = await jsonFetch(`${baseUrl}/api/branch-review`);
+    const sessions = await jsonFetch(`${baseUrl}/api/branch-review/sessions`);
+    const diff = await jsonFetch(`${baseUrl}/api/branch-review/sessions/review-feature-branch-review-server/diff`);
+    const added = await jsonFetch(`${baseUrl}/api/branch-review/comments`, {
+      method: "POST",
+      body: JSON.stringify({
+        body: "Handle the empty branch case.",
+        sessionId: "review-feature-branch-review-server",
+        filePath: "src/report.ts",
+        lineNumber: 1,
+        side: "new"
+      })
+    });
+    await git(repo, ["rm", "src/report.ts"]);
+    await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "remove report"]);
+    const refreshed = await jsonFetch(
+      `${baseUrl}/api/branch-review/sessions/review-feature-branch-review-server/refresh`,
+      { method: "POST" }
+    );
+    const comments = await jsonFetch(
+      `${baseUrl}/api/branch-review/comments?session=review-feature-branch-review-server`
+    );
+    const resolved = await jsonFetch(
+      `${baseUrl}/api/branch-review/comments/handle-the-empty-branch-case/resolve`,
+      { method: "POST" }
+    );
+    const openComments = await jsonFetch(
+      `${baseUrl}/api/branch-review/comments?session=review-feature-branch-review-server&open=true`
+    );
+
+    assert.equal(overview.sessions[0].id, "review-feature-branch-review-server");
+    assert.match(overview.prDraft.path, /branch-reviews[\\/]+pr\.md$/);
+    assert.equal(sessions.sessions[0].id, "review-feature-branch-review-server");
+    assert.equal(diff.session.id, "review-feature-branch-review-server");
+    assert.equal(diff.diff.files[0].path, "src/report.ts");
+    assert.equal(added.comment.id, "handle-the-empty-branch-case");
+    assert.equal(refreshed.comments[0].anchorStatus, "stale");
+    assert.equal(comments.comments.length, 1);
+    assert.equal(comments.comments[0].anchorStatus, "stale");
+    assert.equal(resolved.comment.resolved, true);
+    assert.equal(openComments.comments.length, 0);
+  } finally {
+    await closeServer(server);
+  }
+});
+
 test("serves JSON errors when Pathfinder state is missing", async () => {
   const repo = await createRealTempGitRepo();
   const server = await serveReviewServer({ cwd: repo, port: 0, silent: true });

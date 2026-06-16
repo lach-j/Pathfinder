@@ -5,6 +5,10 @@
   background: var(--background);
 }
 
+.workspace-app.is-branch-review {
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+}
+
 .workspace-rail,
 .workspace-inspector {
   min-width: 0;
@@ -24,6 +28,11 @@
   min-width: 0;
   overflow: auto;
   padding: 18px;
+}
+
+.workspace-main-branch {
+  padding: 0;
+  overflow: hidden;
 }
 
 .rail-content,
@@ -618,8 +627,112 @@
   gap: 6px;
 }
 
+.branch-review-workspace {
+  min-height: 100vh;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+}
+
+.branch-review-sidebar {
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  overflow: auto;
+}
+
+.branch-review-main {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.branch-review-toolbar {
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 14px 18px;
+  align-items: start;
+}
+
+.session-list {
+  display: grid;
+  border-bottom: 1px solid var(--border);
+}
+
+.session-button {
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  gap: 4px;
+  padding: 11px 16px;
+  text-align: left;
+}
+
+.session-button:hover,
+.session-button[aria-current="true"] {
+  background: var(--selected);
+}
+
+.session-title {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.session-meta {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.branch-review-empty {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.branch-review-empty strong {
+  color: var(--text);
+}
+
+.branch-review-empty p {
+  margin: 0;
+}
+
+.branch-review-empty code {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--metadata);
+  color: var(--text);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  padding: 8px;
+}
+
 @media (max-width: 980px) {
   .workspace-app {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-app.is-branch-review {
     grid-template-columns: 1fr;
   }
 
@@ -634,6 +747,20 @@
   }
 
   .surface-header {
+    grid-template-columns: 1fr;
+  }
+
+  .branch-review-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .branch-review-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    max-height: 42vh;
+  }
+
+  .branch-review-toolbar {
     grid-template-columns: 1fr;
   }
 }

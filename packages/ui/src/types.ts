@@ -97,6 +97,31 @@ export interface ReviewSession {
   headRef: string;
   mergeBase: string;
   headCommit: string;
+  changedFiles?: unknown[];
+  createdAt?: string;
+  refreshedAt?: string;
+  approvedAt?: string;
+}
+
+export type BranchReviewSession = ReviewSession;
+
+export interface BranchReviewOverviewResponse {
+  sessions: BranchReviewSession[];
+  comments: ReviewComment[];
+  prDraft: StoredMarkdownFile;
+}
+
+export interface BranchReviewDiffResponse {
+  session: BranchReviewSession;
+  diff: StructuredDiff;
+}
+
+export interface BranchReviewRefreshResponse extends BranchReviewDiffResponse {
+  comments: ReviewComment[];
+}
+
+export interface CommentResponse {
+  comment: ReviewComment;
 }
 
 export interface StructuredDiff {

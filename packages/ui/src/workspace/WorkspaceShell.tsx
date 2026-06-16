@@ -1,8 +1,10 @@
+import { useState } from "react";
 import type { ReactElement } from "react";
 
 import type { Workstream, WorkstreamOverviewResponse, WorkspaceResponse } from "../types";
 import { countsForWorkstream } from "./workspace-model";
 import { ArtifactPreviewPanel } from "./ArtifactPreviewPanel";
+import { BranchReviewWorkspace } from "./BranchReviewWorkspace";
 import { SliceDependencyCanvas } from "./SliceDependencyCanvas";
 
 interface WorkspaceShellProps {
@@ -30,58 +32,76 @@ export function WorkspaceShell({
   onSelectSlice,
   onMakeActive
 }: WorkspaceShellProps): ReactElement {
+  const [mode, setMode] = useState<"workstreams" | "branch-review">("workstreams");
   const selectedWorkstream = workspace?.workstreams.find((workstream) => workstream.id === selectedWorkstreamId);
   const selectedSlice = overview?.slices.find((slice) => slice.id === selectedSliceId);
   const activeWorkstreamId = workspace?.activeWorkstream?.id;
   const activeSliceId = workspace?.activeSlice?.id;
 
   return (
-    <main className="workspace-app">
+    <main className={`workspace-app${mode === "branch-review" ? " is-branch-review" : ""}`}>
       <aside className="workspace-rail">
         <ProjectNav
           workspace={workspace}
+          mode={mode}
           selectedWorkstreamId={selectedWorkstreamId}
           activeWorkstreamId={activeWorkstreamId}
-          onSelectWorkstream={onSelectWorkstream}
+          onSelectBranchReview={() => setMode("branch-review")}
+          onSelectWorkstream={(workstreamId) => {
+            setMode("workstreams");
+            onSelectWorkstream(workstreamId);
+          }}
         />
       </aside>
-      <section className="workspace-main">
-        <WorkspaceOverview
-          loading={loading}
-          error={error}
-          workspace={workspace}
-          overview={overview}
-          selectedWorkstream={selectedWorkstream}
-          selectedSliceId={selectedSliceId}
-          activeSliceId={activeSliceId}
-          onSelectSlice={onSelectSlice}
-        />
-      </section>
-      <aside className="workspace-inspector">
-        <ArtifactPreviewPanel
-          loading={loading}
-          error={error}
-          overview={overview}
-          selectedWorkstream={selectedWorkstream}
-          selectedSlice={selectedSlice}
-          activeSliceId={activeSliceId}
-          statusMessage={statusMessage}
-          onMakeActive={onMakeActive}
-        />
-      </aside>
+      {mode === "branch-review" ? (
+        <section className="workspace-main workspace-main-branch">
+          <BranchReviewWorkspace />
+        </section>
+      ) : (
+        <>
+          <section className="workspace-main">
+            <WorkspaceOverview
+              loading={loading}
+              error={error}
+              workspace={workspace}
+              overview={overview}
+              selectedWorkstream={selectedWorkstream}
+              selectedSliceId={selectedSliceId}
+              activeSliceId={activeSliceId}
+              onSelectSlice={onSelectSlice}
+            />
+          </section>
+          <aside className="workspace-inspector">
+            <ArtifactPreviewPanel
+              loading={loading}
+              error={error}
+              overview={overview}
+              selectedWorkstream={selectedWorkstream}
+              selectedSlice={selectedSlice}
+              activeSliceId={activeSliceId}
+              statusMessage={statusMessage}
+              onMakeActive={onMakeActive}
+            />
+          </aside>
+        </>
+      )}
     </main>
   );
 }
 
 function ProjectNav({
   workspace,
+  mode,
   selectedWorkstreamId,
   activeWorkstreamId,
+  onSelectBranchReview,
   onSelectWorkstream
 }: {
   workspace?: WorkspaceResponse;
+  mode: "workstreams" | "branch-review";
   selectedWorkstreamId?: string;
   activeWorkstreamId?: string;
+  onSelectBranchReview: () => void;
   onSelectWorkstream: (workstreamId: string) => void;
 }): ReactElement {
   return (
@@ -89,6 +109,20 @@ function ProjectNav({
       <div className="repo-block">
         <div className="eyebrow">Current repository</div>
         <h1>{workspace?.project.name || "Pathfinder workspace"}</h1>
+      </div>
+      <div className="rail-section">
+        <div className="rail-heading">Review modes</div>
+        <div className="workstream-list">
+          <button
+            className="workstream-button"
+            type="button"
+            aria-current={mode === "branch-review"}
+            onClick={onSelectBranchReview}
+          >
+            <span className="workstream-title">Branch review</span>
+            <span className="workstream-meta">Standalone diff review</span>
+          </button>
+        </div>
       </div>
       <div className="rail-section">
         <div className="rail-heading">Workstreams</div>
