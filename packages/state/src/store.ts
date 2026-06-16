@@ -24,6 +24,7 @@ import {
   RepositorySummary,
   Review,
   ReviewComment,
+  ReviewCommentOrigin,
   ReviewCommentTarget,
   ReviewSession,
   Slice,
@@ -197,6 +198,7 @@ export type UncommittedChangesProvider = () => Promise<boolean>;
 
 export interface AddCommentInput {
   body: string;
+  origin?: ReviewCommentOrigin;
   target?: ReviewCommentTarget;
   structuredDiff?: StructuredDiff;
 }
@@ -752,6 +754,7 @@ export class PathfinderStore {
       id,
       ...(validatedTarget.sliceId ? { sliceId: validatedTarget.sliceId } : {}),
       target: validatedTarget.target,
+      origin: input.origin ?? "human",
       body: cleanBody,
       resolved: false,
       createdAt: createTimestamp()
@@ -1178,6 +1181,7 @@ export class PathfinderStore {
     const comment: ReviewComment = {
       id,
       target,
+      origin: input.origin ?? "human",
       body: cleanBody,
       resolved: false,
       createdAt: createTimestamp()
@@ -1264,7 +1268,7 @@ export class PathfinderStore {
     const comments = await this.listBranchReviewComments({
       sessionId: options.sessionId,
       openOnly: true
-    });
+    }).then((items) => items.filter((comment) => comment.origin !== "agent"));
 
     return {
       markdown: generateBranchFeedbackQueueMarkdown({
@@ -1376,7 +1380,7 @@ export class PathfinderStore {
     const comments = await this.listComments(workstreamId, {
       sessionId: options.sessionId,
       openOnly: true
-    });
+    }).then((items) => items.filter((comment) => comment.origin !== "agent"));
 
     return {
       markdown: generateFeedbackQueueMarkdown({

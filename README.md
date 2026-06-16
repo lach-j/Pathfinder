@@ -202,6 +202,37 @@ Generate PR markdown for the standalone branch review:
 pathfinder branch-review pr generate --base main
 ```
 
+## Agent First-Pass Review
+
+Pathfinder can prepare a local first-pass review prompt for an agent and import the agent's structured comments. It does not call an AI provider.
+
+```bash
+pathfinder agent-review prompt <workstream-id> --session <session-id> > agent-review-prompt.md
+pathfinder agent-review import <workstream-id> --session <session-id> --file ./agent-review-comments.json
+```
+
+For standalone branch review:
+
+```bash
+pathfinder branch-review agent-review prompt --session <session-id>
+pathfinder branch-review agent-review import --session <session-id> --file ./agent-review-comments.json
+```
+
+The import file is JSON:
+
+```json
+{
+  "runId": "first-pass",
+  "comments": [
+    { "filePath": "src/example.ts", "lineNumber": 12, "side": "new", "body": "Handle this edge case." },
+    { "filePath": "src/example.ts", "body": "File-level issue." },
+    { "body": "Whole-session issue." }
+  ]
+}
+```
+
+Agent-authored comments are marked with `origin: "agent"` and can be resolved with the normal comment resolve commands. Default feedback exports omit agent-origin comments so an implementation agent does not automatically respond to its own first-pass review.
+
 ## Command Guide
 
 The main commands are:
@@ -219,12 +250,16 @@ pathfinder review sessions <workstream-id> --json
 pathfinder comment list <workstream-id> --session <session-id> --open --json
 pathfinder workspace serve
 pathfinder review serve
+pathfinder agent-review prompt <workstream-id> --session <session-id>
+pathfinder agent-review import <workstream-id> --session <session-id> --file ./comments.json
 pathfinder feedback export <workstream-id>
 pathfinder pr generate <workstream-id>
 pathfinder branch-review next --json
 pathfinder branch-review start --base <base-ref>
 pathfinder branch-review comment add <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
 pathfinder branch-review feedback export [--session <session-id>] [--file ./feedback.md]
+pathfinder branch-review agent-review prompt --session <session-id>
+pathfinder branch-review agent-review import --session <session-id> --file ./comments.json
 pathfinder branch-review pr generate [--base <base-ref>]
 ```
 

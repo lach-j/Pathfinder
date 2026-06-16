@@ -19,9 +19,11 @@ import {
   isSliceStatus,
   isUrlSafeId,
   nextAvailableId,
+  parseAgentReviewImportJson,
   parseUnifiedDiff,
   parseStagePlanMarkdown,
   renderAgentPrompt,
+  renderAgentReviewPrompt,
   Slice,
   toUrlSafeId
 } from "./index.js";
@@ -43,6 +45,39 @@ test("creates short opaque review comment ids", () => {
   assert.match(id, /^c-[a-z0-9]{8}$/);
   assert.notEqual(id, "needs-tests");
   assert.notEqual(createOpaqueReviewCommentId([id]), id);
+});
+
+test("renders and parses agent review prompt artifacts", () => {
+  const prompt = renderAgentReviewPrompt({
+    mode: "branch",
+    session: {
+      id: "review-feature",
+      baseRef: "main",
+      headRef: "feature",
+      headCommit: "abc123",
+      mergeBase: "abc000",
+      changedFiles: [],
+      createdAt: "2026-01-01T00:00:00.000Z"
+    },
+    diff: parseUnifiedDiff(sampleUnifiedDiff())
+  });
+  const imported = parseAgentReviewImportJson(JSON.stringify({
+    runId: "first-pass",
+    comments: [
+      { filePath: "src/modified.ts", lineNumber: 4, side: "new", body: "Check the edge case." },
+      { filePath: "src/modified.ts", body: "Review this file." },
+      { body: "Session-level concern." }
+    ]
+  }));
+
+  assert.match(prompt, /Pathfinder Agent Review Prompt/);
+  assert.equal(imported.runId, "first-pass");
+  assert.equal(imported.comments.length, 3);
+  assert.equal(imported.comments[0].side, "new");
+  assert.throws(
+    () => parseAgentReviewImportJson(JSON.stringify({ comments: [{ lineNumber: 1, body: "Missing file." }] })),
+    PathfinderError
+  );
 });
 
 test("validates required text and slice statuses", () => {

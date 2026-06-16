@@ -330,6 +330,21 @@ tr:hover .comment-button,
   text-transform: uppercase;
 }
 
+.comment-origin {
+  border: 1px solid #6b7280;
+  border-radius: 4px;
+  color: #4b5563;
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  text-transform: uppercase;
+}
+
+.origin-agent {
+  border-color: #5f6fb3;
+  color: #35469b;
+}
+
 .anchor-current {
   border-color: #4f8f5b;
   color: #276d36;

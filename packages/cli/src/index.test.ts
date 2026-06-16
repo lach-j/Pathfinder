@@ -48,6 +48,8 @@ test("help lists the implemented commands", async () => {
     "pathfinder comment add",
     "pathfinder comment list",
     "pathfinder comment resolve",
+    "pathfinder agent-review prompt <workstream-id> --session <session-id>",
+    "pathfinder agent-review import <workstream-id> --session <session-id>",
     "pathfinder review serve [--port 4783]",
     "pathfinder workspace serve [--port 4783]",
     "pathfinder review start --base <base-ref>",
@@ -69,6 +71,8 @@ test("help lists the implemented commands", async () => {
     "pathfinder branch-review comment add <session-id>",
     "pathfinder branch-review comment list [--session <session-id>] [--open] [--json]",
     "pathfinder branch-review comment resolve <comment-id>",
+    "pathfinder branch-review agent-review prompt --session <session-id>",
+    "pathfinder branch-review agent-review import --session <session-id>",
     "pathfinder branch-review feedback export [--session <session-id>] [--file ./feedback.md]",
     "pathfinder branch-review pr generate [--base <base-ref>]",
     "pathfinder evidence add",
@@ -92,6 +96,8 @@ test("prints command-group help", async () => {
   const workspace = await runCli(["workspace", "--help"]);
   const comment = await runCli(["comment", "--help"]);
   const agent = await runCli(["agent", "--help"]);
+  const agentReview = await runCli(["agent-review", "--help"]);
+  const branchReview = await runCli(["branch-review", "--help"]);
 
   assert.match(workstream.stdout, /Pathfinder workstream commands/);
   assert.match(workstream.stdout, /pathfinder workstream show <id> \[--json\]/);
@@ -105,6 +111,9 @@ test("prints command-group help", async () => {
   assert.match(comment.stdout, /pathfinder comment list <workstream-id> \[--session <session-id>\] \[--open\] \[--json\]/);
   assert.match(agent.stdout, /Pathfinder agent commands/);
   assert.match(agent.stdout, /pathfinder agent next \[--json\]/);
+  assert.match(agentReview.stdout, /Pathfinder agent review commands/);
+  assert.match(agentReview.stdout, /pathfinder agent-review import <workstream-id> --session <session-id>/);
+  assert.match(branchReview.stdout, /pathfinder branch-review agent-review prompt --session <session-id>/);
 });
 
 test("diagnoses missing agent integration setup from the CLI", async () => {
@@ -1777,6 +1786,107 @@ test("adds, lists, filters, and resolves file and line comments for a review ses
   assert.doesNotMatch(list.stdout, /keep-compatibility/);
   assert.match(openList.stdout, new RegExp(fileCommentId));
   assert.doesNotMatch(openList.stdout, new RegExp(lineCommentId));
+});
+
+test("exports and imports workstream agent review comments", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await runCli(["workstream", "create", "--title", "Inventory Alerts"], repo);
+  await runCli(
+    ["slice", "add", "inventory-alerts", "--title", "Add Report", "--description", "Report reorder candidates."],
+    repo
+  );
+  await runCli(["slice", "active", "inventory-alerts", "add-report"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-agent-review"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  await runCli(["review", "start", "--base", "main"], repo);
+  await writeFile(
+    path.join(repo, "agent-comments.json"),
+    JSON.stringify({
+      runId: "first-pass",
+      comments: [
+        { filePath: "src/report.ts", lineNumber: 1, side: "new", body: "Check the empty report case." },
+        { filePath: "src/report.ts", lineNumber: 99, side: "new", body: "Falls back to file level." },
+        { body: "Whole session concern." }
+      ]
+    }),
+    "utf8"
+  );
+
+  const prompt = await runCli(["agent-review", "prompt", "inventory-alerts", "--session", "review-add-report"], repo);
+  const imported = await runCli(
+    ["agent-review", "import", "inventory-alerts", "--session", "review-add-report", "--file", "./agent-comments.json"],
+    repo
+  );
+  const list = JSON.parse(
+    (await runCli(["comment", "list", "inventory-alerts", "--session", "review-add-report", "--json"], repo)).stdout
+  );
+  const feedback = await runCli(["feedback", "export", "inventory-alerts", "--session", "review-add-report"], repo);
+
+  assert.match(prompt.stdout, /Pathfinder Agent Review Prompt/);
+  assert.match(imported.stdout, /Imported 3 agent review comments/);
+  assert.equal(list.length, 2);
+  assert.deepEqual(list.map((comment: { origin?: string }) => comment.origin), ["agent", "agent"]);
+  assert.deepEqual(list.map((comment: { target: { type: string } }) => comment.target.type), ["line", "file"]);
+  assert.doesNotMatch(feedback.stdout, /Check the empty report case/);
+});
+
+test("exports and imports branch-review agent comments", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-branch-agent-review"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+  await runCli(["branch-review", "start", "--base", "main"], repo);
+  await writeFile(
+    path.join(repo, "branch-agent-comments.json"),
+    JSON.stringify({
+      comments: [
+        { filePath: "src/report.ts", lineNumber: 1, side: "new", body: "Branch agent line comment." },
+        { body: "Branch session concern." }
+      ]
+    }),
+    "utf8"
+  );
+
+  const prompt = await runCli(
+    ["branch-review", "agent-review", "prompt", "--session", "review-feature-branch-agent-review"],
+    repo
+  );
+  const imported = await runCli(
+    [
+      "branch-review",
+      "agent-review",
+      "import",
+      "--session",
+      "review-feature-branch-agent-review",
+      "--file",
+      "./branch-agent-comments.json"
+    ],
+    repo
+  );
+  const list = JSON.parse(
+    (await runCli(["branch-review", "comment", "list", "--session", "review-feature-branch-agent-review", "--json"], repo)).stdout
+  );
+  const feedback = await runCli(["branch-review", "feedback", "export", "--session", "review-feature-branch-agent-review"], repo);
+
+  assert.match(prompt.stdout, /Pathfinder Agent Review Prompt/);
+  assert.match(imported.stdout, /Imported 2 agent branch review comments/);
+  assert.equal(list.length, 1);
+  assert.equal(list[0].origin, "agent");
+  assert.equal(list[0].target.type, "line");
+  assert.doesNotMatch(feedback.stdout, /Branch agent line comment/);
 });
 
 test("exports feedback queue to stdout and a markdown file", async () => {

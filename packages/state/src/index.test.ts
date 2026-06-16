@@ -1004,6 +1004,29 @@ test("preserves legacy slug review comment ids", async () => {
   assert.equal(resolved.id, "needs-tests");
 });
 
+test("persists agent comment origin and omits agent comments from default feedback", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add comment support.");
+  await store.setActiveSlice(workstream.id, slice.id);
+  const human = await store.addComment(workstream.id, slice.id, "Human follow-up.");
+  const agent = await store.addComment(workstream.id, {
+    body: "Agent first-pass issue.",
+    origin: "agent",
+    target: { type: "slice", sliceId: slice.id }
+  });
+
+  const comments = await store.listComments(workstream.id);
+  const feedback = await store.exportFeedbackQueue(workstream.id);
+
+  assert.equal(comments.find((comment) => comment.id === human.id)?.origin, "human");
+  assert.equal(comments.find((comment) => comment.id === agent.id)?.origin, "agent");
+  assert.match(feedback.markdown, /Human follow-up\./);
+  assert.doesNotMatch(feedback.markdown, /Agent first-pass issue\./);
+});
+
 test("validates comment workstream, slice, body, and resolution state", async () => {
   const repo = await createTempRepo();
   const store = new PathfinderStore(repo);

@@ -1,17 +1,23 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { cancel, intro, isCancel, multiselect, outro, select } from "@clack/prompts";
 import {
   AgentPromptPhase,
   AgentUserInstallTool,
+  AgentReviewImportComment,
   PathfinderError,
   ReviewCommentTarget,
   Slice,
+  StructuredDiff,
   isAgentCommandTool,
   isAgentUserInstallTool,
   isAgentPromptPhase,
-  isReviewCommentSide
+  isReviewCommentSide,
+  parseAgentReviewImportJson,
+  renderAgentReviewPrompt,
+  structuredDiffHasFile,
+  structuredDiffHasLine
 } from "@pathfinder/core";
 import { GitAdapter } from "@pathfinder/git";
 import { serveReviewServer, serveWorkspaceServer } from "@pathfinder/local-server";
@@ -97,6 +103,11 @@ export async function run(args: string[]): Promise<void> {
 
   if (area === "review") {
     await runReview(action, rest);
+    return;
+  }
+
+  if (area === "agent-review") {
+    await runAgentReview(action, rest);
     return;
   }
 
@@ -941,6 +952,43 @@ async function runComment(action: string | undefined, args: string[]): Promise<v
   throw usageError("Unknown comment command. Expected add, list, or resolve.");
 }
 
+async function runAgentReview(action: string | undefined, args: string[]): Promise<void> {
+  const [workstreamId, ...optionArgs] = args;
+  requireArgument(workstreamId, "workstream id");
+  const options = parseOptions(optionArgs);
+  requireOption(options.session, "--session");
+  const git = new GitAdapter({ cwd: process.cwd() });
+  const session = await store.getReviewSession(workstreamId, options.session);
+  const diff = await getStructuredDiffForSession(git, session.id);
+
+  if (action === "prompt") {
+    const template = options.template ? await readFile(path.resolve(process.cwd(), options.template), "utf8") : undefined;
+    process.stdout.write(renderAgentReviewPrompt({ mode: "workstream", session, diff, template }));
+    process.stdout.write("\n");
+    return;
+  }
+
+  if (action === "import") {
+    const imported = parseAgentReviewImportJson(await readInputFileOrStdin(options.file));
+    const comments = [];
+    for (const item of imported.comments) {
+      comments.push(await store.addComment(workstreamId, {
+        body: item.body,
+        origin: "agent",
+        target: agentReviewTarget(item, session.id, diff),
+        structuredDiff: diff
+      }));
+    }
+    console.log(`Imported ${comments.length} agent review comment${comments.length === 1 ? "" : "s"}.`);
+    for (const comment of comments) {
+      console.log(formatComment(comment));
+    }
+    return;
+  }
+
+  throw usageError("Unknown agent-review command. Expected prompt or import.");
+}
+
 async function runReview(action: string | undefined, args: string[]): Promise<void> {
   if (action === "serve") {
     const options = parseOptions(args);
@@ -1175,6 +1223,11 @@ async function runBranchReview(action: string | undefined, args: string[]): Prom
     return;
   }
 
+  if (action === "agent-review") {
+    await runBranchReviewAgentReview(args);
+    return;
+  }
+
   if (action === "feedback") {
     await runBranchReviewFeedback(args);
     return;
@@ -1256,6 +1309,42 @@ async function runBranchReviewComment(args: string[]): Promise<void> {
   throw usageError("Unknown branch-review comment command. Expected add, list, or resolve.");
 }
 
+async function runBranchReviewAgentReview(args: string[]): Promise<void> {
+  const [action, ...rest] = args;
+  const options = parseOptions(rest);
+  requireOption(options.session, "--session");
+  const git = new GitAdapter({ cwd: process.cwd() });
+  const session = await store.getBranchReviewSession(options.session);
+  const diff = await getStructuredDiffForBranchReviewSession(git, session.id);
+
+  if (action === "prompt") {
+    const template = options.template ? await readFile(path.resolve(process.cwd(), options.template), "utf8") : undefined;
+    process.stdout.write(renderAgentReviewPrompt({ mode: "branch", session, diff, template }));
+    process.stdout.write("\n");
+    return;
+  }
+
+  if (action === "import") {
+    const imported = parseAgentReviewImportJson(await readInputFileOrStdin(options.file));
+    const comments = [];
+    for (const item of imported.comments) {
+      comments.push(await store.addBranchReviewComment({
+        body: item.body,
+        origin: "agent",
+        target: agentReviewTarget(item, session.id, diff),
+        structuredDiff: diff
+      }));
+    }
+    console.log(`Imported ${comments.length} agent branch review comment${comments.length === 1 ? "" : "s"}.`);
+    for (const comment of comments) {
+      console.log(formatComment(comment));
+    }
+    return;
+  }
+
+  throw usageError("Unknown branch-review agent-review command. Expected prompt or import.");
+}
+
 function createLineTarget(
   sessionId: string,
   filePath: string,
@@ -1274,6 +1363,46 @@ function createLineTarget(
     lineNumber,
     side
   };
+}
+
+function agentReviewTarget(
+  item: AgentReviewImportComment,
+  sessionId: string,
+  diff: StructuredDiff
+): ReviewCommentTarget {
+  if (item.filePath && item.lineNumber !== undefined && item.side) {
+    if (structuredDiffHasLine(diff, item.filePath, item.lineNumber, item.side)) {
+      return {
+        type: "line",
+        sessionId,
+        filePath: item.filePath,
+        lineNumber: item.lineNumber,
+        side: item.side
+      };
+    }
+  }
+
+  if (item.filePath && structuredDiffHasFile(diff, item.filePath)) {
+    return {
+      type: "file",
+      sessionId,
+      filePath: item.filePath
+    };
+  }
+
+  return { type: "workstream" };
+}
+
+async function readInputFileOrStdin(file: string | undefined): Promise<string> {
+  if (file) {
+    return readFile(path.resolve(process.cwd(), file), "utf8");
+  }
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 async function runBranchReviewFeedback(args: string[]): Promise<void> {

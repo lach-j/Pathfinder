@@ -166,7 +166,7 @@ After workspace review polish, the next workflow-oriented slice set explores mor
 | 47 | done | `docs/slices/47-standalone-branch-review.md` |
 | 48 | done | `docs/slices/48-review-ui-polish-and-syntax-highlighting.md` |
 | 49 | done | `docs/slices/49-opaque-review-comment-ids.md` |
-| 50 | ready | `docs/slices/50-agent-first-pass-review.md` |
+| 50 | done | `docs/slices/50-agent-first-pass-review.md` |
 | 51 | ready | `docs/slices/51-agent-pr-draft-generation.md` |
 | 52 | ready | `docs/slices/52-configurable-git-message-generation.md` |
 | 53 | ready | `docs/slices/53-agent-control-cli-layer.md` |

@@ -30,7 +30,8 @@ export function formatSlice(slice: Slice): string {
 export function formatComment(comment: ReviewComment): string {
   const status = comment.resolved ? "resolved" : "open";
   const anchorStatus = comment.anchorStatus ? `\tanchor:${comment.anchorStatus}` : "";
-  return `${comment.id}\t${status}${anchorStatus}\t${describeReviewCommentTarget(comment)}\t${comment.body}`;
+  const origin = comment.origin && comment.origin !== "human" ? `\torigin:${comment.origin}` : "";
+  return `${comment.id}\t${status}${anchorStatus}${origin}\t${describeReviewCommentTarget(comment)}\t${comment.body}`;
 }
 
 export function formatReview(review: Review): string {

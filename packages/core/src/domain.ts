@@ -134,11 +134,14 @@ export interface ReviewComment {
   sliceId?: string;
   target?: ReviewCommentTarget;
   anchorStatus?: ReviewCommentAnchorStatus;
+  origin?: ReviewCommentOrigin;
   body: string;
   resolved: boolean;
   createdAt: string;
   resolvedAt?: string;
 }
+
+export type ReviewCommentOrigin = "human" | "agent" | "system";
 
 export type ReviewCommentSide = "old" | "new";
 export type ReviewCommentAnchorStatus = "current" | "stale" | "unknown";

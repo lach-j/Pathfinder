@@ -34,6 +34,11 @@ Usage:
   pathfinder comment add <workstream-id> --session <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
   pathfinder comment list <workstream-id> [--session <session-id>] [--open] [--json]
   pathfinder comment resolve <workstream-id> <comment-id>`,
+  "agent-review": `Pathfinder agent review commands
+
+Usage:
+  pathfinder agent-review prompt <workstream-id> --session <session-id> [--template ./prompt.md]
+  pathfinder agent-review import <workstream-id> --session <session-id> [--file ./comments.json]`,
   review: `Pathfinder review commands
 
 Usage:
@@ -60,6 +65,8 @@ Usage:
   pathfinder branch-review comment add <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
   pathfinder branch-review comment list [--session <session-id>] [--open] [--json]
   pathfinder branch-review comment resolve <comment-id>
+  pathfinder branch-review agent-review prompt --session <session-id> [--template ./prompt.md]
+  pathfinder branch-review agent-review import --session <session-id> [--file ./comments.json]
   pathfinder branch-review feedback export [--session <session-id>] [--file ./feedback.md]
   pathfinder branch-review pr generate [--base <base-ref>]`,
   workspace: `Pathfinder workspace commands
@@ -111,6 +118,8 @@ Usage:
   pathfinder comment add <workstream-id> --session <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
   pathfinder comment list <workstream-id> [--session <session-id>] [--open] [--json]
   pathfinder comment resolve <workstream-id> <comment-id>
+  pathfinder agent-review prompt <workstream-id> --session <session-id> [--template ./prompt.md]
+  pathfinder agent-review import <workstream-id> --session <session-id> [--file ./comments.json]
   pathfinder review serve [--port 4783]
   pathfinder review start --base <base-ref>
   pathfinder review refresh <workstream-id> <session-id>
@@ -131,6 +140,8 @@ Usage:
   pathfinder branch-review comment add <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
   pathfinder branch-review comment list [--session <session-id>] [--open] [--json]
   pathfinder branch-review comment resolve <comment-id>
+  pathfinder branch-review agent-review prompt --session <session-id> [--template ./prompt.md]
+  pathfinder branch-review agent-review import --session <session-id> [--file ./comments.json]
   pathfinder branch-review feedback export [--session <session-id>] [--file ./feedback.md]
   pathfinder branch-review pr generate [--base <base-ref>]
   pathfinder evidence add <workstream-id> --slice <slice-id> --kind <kind> --description "..." [--path ./artifact.txt]

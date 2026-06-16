@@ -23,6 +23,7 @@ export interface OptionMap {
   kind?: string;
   path?: string;
   phase?: string;
+  template?: string;
   tool?: string;
   user?: string;
 }
@@ -107,6 +108,8 @@ export function parseOptions(args: string[]): OptionMap {
       options.path = value;
     } else if (flag === "--phase") {
       options.phase = value;
+    } else if (flag === "--template") {
+      options.template = value;
     } else if (flag === "--tool") {
       options.tool = value;
     } else if (flag === "--user") {

@@ -214,6 +214,9 @@ function CommentRow({
             <div className="comment-meta">
               {comment.id} - {commentTargetText(comment)}
               {comment.resolved ? " - resolved" : ""}
+              {comment.origin && comment.origin !== "human" && (
+                <span className={`comment-origin origin-${comment.origin}`}>{comment.origin}</span>
+              )}
               {comment.anchorStatus && (
                 <span className={`anchor-status anchor-${comment.anchorStatus}`}>{comment.anchorStatus}</span>
               )}

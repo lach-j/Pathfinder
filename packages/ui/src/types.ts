@@ -161,6 +161,7 @@ export interface ReviewComment {
   id: string;
   sliceId?: string;
   body: string;
+  origin?: "human" | "agent" | "system" | string;
   resolved?: boolean;
   anchorStatus?: "current" | "stale" | "unknown" | string;
   target?: ReviewCommentTarget;
