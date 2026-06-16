@@ -78,7 +78,7 @@ pathfinder agent next --json
 
 is the canonical first command for agents. Repository instructions and optional native command wrappers should teach Codex, Claude Code, OpenCode, and similar tools to ask Pathfinder what to do next instead of inventing a parallel workflow.
 
-MCP, hooks, direct agent invocation, AI review, and remote Git hosting integrations remain out of scope for the next slice set.
+MCP, hooks, direct agent invocation, AI review, and remote Git hosting integrations remain out of scope unless a later slice explicitly introduces one of those workflows with local-first boundaries and reusable core/state/git behavior.
 
 The current product focus is personal installation and no-repo-footprint usage:
 
@@ -102,6 +102,16 @@ After agent workflow stability, the next focus is expanding the local browser UI
 3. Visualize workstream slices and dependencies as the central workspace surface.
 4. Preview requirements, plans, evidence, feedback, stored PR drafts, and review sessions from the right panel.
 5. Add rich copy for stored PR drafts without turning Pathfinder into a Git hosting integration.
+
+After workspace review polish, the next workflow-oriented slice set explores more agent-assisted local workflows:
+
+1. Improve review UI readability with syntax highlighting and denser code rows.
+2. Replace text-derived comment ids with stable opaque ids before agent-authored comments expand comment volume.
+3. Add agent-authored first-pass review comments while keeping human comments and agent comments distinct.
+4. Add prompt-driven agent PR draft generation without replacing deterministic PR markdown generation.
+5. Add configurable commit message guidance for agent prompts.
+6. Add a CLI-first agent control layer that can later be surfaced in the workspace UI.
+7. Add local agent session records and progress streaming without making a specific agent framework mandatory.
 
 ## Progress
 
@@ -153,6 +163,14 @@ After agent workflow stability, the next focus is expanding the local browser UI
 | 44 | done | `docs/slices/44-artifact-preview-panel.md` |
 | 45 | ready | `docs/slices/45-workspace-review-panel.md` |
 | 46 | ready | `docs/slices/46-pr-rich-copy.md` |
+| 47 | done | `docs/slices/47-standalone-branch-review.md` |
+| 48 | done | `docs/slices/48-review-ui-polish-and-syntax-highlighting.md` |
+| 49 | ready | `docs/slices/49-opaque-review-comment-ids.md` |
+| 50 | ready | `docs/slices/50-agent-first-pass-review.md` |
+| 51 | ready | `docs/slices/51-agent-pr-draft-generation.md` |
+| 52 | ready | `docs/slices/52-configurable-git-message-generation.md` |
+| 53 | ready | `docs/slices/53-agent-control-cli-layer.md` |
+| 54 | ready | `docs/slices/54-agent-session-streaming-and-progress.md` |
 
 Status values:
 
@@ -246,5 +264,16 @@ Next workspace UI expansion order:
 44. Artifact preview panel
 45. Workspace review panel
 46. PR rich copy
+47. Standalone branch review
+
+Next workflow polish and agent-control order:
+
+48. Review UI polish and syntax highlighting
+49. Opaque review comment ids
+50. Agent first-pass review
+51. Agent PR draft generation
+52. Configurable git message generation
+53. Agent control CLI layer
+54. Agent session streaming and progress
 
 The order can change if a slice doc says it has no dependency on earlier slices.

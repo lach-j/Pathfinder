@@ -13,6 +13,7 @@ import {
   staleCommentsForSelectedFile,
   visibleComments
 } from "./review-model";
+import { highlightDiffLine } from "./syntax-highlighting";
 
 interface DiffPaneProps {
   diff: StructuredDiff | undefined;
@@ -189,7 +190,7 @@ function DiffLineRow({
       <td className="line-number">{line.newLineNumber || ""}</td>
       <td className="code">
         <span className="prefix">{linePrefix(line.kind)}</span>
-        {line.text || ""}
+        <span className="code-content">{highlightDiffLine(file.path, line.text)}</span>
       </td>
     </tr>
   );

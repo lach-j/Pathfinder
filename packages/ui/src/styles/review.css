@@ -171,30 +171,30 @@
   border-top: 0;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .diff-table td {
   vertical-align: top;
-  border-top: 1px solid #edf0f3;
+  border-top: 0;
 }
 
 .line-action {
-  width: 42px;
-  padding: 2px 4px;
+  width: 30px;
+  padding: 1px 2px;
   background: var(--panel-soft);
   text-align: center;
   user-select: none;
 }
 
 .comment-button {
-  width: 28px;
-  height: 26px;
+  width: 22px;
+  height: 21px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
   opacity: 0;
 }
@@ -211,8 +211,8 @@ tr:hover .comment-button,
 }
 
 .line-number {
-  width: 58px;
-  padding: 2px 8px;
+  width: 54px;
+  padding: 1px 8px;
   color: var(--muted);
   background: var(--panel-soft);
   text-align: right;
@@ -220,7 +220,7 @@ tr:hover .comment-button,
 }
 
 .code {
-  padding: 2px 10px;
+  padding: 1px 10px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -230,6 +230,35 @@ tr:hover .comment-button,
   width: 18px;
   color: var(--muted);
   user-select: none;
+}
+
+.code-content {
+  color: #2d333b;
+}
+
+.syntax-comment {
+  color: #6a737d;
+}
+
+.syntax-string {
+  color: #0a6b45;
+}
+
+.syntax-keyword {
+  color: #7f3fbf;
+  font-weight: 650;
+}
+
+.syntax-number {
+  color: #986801;
+}
+
+.syntax-function {
+  color: #0550ae;
+}
+
+.syntax-property {
+  color: #953800;
 }
 
 .line-addition .code,
@@ -264,6 +293,7 @@ tr:hover .comment-button,
 .comment-row td {
   background: var(--comment);
   border-top: 1px solid var(--comment-border);
+  border-bottom: 1px solid var(--comment-border);
 }
 
 .comment-cell {
@@ -403,12 +433,12 @@ tr:hover .comment-button,
 
   .line-number {
     width: 44px;
-    padding-inline: 5px;
+    padding-inline: 4px;
   }
 
   .line-action {
-    width: 34px;
-    padding-inline: 2px;
+    width: 28px;
+    padding-inline: 1px;
   }
 
   .code {
