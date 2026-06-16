@@ -620,7 +620,7 @@ test("returns current context for the active workstream and slice", async () => 
   await store.setPlanFromFile(workstream.id, planPath);
   const slice = await store.addSlice(workstream.id, "Current Command", "Print local context.");
   await store.setActiveSlice(workstream.id, slice.id);
-  await store.addComment(workstream.id, slice.id, "Check output.");
+  const openComment = await store.addComment(workstream.id, slice.id, "Check output.");
   const resolved = await store.addComment(workstream.id, slice.id, "Already handled.");
   await store.resolveComment(workstream.id, resolved.id);
   await store.addEvidence(workstream.id, slice.id, "manual", "Manual QA passed.");
@@ -638,7 +638,7 @@ test("returns current context for the active workstream and slice", async () => 
   assert.equal(context.planPath, path.join(repo, ".pathfinder", "workstreams", workstream.id, "plan.md"));
   assert.deepEqual(
     context.unresolvedComments.map((comment) => comment.id),
-    ["check-output"]
+    [openComment.id]
   );
   assert.deepEqual(
     context.evidence.map((evidence) => evidence.id),
@@ -862,8 +862,10 @@ test("adds, lists, and resolves review comments", async () => {
   });
   const commentsBeforeResolve = await store.listComments(workstream.id);
 
-  assert.equal(first.id, "needs-tests");
-  assert.equal(second.id, "needs-tests-2");
+  assert.match(first.id, /^c-[a-z0-9]{8}$/);
+  assert.match(second.id, /^c-[a-z0-9]{8}$/);
+  assert.notEqual(first.id, second.id);
+  assert.notEqual(first.id, "needs-tests");
   assert.equal(workstreamComment.target?.type, "workstream");
   assert.equal(commentsBeforeResolve.length, 3);
   assert.equal(commentsBeforeResolve[0]?.resolved, false);
@@ -955,10 +957,9 @@ test("adds file and line review comments anchored to sessions", async () => {
   assert.equal(fileComment.target?.type, "file");
   assert.equal(lineComment.target?.type, "line");
   assert.equal(lineComment.sliceId, slice.id);
-  assert.deepEqual(
-    sessionComments.map((comment) => comment.id),
-    ["review-this-file", "handle-the-empty-case"]
-  );
+  assert.deepEqual(sessionComments.map((comment) => comment.id), [fileComment.id, lineComment.id]);
+  assert.match(fileComment.id, /^c-[a-z0-9]{8}$/);
+  assert.match(lineComment.id, /^c-[a-z0-9]{8}$/);
 
   const resolved = await store.resolveComment(workstream.id, lineComment.id);
 
@@ -967,8 +968,40 @@ test("adds file and line review comments anchored to sessions", async () => {
     (await store.listComments(workstream.id, { sessionId: session.id, openOnly: true })).map(
       (comment) => comment.id
     ),
-    ["review-this-file"]
+    [fileComment.id]
   );
+});
+
+test("preserves legacy slug review comment ids", async () => {
+  const repo = await createTempRepo();
+  const store = new PathfinderStore(repo);
+  await store.initProject();
+  const workstream = await store.createWorkstream("Review Flow");
+  const slice = await store.addSlice(workstream.id, "First Slice", "Add comment support.");
+  await writeFile(
+    path.join(repo, ".pathfinder", "workstreams", workstream.id, "comments.json"),
+    `${JSON.stringify({
+      comments: [
+        {
+          id: "needs-tests",
+          sliceId: slice.id,
+          target: { type: "slice", sliceId: slice.id },
+          body: "Needs tests.",
+          resolved: false,
+          createdAt: new Date(0).toISOString()
+        }
+      ]
+    }, null, 2)}\n`,
+    "utf8"
+  );
+
+  const listed = await store.listComments(workstream.id);
+  const feedback = await store.exportFeedbackQueue(workstream.id);
+  const resolved = await store.resolveComment(workstream.id, "needs-tests");
+
+  assert.equal(listed[0].id, "needs-tests");
+  assert.match(feedback.markdown, /`needs-tests`/);
+  assert.equal(resolved.id, "needs-tests");
 });
 
 test("validates comment workstream, slice, body, and resolution state", async () => {
@@ -1342,7 +1375,7 @@ test("refreshes review sessions and marks stale comment anchors", async () => {
     structuredDiffFile("src/report.ts", [1, 2]),
     structuredDiffFile("src/removed.ts", [1])
   ]);
-  await store.addComment(workstream.id, {
+  const currentComment = await store.addComment(workstream.id, {
     body: "Still current.",
     target: {
       type: "line",
@@ -1353,7 +1386,7 @@ test("refreshes review sessions and marks stale comment anchors", async () => {
     },
     structuredDiff: originalDiff
   });
-  await store.addComment(workstream.id, {
+  const disappearedLineComment = await store.addComment(workstream.id, {
     body: "Line disappeared.",
     target: {
       type: "line",
@@ -1364,7 +1397,7 @@ test("refreshes review sessions and marks stale comment anchors", async () => {
     },
     structuredDiff: originalDiff
   });
-  await store.addComment(workstream.id, {
+  const disappearedFileComment = await store.addComment(workstream.id, {
     body: "File disappeared.",
     target: {
       type: "line",
@@ -1402,9 +1435,9 @@ test("refreshes review sessions and marks stale comment anchors", async () => {
   assert.deepEqual(
     comments.map((comment) => [comment.id, comment.anchorStatus]),
     [
-      ["still-current", "current"],
-      ["line-disappeared", "stale"],
-      ["file-disappeared", "stale"]
+      [currentComment.id, "current"],
+      [disappearedLineComment.id, "stale"],
+      [disappearedFileComment.id, "stale"]
     ]
   );
   assert.deepEqual(
@@ -1489,7 +1522,7 @@ test("deterministic review stores only active-slice comments", async () => {
   const otherSlice = await store.addSlice(workstream.id, "Other Slice", "Unrelated review feedback.");
   await store.updateSliceStatus(workstream.id, activeSlice.id, "review");
   await store.setActiveSlice(workstream.id, activeSlice.id);
-  await store.addComment(workstream.id, activeSlice.id, "Fix active slice.");
+  const activeComment = await store.addComment(workstream.id, activeSlice.id, "Fix active slice.");
   await store.addComment(workstream.id, otherSlice.id, "Do not include in active review.");
   await store.addEvidence(workstream.id, activeSlice.id, "test", "npm test passed.");
   await writeFile(path.join(repo, "plan.md"), "# Plan\n", "utf8");
@@ -1513,7 +1546,7 @@ test("deterministic review stores only active-slice comments", async () => {
 
   assert.deepEqual(
     review.comments.map((comment) => comment.id),
-    ["fix-active-slice"]
+    [activeComment.id]
   );
   assert.match(review.summary, /1 warning\(s\)/);
   assert.match(
@@ -1571,7 +1604,7 @@ test("generates and writes local PR markdown", async () => {
   await store.updateSliceStatus(workstream.id, slice.id, "complete");
   await store.createReview(workstream.id, slice.id, "Manual review passed.");
   await store.addEvidence(workstream.id, slice.id, "test", "npm test passed.");
-  await store.addComment(workstream.id, slice.id, "Confirm generated output.");
+  const comment = await store.addComment(workstream.id, slice.id, "Confirm generated output.");
 
   const result = await store.generatePrMarkdown(workstream.id);
   const stored = await readFile(path.join(repo, ".pathfinder", "workstreams", workstream.id, "pr.md"), "utf8");
@@ -1584,7 +1617,7 @@ test("generates and writes local PR markdown", async () => {
   assert.match(result.markdown, /- First Slice \(`first-slice`, complete\): Generate markdown\. Dependencies: none\./);
   assert.match(result.markdown, /- `npm-test-passed` \[test\]: npm test passed\./);
   assert.match(result.markdown, /- Review `manual-review-passed` \(open, slice `first-slice`\): Manual review passed\./);
-  assert.match(result.markdown, /- Open comment `confirm-generated-output` \(slice `first-slice`\): Confirm generated output\./);
+  assert.match(result.markdown, new RegExp(`- Open comment \`${comment.id}\` \\(slice \`first-slice\`\\): Confirm generated output\\.`));
 });
 
 test("reads stored PR markdown without regenerating it", async () => {

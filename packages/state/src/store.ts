@@ -31,6 +31,7 @@ import {
   StructuredDiff,
   Workstream,
   assertNonEmptyText,
+  createOpaqueReviewCommentId,
   createTimestamp,
   findNextActionableSlice,
   getAgentCommandToolDefinitions,
@@ -746,10 +747,7 @@ export class PathfinderStore {
     const validatedTarget = await this.validateCommentTarget(workstreamId, input.target, input.structuredDiff);
 
     const commentsFile = await this.readComments(root);
-    const id = nextAvailableId(
-      toUrlSafeId(cleanBody),
-      commentsFile.comments.map((comment) => comment.id)
-    );
+    const id = createOpaqueReviewCommentId(commentsFile.comments.map((comment) => comment.id));
     const comment: ReviewComment = {
       id,
       ...(validatedTarget.sliceId ? { sliceId: validatedTarget.sliceId } : {}),
@@ -1176,10 +1174,7 @@ export class PathfinderStore {
     const cleanBody = assertNonEmptyText(input.body, "Comment body");
     const target = await this.validateBranchReviewCommentTarget(input.target, input.structuredDiff);
     const commentsFile = await this.readBranchReviewComments(root);
-    const id = nextAvailableId(
-      toUrlSafeId(cleanBody),
-      commentsFile.comments.map((comment) => comment.id)
-    );
+    const id = createOpaqueReviewCommentId(commentsFile.comments.map((comment) => comment.id));
     const comment: ReviewComment = {
       id,
       target,

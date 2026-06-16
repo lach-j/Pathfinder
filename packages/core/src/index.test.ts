@@ -5,6 +5,7 @@ import {
   PathfinderError,
   assertNonEmptyText,
   categorizeRepositoryPath,
+  createOpaqueReviewCommentId,
   findNextActionableSlice,
   getAgentNextRecommendation,
   generateDeterministicReview,
@@ -34,6 +35,14 @@ test("creates URL-safe ids from titles", () => {
 test("allocates a stable numeric suffix when an id already exists", () => {
   assert.equal(nextAvailableId("slice", ["slice", "slice-2"]), "slice-3");
   assert.equal(nextAvailableId("slice", ["other"]), "slice");
+});
+
+test("creates short opaque review comment ids", () => {
+  const id = createOpaqueReviewCommentId([]);
+
+  assert.match(id, /^c-[a-z0-9]{8}$/);
+  assert.notEqual(id, "needs-tests");
+  assert.notEqual(createOpaqueReviewCommentId([id]), id);
 });
 
 test("validates required text and slice statuses", () => {

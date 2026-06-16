@@ -641,7 +641,8 @@ test("prints JSON for agent-friendly read-only commands", async () => {
   assert.equal(sliceList[0].id, "add-report");
   assert.equal(nextSlice.id, "add-report");
   assert.equal(sessions[0].id, "review-add-report");
-  assert.equal(comments[0].id, "handle-empty-report-data");
+  assert.match(comments[0].id, /^c-[a-z0-9]{8}$/);
+  assert.notEqual(comments[0].id, "handle-empty-report-data");
 });
 
 test("agent next and prompt reference external feedback path in external mode", async () => {
@@ -1539,8 +1540,9 @@ test("runs standalone branch review with comments feedback approval and PR markd
       throw error;
     }
   }
+  const branchCommentId = firstOutputField(comment.stdout);
   assert.ok(approvalError);
-  await runCli(["branch-review", "comment", "resolve", "handle-the-empty-branch-case"], repo);
+  await runCli(["branch-review", "comment", "resolve", branchCommentId], repo);
   const approve = await runCli(["branch-review", "approve", "review-feature-branch-review"], repo);
   const prNext = await runCli(["branch-review", "next", "--json"], repo);
   const parsedPrNext = JSON.parse(prNext.stdout);
@@ -1564,7 +1566,7 @@ test("runs standalone branch review with comments feedback approval and PR markd
   assert.match(diff.stdout, /src\/report\.ts/);
   assert.match(
     comment.stdout,
-    /handle-the-empty-branch-case\topen\tsession review-feature-branch-review file src\/report\.ts new line 1\tHandle the empty branch case\./
+    /^c-[a-z0-9]{8}\topen\tsession review-feature-branch-review file src\/report\.ts new line 1\tHandle the empty branch case\./
   );
   assert.equal(parsedFeedbackNext.phase, "feedback");
   assert.deepEqual(parsedFeedbackNext.commands, [
@@ -1584,7 +1586,7 @@ test("runs standalone branch review with comments feedback approval and PR markd
   assert.match(pr.stdout, /## Branch Review Sessions/);
   assert.match(pr.stdout, /Session `review-feature-branch-review`/);
   assert.match(pr.stdout, /approved /);
-  assert.match(pr.stdout, /- `handle-the-empty-branch-case` \(resolved, resolved .*; session review-feature-branch-review file src\/report\.ts new line 1\): Handle the empty branch case\./);
+  assert.match(pr.stdout, new RegExp(`- \`${branchCommentId}\` \\(resolved, resolved .*; session review-feature-branch-review file src\\/report\\.ts new line 1\\): Handle the empty branch case\\.`));
   assert.equal(parsedCompleteNext.phase, "complete");
   assert.equal(parsedAgentNext.phase, "needs_workstream");
 });
@@ -1616,7 +1618,7 @@ test("refreshes review sessions and reports stale comment anchors", async () => 
   await git(repo, ["add", "src"]);
   await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report files"]);
   await runCli(["review", "start", "--base", "main"], repo);
-  await runCli(
+  const currentComment = await runCli(
     [
       "comment",
       "add",
@@ -1634,7 +1636,7 @@ test("refreshes review sessions and reports stale comment anchors", async () => 
     ],
     repo
   );
-  await runCli(
+  const movedComment = await runCli(
     [
       "comment",
       "add",
@@ -1652,7 +1654,7 @@ test("refreshes review sessions and reports stale comment anchors", async () => 
     ],
     repo
   );
-  await runCli(
+  const removedFileComment = await runCli(
     [
       "comment",
       "add",
@@ -1682,9 +1684,9 @@ test("refreshes review sessions and reports stale comment anchors", async () => 
   assert.match(refresh.stdout, /Session: review-add-report/);
   assert.match(refresh.stdout, /Changed files: 1/);
   assert.match(refresh.stdout, /Anchor status: 2 stale, 0 unknown\./);
-  assert.match(comments.stdout, /keep-this-line\topen\tanchor:current/);
-  assert.match(comments.stdout, /this-line-will-move-away\topen\tanchor:stale/);
-  assert.match(comments.stdout, /this-file-will-disappear\topen\tanchor:stale/);
+  assert.match(comments.stdout, new RegExp(`${firstOutputField(currentComment.stdout)}\\topen\\tanchor:current`));
+  assert.match(comments.stdout, new RegExp(`${firstOutputField(movedComment.stdout)}\\topen\\tanchor:stale`));
+  assert.match(comments.stdout, new RegExp(`${firstOutputField(removedFileComment.stdout)}\\topen\\tanchor:stale`));
   assert.match(show.stdout, /"refreshedAt":/);
 });
 
@@ -1760,19 +1762,21 @@ test("adds, lists, filters, and resolves file and line comments for a review ses
     repo
   );
   const list = await runCli(["comment", "list", "inventory-alerts", "--session", "review-add-report", "--open"], repo);
-  await runCli(["comment", "resolve", "inventory-alerts", "handle-the-empty-case"], repo);
+  const fileCommentId = firstOutputField(fileComment.stdout);
+  const lineCommentId = firstOutputField(lineComment.stdout);
+  await runCli(["comment", "resolve", "inventory-alerts", lineCommentId], repo);
   const openList = await runCli(["comment", "list", "inventory-alerts", "--session", "review-add-report", "--open"], repo);
 
-  assert.match(fileComment.stdout, /review-this-file\topen\tsession review-add-report file src\/report\.ts\tReview this file\./);
+  assert.match(fileComment.stdout, /^c-[a-z0-9]{8}\topen\tsession review-add-report file src\/report\.ts\tReview this file\./);
   assert.match(
     lineComment.stdout,
-    /handle-the-empty-case\topen\tsession review-add-report file src\/report\.ts new line 1\tHandle the empty case\./
+    /^c-[a-z0-9]{8}\topen\tsession review-add-report file src\/report\.ts new line 1\tHandle the empty case\./
   );
-  assert.match(list.stdout, /review-this-file/);
-  assert.match(list.stdout, /handle-the-empty-case/);
+  assert.match(list.stdout, new RegExp(fileCommentId));
+  assert.match(list.stdout, new RegExp(lineCommentId));
   assert.doesNotMatch(list.stdout, /keep-compatibility/);
-  assert.match(openList.stdout, /review-this-file/);
-  assert.doesNotMatch(openList.stdout, /handle-the-empty-case/);
+  assert.match(openList.stdout, new RegExp(fileCommentId));
+  assert.doesNotMatch(openList.stdout, new RegExp(lineCommentId));
 });
 
 test("exports feedback queue to stdout and a markdown file", async () => {
@@ -1946,7 +1950,7 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     const comments = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/comments?session=review-add-report`);
     const feedback = await jsonFetch(`${baseUrl}/api/workstreams/inventory-alerts/feedback?session=review-add-report`);
     const resolved = await jsonFetch(
-      `${baseUrl}/api/workstreams/inventory-alerts/comments/handle-the-empty-case/resolve`,
+      `${baseUrl}/api/workstreams/inventory-alerts/comments/${added.comment.id}/resolve`,
       { method: "POST" }
     );
     const openComments = await jsonFetch(
@@ -1982,7 +1986,8 @@ test("serves local review JSON endpoints and mutates comments", async () => {
     assert.equal(sessions.sessions[0].id, "review-add-report");
     assert.equal(diff.session.id, "review-add-report");
     assert.equal(diff.diff.files[0].path, "src/report.ts");
-    assert.equal(added.comment.id, "handle-the-empty-case");
+    assert.match(added.comment.id, /^c-[a-z0-9]{8}$/);
+    assert.notEqual(added.comment.id, "handle-the-empty-case");
     assert.equal(refreshed.comments[0].anchorStatus, "stale");
     assert.equal(comments.comments.length, 1);
     assert.equal(comments.comments[0].anchorStatus, "stale");
@@ -2033,7 +2038,7 @@ test("serves branch review JSON endpoints and mutates comments", async () => {
       `${baseUrl}/api/branch-review/comments?session=review-feature-branch-review-server`
     );
     const resolved = await jsonFetch(
-      `${baseUrl}/api/branch-review/comments/handle-the-empty-branch-case/resolve`,
+      `${baseUrl}/api/branch-review/comments/${added.comment.id}/resolve`,
       { method: "POST" }
     );
     const openComments = await jsonFetch(
@@ -2045,7 +2050,8 @@ test("serves branch review JSON endpoints and mutates comments", async () => {
     assert.equal(sessions.sessions[0].id, "review-feature-branch-review-server");
     assert.equal(diff.session.id, "review-feature-branch-review-server");
     assert.equal(diff.diff.files[0].path, "src/report.ts");
-    assert.equal(added.comment.id, "handle-the-empty-branch-case");
+    assert.match(added.comment.id, /^c-[a-z0-9]{8}$/);
+    assert.notEqual(added.comment.id, "handle-the-empty-branch-case");
     assert.equal(refreshed.comments[0].anchorStatus, "stale");
     assert.equal(comments.comments.length, 1);
     assert.equal(comments.comments[0].anchorStatus, "stale");
@@ -2381,7 +2387,7 @@ test("generates PR markdown with committed repository summary", async () => {
     ],
     repo
   );
-  await runCli(
+  const resolvedBeforePr = await runCli(
     [
       "comment",
       "add",
@@ -2419,7 +2425,8 @@ test("generates PR markdown with committed repository summary", async () => {
     ],
     repo
   );
-  await runCli(["comment", "resolve", "inventory-alerts", "resolve-before-pr"], repo);
+  const resolvedBeforePrId = firstOutputField(resolvedBeforePr.stdout);
+  await runCli(["comment", "resolve", "inventory-alerts", resolvedBeforePrId], repo);
   await runCli(
     ["feedback", "export", "inventory-alerts", "--session", "review-add-report", "--file", "./.pathfinder-feedback.md"],
     repo
@@ -2444,8 +2451,8 @@ test("generates PR markdown with committed repository summary", async () => {
   assert.match(result.stdout, /## Review Sessions/);
   assert.match(result.stdout, /- Session `review-add-report` for slice `add-report`: base `main`, head `feature-pr`/);
   assert.match(result.stdout, /## Local Review Feedback/);
-  assert.match(result.stdout, /- `handle-empty-report-data` \(open; session review-add-report file src\/report\.ts new line 1\): Handle empty report data\./);
-  assert.match(result.stdout, /- `resolve-before-pr` \(resolved, resolved .*; slice `add-report`\): Resolve before PR\./);
+  assert.match(result.stdout, /- `c-[a-z0-9]{8}` \(open; session review-add-report file src\/report\.ts new line 1\): Handle empty report data\./);
+  assert.match(result.stdout, new RegExp(`- \`${resolvedBeforePrId}\` \\(resolved, resolved .*; slice \`add-report\`\\): Resolve before PR\\.`));
   assert.match(result.stdout, /## Agent Feedback Queue/);
   assert.match(result.stdout, /- Exported feedback queue: `.pathfinder-feedback\.md`/);
   assert.match(result.stdout, /- 1 unresolved review comment\(s\) remain\./);
@@ -2482,6 +2489,12 @@ async function closeServer(server: Server): Promise<void> {
       resolve();
     });
   });
+}
+
+function firstOutputField(stdout: string): string {
+  const field = stdout.trim().split(/\s+/)[0];
+  assert.match(field, /^c-[a-z0-9]{8}$/);
+  return field;
 }
 
 async function runCli(
