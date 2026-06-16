@@ -1,0 +1,53 @@
+{
+  "evidence": [
+    {
+      "id": "commit-f5ded4f626d7",
+      "sliceId": "slice-48-review-ui-polish-and-syntax-highlighting",
+      "kind": "other",
+      "description": "Historical commit f5ded4f626d7d301856b2c1639efe902b84979b9 (2026-06-16T17:33:10+10:00): feat: polish review diff readability. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-16T07:33:10.000Z"
+    },
+    {
+      "id": "commit-0e6f77551e62",
+      "sliceId": "slice-49-opaque-review-comment-ids",
+      "kind": "other",
+      "description": "Historical commit 0e6f77551e62ecf98ce428c408d5c65b2c386c2a (2026-06-16T17:42:08+10:00): feat: use opaque review comment ids. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-16T07:42:08.000Z"
+    },
+    {
+      "id": "commit-a596975109fb",
+      "sliceId": "slice-50-agent-first-pass-review",
+      "kind": "other",
+      "description": "Historical commit a596975109fb1bcee3aabb1554acf475f70d3014 (2026-06-16T17:49:28+10:00): feat: add agent first-pass review workflow. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-16T07:49:28.000Z"
+    },
+    {
+      "id": "commit-b54edc6e0c51",
+      "sliceId": "slice-51-agent-pr-draft-generation",
+      "kind": "other",
+      "description": "Historical commit b54edc6e0c51637a73c34a8017318518eec5950e (2026-06-16T18:17:15+10:00): docs: add additional slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-16T08:17:15.000Z"
+    },
+    {
+      "id": "commit-b54edc6e0c51-2",
+      "sliceId": "slice-52-configurable-git-message-generation",
+      "kind": "other",
+      "description": "Historical commit b54edc6e0c51637a73c34a8017318518eec5950e (2026-06-16T18:17:15+10:00): docs: add additional slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-16T08:17:15.000Z"
+    },
+    {
+      "id": "commit-b54edc6e0c51-3",
+      "sliceId": "slice-53-agent-control-cli-layer",
+      "kind": "other",
+      "description": "Historical commit b54edc6e0c51637a73c34a8017318518eec5950e (2026-06-16T18:17:15+10:00): docs: add additional slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-16T08:17:15.000Z"
+    },
+    {
+      "id": "commit-b54edc6e0c51-4",
+      "sliceId": "slice-54-agent-session-streaming-and-progress",
+      "kind": "other",
+      "description": "Historical commit b54edc6e0c51637a73c34a8017318518eec5950e (2026-06-16T18:17:15+10:00): docs: add additional slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-16T08:17:15.000Z"
+    }
+  ]
+}

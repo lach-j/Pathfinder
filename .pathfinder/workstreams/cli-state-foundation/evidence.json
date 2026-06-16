@@ -1,0 +1,123 @@
+{
+  "evidence": [
+    {
+      "id": "commit-ddfe85c459dc",
+      "sliceId": "slice-01-stage-1-foundation",
+      "kind": "other",
+      "description": "Historical commit ddfe85c459dc57f678a2148f4caf8cf85a034125 (2026-06-13T09:42:19+10:00): Initial commit. Mapping: inferred: initial foundation commit predates slice docs.",
+      "createdAt": "2026-06-12T23:42:19.000Z"
+    },
+    {
+      "id": "commit-aaffa78428cd",
+      "sliceId": "slice-01-stage-1-foundation",
+      "kind": "other",
+      "description": "Historical commit aaffa78428cdb214177306dac1604459cc3852b0 (2026-06-13T09:51:28+10:00): Add pathfinder CLI bin entry. Mapping: inferred: CLI bin setup for the foundation.",
+      "createdAt": "2026-06-12T23:51:28.000Z"
+    },
+    {
+      "id": "commit-561237fe8128",
+      "sliceId": "slice-01-stage-1-foundation",
+      "kind": "other",
+      "description": "Historical commit 561237fe81286e02c0ba432653b34137276d373d (2026-06-13T09:59:41+10:00): Add slice docs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-12T23:59:41.000Z"
+    },
+    {
+      "id": "commit-561237fe8128-2",
+      "sliceId": "slice-02-repo-hygiene",
+      "kind": "other",
+      "description": "Historical commit 561237fe81286e02c0ba432653b34137276d373d (2026-06-13T09:59:41+10:00): Add slice docs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-12T23:59:41.000Z"
+    },
+    {
+      "id": "commit-95da7fa2a202",
+      "sliceId": "slice-02-repo-hygiene",
+      "kind": "other",
+      "description": "Historical commit 95da7fa2a202d02930f63e2d9e64891b5c128b46 (2026-06-13T10:03:04+10:00): Mark repo hygiene slice done and ignore build outputs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T00:03:04.000Z"
+    },
+    {
+      "id": "commit-561237fe8128-3",
+      "sliceId": "slice-03-comments-cli",
+      "kind": "other",
+      "description": "Historical commit 561237fe81286e02c0ba432653b34137276d373d (2026-06-13T09:59:41+10:00): Add slice docs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-12T23:59:41.000Z"
+    },
+    {
+      "id": "commit-e4f4c2b9f7d7",
+      "sliceId": "slice-03-comments-cli",
+      "kind": "other",
+      "description": "Historical commit e4f4c2b9f7d742470fde65dc976ff2c0c7ffbbde (2026-06-13T10:08:52+10:00): Add local review comments CLI. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T00:08:52.000Z"
+    },
+    {
+      "id": "commit-561237fe8128-4",
+      "sliceId": "slice-04-git-diff-adapter",
+      "kind": "other",
+      "description": "Historical commit 561237fe81286e02c0ba432653b34137276d373d (2026-06-13T09:59:41+10:00): Add slice docs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-12T23:59:41.000Z"
+    },
+    {
+      "id": "commit-437d185f2fcc",
+      "sliceId": "slice-04-git-diff-adapter",
+      "kind": "other",
+      "description": "Historical commit 437d185f2fcc2c9ebfba78c41b1a206fbdb1974f (2026-06-13T10:14:18+10:00): Add git diff command to the CLI. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T00:14:18.000Z"
+    },
+    {
+      "id": "commit-561237fe8128-5",
+      "sliceId": "slice-05-review-state-foundation",
+      "kind": "other",
+      "description": "Historical commit 561237fe81286e02c0ba432653b34137276d373d (2026-06-13T09:59:41+10:00): Add slice docs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-12T23:59:41.000Z"
+    },
+    {
+      "id": "commit-78b9fb369935",
+      "sliceId": "slice-05-review-state-foundation",
+      "kind": "other",
+      "description": "Historical commit 78b9fb36993534f25f3cfcc142459ab982ccc0ae (2026-06-13T10:22:59+10:00): Add local review record commands and storage. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T00:22:59.000Z"
+    },
+    {
+      "id": "commit-561237fe8128-6",
+      "sliceId": "slice-06-pr-markdown-generation",
+      "kind": "other",
+      "description": "Historical commit 561237fe81286e02c0ba432653b34137276d373d (2026-06-13T09:59:41+10:00): Add slice docs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-12T23:59:41.000Z"
+    },
+    {
+      "id": "commit-d5cefbcc5397",
+      "sliceId": "slice-06-pr-markdown-generation",
+      "kind": "other",
+      "description": "Historical commit d5cefbcc5397ad8554b4fa73f1c34c9d4171cea4 (2026-06-13T10:33:27+10:00): Add PR markdown generation command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T00:33:27.000Z"
+    },
+    {
+      "id": "commit-561237fe8128-7",
+      "sliceId": "slice-07-current-context-command",
+      "kind": "other",
+      "description": "Historical commit 561237fe81286e02c0ba432653b34137276d373d (2026-06-13T09:59:41+10:00): Add slice docs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-12T23:59:41.000Z"
+    },
+    {
+      "id": "commit-b25b23683e49",
+      "sliceId": "slice-07-current-context-command",
+      "kind": "other",
+      "description": "Historical commit b25b23683e495a7ff673c80a396599467cfc10ee (2026-06-13T10:37:53+10:00): Add current context command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T00:37:53.000Z"
+    },
+    {
+      "id": "commit-561237fe8128-8",
+      "sliceId": "slice-08-cli-polish",
+      "kind": "other",
+      "description": "Historical commit 561237fe81286e02c0ba432653b34137276d373d (2026-06-13T09:59:41+10:00): Add slice docs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-12T23:59:41.000Z"
+    },
+    {
+      "id": "commit-447831b86608",
+      "sliceId": "slice-08-cli-polish",
+      "kind": "other",
+      "description": "Historical commit 447831b866085cd3b40f6cc74b19a66323c98a24 (2026-06-13T10:43:33+10:00): Polish CLI usage errors and add CLI tests. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T00:43:33.000Z"
+    }
+  ]
+}

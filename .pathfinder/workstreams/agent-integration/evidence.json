@@ -1,0 +1,74 @@
+{
+  "evidence": [
+    {
+      "id": "commit-d370b609cfc8",
+      "sliceId": "slice-26-agent-next-state-machine",
+      "kind": "other",
+      "description": "Historical commit d370b609cfc8fa998147160cdab3a57a4c41ba25 (2026-06-13T21:16:32+10:00): Document agent-next slices and integration order. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T11:16:32.000Z"
+    },
+    {
+      "id": "commit-5fadbf7293ae",
+      "sliceId": "slice-26-agent-next-state-machine",
+      "kind": "other",
+      "description": "Historical commit 5fadbf7293ae20e56cf8107f9d2f66da975eeb57 (2026-06-14T11:21:29+10:00): Add agent next state machine command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T01:21:29.000Z"
+    },
+    {
+      "id": "commit-d370b609cfc8-2",
+      "sliceId": "slice-27-agent-prompt-rendering",
+      "kind": "other",
+      "description": "Historical commit d370b609cfc8fa998147160cdab3a57a4c41ba25 (2026-06-13T21:16:32+10:00): Document agent-next slices and integration order. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T11:16:32.000Z"
+    },
+    {
+      "id": "commit-f14c3e03f1a3",
+      "sliceId": "slice-27-agent-prompt-rendering",
+      "kind": "other",
+      "description": "Historical commit f14c3e03f1a34b3912f8b0c37ad8b20f1824c105 (2026-06-14T11:28:47+10:00): Add agent prompt rendering command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T01:28:47.000Z"
+    },
+    {
+      "id": "commit-d370b609cfc8-3",
+      "sliceId": "slice-28-agent-bootstrap-instructions",
+      "kind": "other",
+      "description": "Historical commit d370b609cfc8fa998147160cdab3a57a4c41ba25 (2026-06-13T21:16:32+10:00): Document agent-next slices and integration order. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T11:16:32.000Z"
+    },
+    {
+      "id": "commit-601391395f11",
+      "sliceId": "slice-28-agent-bootstrap-instructions",
+      "kind": "other",
+      "description": "Historical commit 601391395f118fbf31fdaa4d5421487f3dcfeb17 (2026-06-14T11:34:59+10:00): Add agent bootstrap instructions. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T01:34:59.000Z"
+    },
+    {
+      "id": "commit-d370b609cfc8-4",
+      "sliceId": "slice-29-native-agent-command-wrappers",
+      "kind": "other",
+      "description": "Historical commit d370b609cfc8fa998147160cdab3a57a4c41ba25 (2026-06-13T21:16:32+10:00): Document agent-next slices and integration order. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T11:16:32.000Z"
+    },
+    {
+      "id": "commit-19b4b64d0d0d",
+      "sliceId": "slice-29-native-agent-command-wrappers",
+      "kind": "other",
+      "description": "Historical commit 19b4b64d0d0d0dc846b5b251a30563201e5f0ece (2026-06-14T11:37:35+10:00): Add agent command install and list support. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T01:37:35.000Z"
+    },
+    {
+      "id": "commit-d370b609cfc8-5",
+      "sliceId": "slice-30-agent-integration-doctor",
+      "kind": "other",
+      "description": "Historical commit d370b609cfc8fa998147160cdab3a57a4c41ba25 (2026-06-13T21:16:32+10:00): Document agent-next slices and integration order. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T11:16:32.000Z"
+    },
+    {
+      "id": "commit-1dc83f271005",
+      "sliceId": "slice-30-agent-integration-doctor",
+      "kind": "other",
+      "description": "Historical commit 1dc83f271005cd3629b416489b9a06af424ef17e (2026-06-14T11:50:01+10:00): Add agent integration doctor command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T01:50:01.000Z"
+    }
+  ]
+}

@@ -5,8 +5,16 @@
 Pathfinder is a local-first, open-source developer tool for planning work, tracking local review state, inspecting Git diffs, collecting feedback, and producing PR-ready output for AI-assisted development.
 
 For product vision and boundaries, read [PATHFINDER_PRD.md](PATHFINDER_PRD.md).
-For active slice status and implementation sequencing, read [docs/implementation-status.md](docs/implementation-status.md).
-For a fresh slice implementation handoff, use [docs/agent-session-prompt.md](docs/agent-session-prompt.md).
+For active slice status, implementation sequencing, and historical slice handoffs, use repo-local Pathfinder state:
+
+```bash
+pathfinder agent next --json
+pathfinder workstream list --json
+pathfinder slice list <workstream-id> --json
+pathfinder agent prompt
+```
+
+The migration from legacy documentation is summarized in `.pathfinder/migration-summary.md`.
 
 ## System Map
 
@@ -16,7 +24,7 @@ For a fresh slice implementation handoff, use [docs/agent-session-prompt.md](doc
 - `packages/cli/`: command routing, argument parsing, terminal output, and CLI smoke-test surface.
 - `packages/local-server/`: local-only HTTP API and static serving for the built browser UI.
 - `packages/ui/`: React browser app, review UI components, browser API client, and CSS.
-- `docs/`: PRD, implementation status, slice handoffs, ideas, and agent-session prompts.
+- `.pathfinder/`: repo-local Pathfinder state, migrated workstreams, plans, slice handoffs, historical commit mappings, and PR/review artifacts.
 - `.github/`: repository automation such as release workflows.
 - `scripts/`: local maintenance scripts used by package commands.
 
@@ -74,10 +82,12 @@ State code belongs in `packages/state/`. Pure validation or state-independent tr
 
 Before starting a slice:
 
-1. Read this file, [PATHFINDER_PRD.md](PATHFINDER_PRD.md), [README.md](README.md), [docs/implementation-status.md](docs/implementation-status.md), and the assigned slice handoff.
-2. Read the nearest directory-level `AGENTS.md` for files you expect to edit.
-3. Restate the assigned slice goal.
-4. Implement only the assigned slice unless the user explicitly broadens scope.
+1. Run `pathfinder agent next --json` and follow its phase, commands, and active workstream/slice guidance.
+2. Read this file, [PATHFINDER_PRD.md](PATHFINDER_PRD.md), [README.md](README.md), and the relevant Pathfinder workstream plan/slice description under `.pathfinder/workstreams/`.
+3. Use `pathfinder agent prompt` when you need phase-specific implementation instructions.
+4. Read the nearest directory-level `AGENTS.md` for files you expect to edit.
+5. Restate the assigned slice goal.
+6. Implement only the assigned slice unless the user explicitly broadens scope.
 
 While changing code:
 

@@ -1,0 +1,60 @@
+{
+  "evidence": [
+    {
+      "id": "commit-1157e5453672",
+      "sliceId": "slice-37-slice-start-branch-workflow",
+      "kind": "other",
+      "description": "Historical commit 1157e5453672be1325fecb2d5a86d8fe45ef19f8 (2026-06-15T00:08:01+10:00): Document next agent workflow stability slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T14:08:01.000Z"
+    },
+    {
+      "id": "commit-aad1b5e77b70",
+      "sliceId": "slice-37-slice-start-branch-workflow",
+      "kind": "other",
+      "description": "Historical commit aad1b5e77b706bb71083b582b3ed601cc49d100b (2026-06-15T18:44:34+10:00): Add slice start branch workflow. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T08:44:34.000Z"
+    },
+    {
+      "id": "commit-1157e5453672-2",
+      "sliceId": "slice-38-commit-before-review",
+      "kind": "other",
+      "description": "Historical commit 1157e5453672be1325fecb2d5a86d8fe45ef19f8 (2026-06-15T00:08:01+10:00): Document next agent workflow stability slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T14:08:01.000Z"
+    },
+    {
+      "id": "commit-2dc2d43cd51e",
+      "sliceId": "slice-38-commit-before-review",
+      "kind": "other",
+      "description": "Historical commit 2dc2d43cd51ee7b69cca79a1884420ab5d529723 (2026-06-15T19:05:39+10:00): Require committed diffs before starting Pathfinder review. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T09:05:39.000Z"
+    },
+    {
+      "id": "commit-1157e5453672-3",
+      "sliceId": "slice-39-human-review-approval-gate",
+      "kind": "other",
+      "description": "Historical commit 1157e5453672be1325fecb2d5a86d8fe45ef19f8 (2026-06-15T00:08:01+10:00): Document next agent workflow stability slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T14:08:01.000Z"
+    },
+    {
+      "id": "commit-85183a407c20",
+      "sliceId": "slice-39-human-review-approval-gate",
+      "kind": "other",
+      "description": "Historical commit 85183a407c207af61ac8221980dac10776117441 (2026-06-15T19:23:33+10:00): Add human review approval gate. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T09:23:33.000Z"
+    },
+    {
+      "id": "commit-1157e5453672-4",
+      "sliceId": "slice-40-agent-prompt-and-command-stability",
+      "kind": "other",
+      "description": "Historical commit 1157e5453672be1325fecb2d5a86d8fe45ef19f8 (2026-06-15T00:08:01+10:00): Document next agent workflow stability slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T14:08:01.000Z"
+    },
+    {
+      "id": "commit-6bc02cbea191",
+      "sliceId": "slice-40-agent-prompt-and-command-stability",
+      "kind": "other",
+      "description": "Historical commit 6bc02cbea1917150ba9dd1451144652042a302ca (2026-06-15T19:55:24+10:00): Stabilize agent prompt commands and JSON outputs. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T09:55:24.000Z"
+    }
+  ]
+}

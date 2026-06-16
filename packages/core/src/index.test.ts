@@ -991,7 +991,7 @@ test("feedback queue markdown has a useful empty state", () => {
 test("classifies repository paths conservatively", () => {
   assert.equal(categorizeRepositoryPath("packages/core/src/index.ts"), "source");
   assert.equal(categorizeRepositoryPath("packages/core/src/index.test.ts"), "test");
-  assert.equal(categorizeRepositoryPath("docs/slices/13-repository-intelligence-summary.md"), "documentation");
+  assert.equal(categorizeRepositoryPath("guides/repository-intelligence-summary.md"), "documentation");
   assert.equal(categorizeRepositoryPath("README.md"), "documentation");
   assert.equal(categorizeRepositoryPath("package.json"), "configuration");
   assert.equal(categorizeRepositoryPath(".github/workflows/test.yml"), "configuration");

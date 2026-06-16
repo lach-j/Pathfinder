@@ -1,0 +1,109 @@
+{
+  "evidence": [
+    {
+      "id": "commit-97e0004542a9",
+      "sliceId": "slice-41-workspace-server-and-api-foundation",
+      "kind": "other",
+      "description": "Historical commit 97e0004542a990bc72e3ad54a73ed85dafaf71eb (2026-06-15T20:33:53+10:00): Add workspace UI expansion slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T10:33:53.000Z"
+    },
+    {
+      "id": "commit-a4b53e5f9731",
+      "sliceId": "slice-41-workspace-server-and-api-foundation",
+      "kind": "other",
+      "description": "Historical commit a4b53e5f9731f84d3c1f224da9ea701e360a719e (2026-06-15T20:44:24+10:00): Add workspace server and API foundation. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T10:44:24.000Z"
+    },
+    {
+      "id": "commit-97e0004542a9-2",
+      "sliceId": "slice-42-workspace-shell-current-repo",
+      "kind": "other",
+      "description": "Historical commit 97e0004542a990bc72e3ad54a73ed85dafaf71eb (2026-06-15T20:33:53+10:00): Add workspace UI expansion slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T10:33:53.000Z"
+    },
+    {
+      "id": "commit-92b5e36990a5",
+      "sliceId": "slice-42-workspace-shell-current-repo",
+      "kind": "other",
+      "description": "Historical commit 92b5e36990a53ff710249e805a75e0ed6f5ed407 (2026-06-15T21:02:01+10:00): feat: Add workspace shell. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T11:02:01.000Z"
+    },
+    {
+      "id": "commit-97e0004542a9-3",
+      "sliceId": "slice-43-workstream-dependency-canvas",
+      "kind": "other",
+      "description": "Historical commit 97e0004542a990bc72e3ad54a73ed85dafaf71eb (2026-06-15T20:33:53+10:00): Add workspace UI expansion slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T10:33:53.000Z"
+    },
+    {
+      "id": "commit-5c343839fbea",
+      "sliceId": "slice-43-workstream-dependency-canvas",
+      "kind": "other",
+      "description": "Historical commit 5c343839fbeae97e948bd2362dfb30832401598b (2026-06-16T07:01:23+10:00): feat: add workspace dependency canvas. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T21:01:23.000Z"
+    },
+    {
+      "id": "commit-221061adc240",
+      "sliceId": "slice-43-workstream-dependency-canvas",
+      "kind": "other",
+      "description": "Historical commit 221061adc24070bbba3a510cead5f6da4993224f (2026-06-16T20:45:19+10:00): fix: Fix slice nodes missing handles. Mapping: inferred: dependency canvas handle fix.",
+      "createdAt": "2026-06-16T10:45:19.000Z"
+    },
+    {
+      "id": "commit-97e0004542a9-4",
+      "sliceId": "slice-44-artifact-preview-panel",
+      "kind": "other",
+      "description": "Historical commit 97e0004542a990bc72e3ad54a73ed85dafaf71eb (2026-06-15T20:33:53+10:00): Add workspace UI expansion slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T10:33:53.000Z"
+    },
+    {
+      "id": "commit-590a41efb043",
+      "sliceId": "slice-44-artifact-preview-panel",
+      "kind": "other",
+      "description": "Historical commit 590a41efb0438d1e6a78e3a48bc780c4db6a14fa (2026-06-16T12:37:40+10:00): feat: add artifact preview panel. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-16T02:37:40.000Z"
+    },
+    {
+      "id": "commit-97e0004542a9-5",
+      "sliceId": "slice-45-workspace-review-panel",
+      "kind": "other",
+      "description": "Historical commit 97e0004542a990bc72e3ad54a73ed85dafaf71eb (2026-06-15T20:33:53+10:00): Add workspace UI expansion slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T10:33:53.000Z"
+    },
+    {
+      "id": "commit-89cf3453d932",
+      "sliceId": "slice-45-workspace-review-panel",
+      "kind": "other",
+      "description": "Historical commit 89cf3453d93257f133e7fda05d44f068f13786e3 (2026-06-16T19:46:55+10:00): Add slice review panel to workspace shell. Mapping: inferred: implementation commit from subject and status update.",
+      "createdAt": "2026-06-16T09:46:55.000Z"
+    },
+    {
+      "id": "commit-97e0004542a9-6",
+      "sliceId": "slice-46-pr-rich-copy",
+      "kind": "other",
+      "description": "Historical commit 97e0004542a990bc72e3ad54a73ed85dafaf71eb (2026-06-15T20:33:53+10:00): Add workspace UI expansion slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-15T10:33:53.000Z"
+    },
+    {
+      "id": "commit-cbceb1bfbdbd",
+      "sliceId": "slice-47-standalone-branch-review",
+      "kind": "other",
+      "description": "Historical commit cbceb1bfbdbde68284f7fa3a5b2e41d09c1b94f9 (2026-06-16T12:34:51+10:00): feat: add standalone branch review state machine. Mapping: inferred: branch-review state machine implementation.",
+      "createdAt": "2026-06-16T02:34:51.000Z"
+    },
+    {
+      "id": "commit-10379b46645f",
+      "sliceId": "slice-47-standalone-branch-review",
+      "kind": "other",
+      "description": "Historical commit 10379b46645fd8c6d287b06bca61dfe14121c8ea (2026-06-16T14:06:52+10:00): feat: add branch review workspace UI. Mapping: inferred: branch-review workspace UI implementation.",
+      "createdAt": "2026-06-16T04:06:52.000Z"
+    },
+    {
+      "id": "commit-b54edc6e0c51",
+      "sliceId": "slice-47-standalone-branch-review",
+      "kind": "other",
+      "description": "Historical commit b54edc6e0c51637a73c34a8017318518eec5950e (2026-06-16T18:17:15+10:00): docs: add additional slices. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-16T08:17:15.000Z"
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "evidence": [
+    {
+      "id": "commit-b94297d34764",
+      "sliceId": "slice-31-release-packaging",
+      "kind": "other",
+      "description": "Historical commit b94297d34764be360b1912d48ba7d20f1e27fd58 (2026-06-14T16:38:01+10:00): Document personal mode distribution roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T06:38:01.000Z"
+    },
+    {
+      "id": "commit-c2656b701fcf",
+      "sliceId": "slice-31-release-packaging",
+      "kind": "other",
+      "description": "Historical commit c2656b701fcfc554ffe50fd282b28c745a142778 (2026-06-14T16:46:23+10:00): Package release tarball from built workspace output. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T06:46:23.000Z"
+    },
+    {
+      "id": "commit-b94297d34764-2",
+      "sliceId": "slice-32-github-release-artifact-workflow",
+      "kind": "other",
+      "description": "Historical commit b94297d34764be360b1912d48ba7d20f1e27fd58 (2026-06-14T16:38:01+10:00): Document personal mode distribution roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T06:38:01.000Z"
+    },
+    {
+      "id": "commit-01d7949a3d98",
+      "sliceId": "slice-32-github-release-artifact-workflow",
+      "kind": "other",
+      "description": "Historical commit 01d7949a3d9826e9f907d7a76b817c60041d9f37 (2026-06-14T16:49:30+10:00): Add GitHub release artifact workflow. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T06:49:30.000Z"
+    },
+    {
+      "id": "commit-b94297d34764-3",
+      "sliceId": "slice-33-automated-versioning",
+      "kind": "other",
+      "description": "Historical commit b94297d34764be360b1912d48ba7d20f1e27fd58 (2026-06-14T16:38:01+10:00): Document personal mode distribution roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T06:38:01.000Z"
+    },
+    {
+      "id": "commit-9758bee29c83",
+      "sliceId": "slice-33-automated-versioning",
+      "kind": "other",
+      "description": "Historical commit 9758bee29c83eff9f6da5ce31fdb3a01c9145808 (2026-06-14T18:27:39+10:00): Add review feedback queue and draft generation flow. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T08:27:39.000Z"
+    },
+    {
+      "id": "commit-8c44460b3351",
+      "sliceId": "slice-33-automated-versioning",
+      "kind": "other",
+      "description": "Historical commit 8c44460b3351887e93e15f7e2d7200f11dfd8bb1 (2026-06-14T18:33:31+10:00): feat: enable automated releases. Mapping: inferred: automated release enablement.",
+      "createdAt": "2026-06-14T08:33:31.000Z"
+    },
+    {
+      "id": "commit-0d23b9cac48a",
+      "sliceId": "slice-33-automated-versioning",
+      "kind": "other",
+      "description": "Historical commit 0d23b9cac48ab4ce64bef48e98b55c0eb931e8e0 (2026-06-14T18:35:26+10:00): fix: disable release issue comments. Mapping: inferred: release automation cleanup.",
+      "createdAt": "2026-06-14T08:35:26.000Z"
+    },
+    {
+      "id": "commit-b94297d34764-4",
+      "sliceId": "slice-34-external-state-mode",
+      "kind": "other",
+      "description": "Historical commit b94297d34764be360b1912d48ba7d20f1e27fd58 (2026-06-14T16:38:01+10:00): Document personal mode distribution roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T06:38:01.000Z"
+    },
+    {
+      "id": "commit-47f68111b5b3",
+      "sliceId": "slice-34-external-state-mode",
+      "kind": "other",
+      "description": "Historical commit 47f68111b5b315d3ddf351d7aef64625d06a51a5 (2026-06-14T18:47:08+10:00): Add external state mode. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T08:47:08.000Z"
+    },
+    {
+      "id": "commit-890f612c41d8",
+      "sliceId": "slice-34-external-state-mode",
+      "kind": "other",
+      "description": "Historical commit 890f612c41d89d69b838cabe4fa3fb4e987ede24 (2026-06-14T22:57:30+10:00): Remove global state mode config. Mapping: inferred: external state mode simplification.",
+      "createdAt": "2026-06-14T12:57:30.000Z"
+    },
+    {
+      "id": "commit-b94297d34764-5",
+      "sliceId": "slice-35-no-repo-footprint-agent-mode",
+      "kind": "other",
+      "description": "Historical commit b94297d34764be360b1912d48ba7d20f1e27fd58 (2026-06-14T16:38:01+10:00): Document personal mode distribution roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T06:38:01.000Z"
+    },
+    {
+      "id": "commit-60b2a78e436a",
+      "sliceId": "slice-35-no-repo-footprint-agent-mode",
+      "kind": "other",
+      "description": "Historical commit 60b2a78e436a8a478a7e17d25139bfff18866ff3 (2026-06-14T19:00:57+10:00): feat: add zero-repo-footprint mode. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T09:00:57.000Z"
+    },
+    {
+      "id": "commit-20b5c1800ff6",
+      "sliceId": "slice-35-no-repo-footprint-agent-mode",
+      "kind": "other",
+      "description": "Historical commit 20b5c1800ff6674b788c95f89e287e92da0defb1 (2026-06-14T22:40:11+10:00): feat: simplify pathfinder init setup. Mapping: inferred: personal/no-footprint init setup simplification.",
+      "createdAt": "2026-06-14T12:40:11.000Z"
+    },
+    {
+      "id": "commit-e76e3641c857",
+      "sliceId": "slice-35-no-repo-footprint-agent-mode",
+      "kind": "other",
+      "description": "Historical commit e76e3641c857c5fa6d22ddf6d3c8600d5c7b2461 (2026-06-14T23:04:50+10:00): Improve init setup prompts and multi-agent install. Mapping: inferred: multi-agent personal setup polish.",
+      "createdAt": "2026-06-14T13:04:50.000Z"
+    },
+    {
+      "id": "commit-06709e1ea8ad",
+      "sliceId": "slice-35-no-repo-footprint-agent-mode",
+      "kind": "other",
+      "description": "Historical commit 06709e1ea8adc7862dc8f1d682e9383ea36d5bce (2026-06-14T23:18:09+10:00): feat: add codex agent integration. Mapping: inferred: Codex user-level integration support.",
+      "createdAt": "2026-06-14T13:18:09.000Z"
+    },
+    {
+      "id": "commit-b94297d34764-6",
+      "sliceId": "slice-36-personal-mode-doctor",
+      "kind": "other",
+      "description": "Historical commit b94297d34764be360b1912d48ba7d20f1e27fd58 (2026-06-14T16:38:01+10:00): Document personal mode distribution roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T06:38:01.000Z"
+    },
+    {
+      "id": "commit-be21bf9775fa",
+      "sliceId": "slice-36-personal-mode-doctor",
+      "kind": "other",
+      "description": "Historical commit be21bf9775fa629cfaecf5d9fb12aa29f2c8ccb0 (2026-06-15T00:20:58+10:00): feat: Add personal doctor command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-14T14:20:58.000Z"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "evidence": [
+    {
+      "id": "commit-7a1162942b78",
+      "sliceId": "slice-09-mvp-review-follow-up",
+      "kind": "other",
+      "description": "Historical commit 7a1162942b787172c1388bd323ffdbd997d94894 (2026-06-13T12:46:43+10:00): Document MVP review slice status. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T02:46:43.000Z"
+    },
+    {
+      "id": "commit-ad72fd4d3833",
+      "sliceId": "slice-09-mvp-review-follow-up",
+      "kind": "other",
+      "description": "Historical commit ad72fd4d3833d41ff2f27d2ad36734936b461a58 (2026-06-13T12:57:24+10:00): Add slice status, branch, and base diff commands. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T02:57:24.000Z"
+    },
+    {
+      "id": "commit-9b830bd5f46c",
+      "sliceId": "slice-10-requirements-context",
+      "kind": "other",
+      "description": "Historical commit 9b830bd5f46cebec4e0e93e3b297c88f43578ee3 (2026-06-13T13:02:39+10:00): Document next MVP slices and priorities. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:02:39.000Z"
+    },
+    {
+      "id": "commit-9b830bd5f46c-2",
+      "sliceId": "slice-11-slice-dependencies-and-next-selection",
+      "kind": "other",
+      "description": "Historical commit 9b830bd5f46cebec4e0e93e3b297c88f43578ee3 (2026-06-13T13:02:39+10:00): Document next MVP slices and priorities. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:02:39.000Z"
+    },
+    {
+      "id": "commit-9b830bd5f46c-3",
+      "sliceId": "slice-12-evidence-attachments",
+      "kind": "other",
+      "description": "Historical commit 9b830bd5f46cebec4e0e93e3b297c88f43578ee3 (2026-06-13T13:02:39+10:00): Document next MVP slices and priorities. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:02:39.000Z"
+    },
+    {
+      "id": "commit-9b830bd5f46c-4",
+      "sliceId": "slice-13-repository-intelligence-summary",
+      "kind": "other",
+      "description": "Historical commit 9b830bd5f46cebec4e0e93e3b297c88f43578ee3 (2026-06-13T13:02:39+10:00): Document next MVP slices and priorities. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:02:39.000Z"
+    },
+    {
+      "id": "commit-9b830bd5f46c-5",
+      "sliceId": "slice-14-deterministic-review-checks",
+      "kind": "other",
+      "description": "Historical commit 9b830bd5f46cebec4e0e93e3b297c88f43578ee3 (2026-06-13T13:02:39+10:00): Document next MVP slices and priorities. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:02:39.000Z"
+    },
+    {
+      "id": "commit-9b830bd5f46c-6",
+      "sliceId": "slice-15-pr-composer-v2",
+      "kind": "other",
+      "description": "Historical commit 9b830bd5f46cebec4e0e93e3b297c88f43578ee3 (2026-06-13T13:02:39+10:00): Document next MVP slices and priorities. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:02:39.000Z"
+    },
+    {
+      "id": "commit-88ae021e8c69",
+      "sliceId": "slice-10-requirements-context",
+      "kind": "other",
+      "description": "Historical commit 88ae021e8c6913210b72b8d0896c315132a1fd79 (2026-06-13T13:10:17+10:00): Add requirements context to workstreams. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:10:17.000Z"
+    },
+    {
+      "id": "commit-41e8d4689fce",
+      "sliceId": "slice-11-slice-dependencies-and-next-selection",
+      "kind": "other",
+      "description": "Historical commit 41e8d4689fce1a35ac725c04979360ae281847e7 (2026-06-13T13:18:22+10:00): Add slice dependencies and next selection. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:18:22.000Z"
+    },
+    {
+      "id": "commit-5acda8f78e9b",
+      "sliceId": "slice-12-evidence-attachments",
+      "kind": "other",
+      "description": "Historical commit 5acda8f78e9b446a74bdd193e780c08edaa37ef6 (2026-06-13T13:30:52+10:00): Add slice evidence attachments and PR testing output. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:30:52.000Z"
+    },
+    {
+      "id": "commit-651e25647429",
+      "sliceId": "slice-13-repository-intelligence-summary",
+      "kind": "other",
+      "description": "Historical commit 651e2564742939bc1e5249c768dee811265ffd31 (2026-06-13T13:41:40+10:00): Add repository summary git command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:41:40.000Z"
+    },
+    {
+      "id": "commit-e4b142b491bd",
+      "sliceId": "slice-14-deterministic-review-checks",
+      "kind": "other",
+      "description": "Historical commit e4b142b491bd32f8541ac448c899a18eac00bdcc (2026-06-13T13:56:51+10:00): Add deterministic review checks. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T03:56:51.000Z"
+    },
+    {
+      "id": "commit-98a56e162f08",
+      "sliceId": "slice-15-pr-composer-v2",
+      "kind": "other",
+      "description": "Historical commit 98a56e162f08c9d31c06b3ca00e03d95f4798d3d (2026-06-13T15:07:13+10:00): Implement PR composer v2. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:13.000Z"
+    },
+    {
+      "id": "commit-a4bbcf17294",
+      "sliceId": "slice-14-deterministic-review-checks",
+      "kind": "other",
+      "description": "Historical commit a4bbcf17294d858fd6fac02ec4b478a3356e4d9b (2026-06-13T15:13:32+10:00): Restrict deterministic reviews to active slice comments. Mapping: inferred deterministic review behavior follow-up.",
+      "createdAt": "2026-06-13T05:13:32.000Z"
+    }
+  ]
+}

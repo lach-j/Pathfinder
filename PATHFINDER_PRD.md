@@ -1051,7 +1051,7 @@ Template:
 
 # Exploratory Ideas
 
-Exploratory product ideas are tracked under `docs/ideas/`. They are not implementation commitments until they are split into scoped slice handoffs under `docs/slices/`.
+Exploratory product ideas are tracked in the repo-local Pathfinder workstream `product-ideas-backlog`. They are not implementation commitments until a future planning pass promotes them into active Pathfinder slices.
 
 ## AI Planning Assistant
 

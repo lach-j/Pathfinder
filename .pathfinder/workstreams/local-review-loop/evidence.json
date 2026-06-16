@@ -1,0 +1,144 @@
+{
+  "evidence": [
+    {
+      "id": "commit-a2f2deb83001",
+      "sliceId": "slice-16-stage-plan-import",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-2935e6a6788f",
+      "sliceId": "slice-16-stage-plan-import",
+      "kind": "other",
+      "description": "Historical commit 2935e6a6788f0fd314acabc2df8ce2b855cd910c (2026-06-13T15:21:37+10:00): Add stage plan import command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:21:37.000Z"
+    },
+    {
+      "id": "commit-a2f2deb83001-2",
+      "sliceId": "slice-17-review-session-state",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-404317f83abe",
+      "sliceId": "slice-17-review-session-state",
+      "kind": "other",
+      "description": "Historical commit 404317f83abe6f7a4449e11206844b6edde08ca3 (2026-06-13T15:31:26+10:00): Add durable review session state and CLI commands. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:31:26.000Z"
+    },
+    {
+      "id": "commit-a2f2deb83001-3",
+      "sliceId": "slice-18-structured-diff-model",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-92c8395f7d8a",
+      "sliceId": "slice-18-structured-diff-model",
+      "kind": "other",
+      "description": "Historical commit 92c8395f7d8a3c628488aa7e63c4611d0b1a5e3e (2026-06-13T16:03:33+10:00): Add structured diff show command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T06:03:33.000Z"
+    },
+    {
+      "id": "commit-a2f2deb83001-4",
+      "sliceId": "slice-19-inline-comment-anchors",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-5d2b35cc4409",
+      "sliceId": "slice-19-inline-comment-anchors",
+      "kind": "other",
+      "description": "Historical commit 5d2b35cc4409f01bcf2d393e544d0ca6f204192f (2026-06-13T19:35:14+10:00): Add inline comment anchors. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T09:35:14.000Z"
+    },
+    {
+      "id": "commit-a2f2deb83001-5",
+      "sliceId": "slice-20-feedback-queue-export",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-d2ac06e718ef",
+      "sliceId": "slice-20-feedback-queue-export",
+      "kind": "other",
+      "description": "Historical commit d2ac06e718eff58908c3430c242ab36b6b0345e4 (2026-06-13T19:44:56+10:00): Add feedback queue export command. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T09:44:56.000Z"
+    },
+    {
+      "id": "commit-a2f2deb83001-6",
+      "sliceId": "slice-21-local-review-server",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-786241d4a7a8",
+      "sliceId": "slice-21-local-review-server",
+      "kind": "other",
+      "description": "Historical commit 786241d4a7a81f03d2a42cb9e2edb344a0045c7a (2026-06-13T19:52:46+10:00): Add local review server. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T09:52:46.000Z"
+    },
+    {
+      "id": "commit-a2f2deb83001-7",
+      "sliceId": "slice-22-read-only-diff-viewer-ui",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-0bd265d32d27",
+      "sliceId": "slice-22-read-only-diff-viewer-ui",
+      "kind": "other",
+      "description": "Historical commit 0bd265d32d27dc64223b0429feb70845164c1e10 (2026-06-13T20:06:01+10:00): Add read-only diff viewer UI. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T10:06:01.000Z"
+    },
+    {
+      "id": "commit-a2f2deb83001-8",
+      "sliceId": "slice-23-inline-commenting-ui",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-72ae591fbb21",
+      "sliceId": "slice-23-inline-commenting-ui",
+      "kind": "other",
+      "description": "Historical commit 72ae591fbb21ed73421bfeed908f48e4192fe385 (2026-06-13T20:17:54+10:00): Add inline commenting controls to diff viewer. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T10:17:54.000Z"
+    },
+    {
+      "id": "commit-a2f2deb83001-9",
+      "sliceId": "slice-24-review-refresh-and-stale-comments",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-49720f0f838c",
+      "sliceId": "slice-24-review-refresh-and-stale-comments",
+      "kind": "other",
+      "description": "Historical commit 49720f0f838c2a4012bb17a768e88d001e038956 (2026-06-13T20:36:00+10:00): Add review refresh for stale comment anchors. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T10:36:00.000Z"
+    },
+    {
+      "id": "commit-a2f2deb83001-10",
+      "sliceId": "slice-25-pr-composer-review-loop",
+      "kind": "other",
+      "description": "Historical commit a2f2deb8300137685660fb72ac88df89d8266ecc (2026-06-13T15:07:55+10:00): Plan local diff review roadmap. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T05:07:55.000Z"
+    },
+    {
+      "id": "commit-35093c7e3630",
+      "sliceId": "slice-25-pr-composer-review-loop",
+      "kind": "other",
+      "description": "Historical commit 35093c7e36300bc0f045d345e6badab683e9bbd7 (2026-06-13T20:46:34+10:00): Expand PR markdown with review loop details. Mapping: touched legacy slice doc.",
+      "createdAt": "2026-06-13T10:46:34.000Z"
+    }
+  ]
+}
