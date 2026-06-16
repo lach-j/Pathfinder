@@ -9,6 +9,9 @@
     "!dist/**/*.test.*",
     "!dist/**/*.tsbuildinfo"
   ],
+  "scripts": {
+    "dev": "tsx watch src/dev-workspace-server.ts"
+  },
   "dependencies": {
     "@pathfinder/core": "0.1.0",
     "@pathfinder/git": "0.1.0",

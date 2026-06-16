@@ -39,6 +39,8 @@
   "scripts": {
     "clean": "node scripts/clean-dist.mjs",
     "build": "npm run clean && npm run build -w @pathfinder/ui && tsc -b packages/core packages/git packages/state packages/local-server packages/cli",
+    "dev:api": "npm run dev -w @pathfinder/local-server --",
+    "dev:ui": "npm run dev -w @pathfinder/ui --",
     "typecheck": "tsc -b --pretty false && npm run typecheck -w @pathfinder/ui",
     "test": "npm run build && node --test packages/core/dist/*.test.js packages/git/dist/*.test.js packages/state/dist/*.test.js packages/cli/dist/*.test.js",
     "release": "semantic-release"
@@ -50,6 +52,13 @@
     "@semantic-release/release-notes-generator": "^14.1.1",
     "@types/node": "^22.13.0",
     "semantic-release": "^25.0.5",
+    "tsx": "^4.22.4",
     "typescript": "^5.8.0"
-  }
+  },
+  "bundleDependencies": [
+    "@pathfinder/core",
+    "@pathfinder/git",
+    "@pathfinder/local-server",
+    "@pathfinder/state"
+  ]
 }
