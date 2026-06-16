@@ -1,5 +1,7 @@
 import {
   AgentNextRecommendation,
+  BranchReviewNextRecommendation,
+  BranchReviewSession,
   describeReviewCommentTarget,
   Evidence,
   RepositoryChangeStatus,
@@ -12,7 +14,7 @@ import {
   StructuredDiff,
   StructuredDiffLine
 } from "@pathfinder/core";
-import { CurrentContext, ReviewApprovalResult } from "@pathfinder/state";
+import { BranchReviewApprovalResult, CurrentContext, ReviewApprovalResult } from "@pathfinder/state";
 import {
   AgentCommandsInstallResult,
   AgentCommandsListResult,
@@ -69,6 +71,40 @@ export function formatReviewSessionSummary(session: ReviewSession): string {
   return `${lines.join("\n")}\n`;
 }
 
+export function formatBranchReviewSession(session: BranchReviewSession): string {
+  const approval = session.approvedAt ? `\tapproved:${session.approvedAt}` : "";
+  return `${session.id}\t${session.baseRef}\t${session.headRef}\t${session.headCommit}\t${session.changedFiles.length} file(s)${approval}`;
+}
+
+export function formatBranchReviewSessionSummary(session: BranchReviewSession): string {
+  const lines = [
+    "# Pathfinder Branch Review Session",
+    "",
+    `Session: ${session.id}`,
+    `Base ref: ${session.baseRef}`,
+    `Head ref: ${session.headRef}`,
+    `Head commit: ${session.headCommit}`,
+    `Merge base: ${session.mergeBase}`,
+    `Changed files: ${session.changedFiles.length}`,
+    ...(session.approvedAt ? [`Approved at: ${session.approvedAt}`] : []),
+    ""
+  ];
+
+  if (session.changedFiles.length === 0) {
+    lines.push("No committed file changes found.");
+    return `${lines.join("\n")}\n`;
+  }
+
+  lines.push("## Files");
+  lines.push("");
+  lines.push(...session.changedFiles.map((file) => {
+    const pathText = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
+    return `- ${formatChangeStatus(file.status)}\t${file.category}\t${pathText}`;
+  }));
+
+  return `${lines.join("\n")}\n`;
+}
+
 export function formatReviewApproval(result: ReviewApprovalResult): string {
   const lines = [
     "# Pathfinder Review Approval",
@@ -80,6 +116,22 @@ export function formatReviewApproval(result: ReviewApprovalResult): string {
     `Evidence: ${result.evidence.id}`,
     "",
     "Human approval recorded locally. This was an explicit review decision, not hidden automation."
+  ];
+
+  return `${lines.join("\n")}\n`;
+}
+
+export function formatBranchReviewApproval(result: BranchReviewApprovalResult): string {
+  const lines = [
+    "# Pathfinder Branch Review Approval",
+    "",
+    `Session: ${result.session.id}`,
+    `Base ref: ${result.session.baseRef}`,
+    `Head ref: ${result.session.headRef}`,
+    `Head commit: ${result.session.headCommit}`,
+    `Approved at: ${result.session.approvedAt}`,
+    "",
+    "Human approval recorded locally for this branch review session."
   ];
 
   return `${lines.join("\n")}\n`;
@@ -204,6 +256,42 @@ export function formatAgentNext(recommendation: AgentNextRecommendation): string
 
   if (recommendation.reviewSessionId) {
     lines.push(`Review session: ${recommendation.reviewSessionId}`);
+  }
+
+  lines.push("");
+  lines.push("## Recommended Commands");
+  lines.push("");
+  lines.push(...recommendation.commands.map((command) => `- ${command}`));
+  lines.push("");
+  lines.push("## Agent Instruction");
+  lines.push("");
+  lines.push(recommendation.agentInstruction);
+  lines.push("");
+  lines.push("## Human Instruction");
+  lines.push("");
+  lines.push(recommendation.humanInstruction);
+
+  return `${lines.join("\n")}\n`;
+}
+
+export function formatBranchReviewNext(recommendation: BranchReviewNextRecommendation): string {
+  const lines = [
+    "# Pathfinder Branch Review Next",
+    "",
+    `Phase: ${recommendation.phase}`,
+    `Reason: ${recommendation.reason}`
+  ];
+
+  if (recommendation.reviewSessionId) {
+    lines.push(`Review session: ${recommendation.reviewSessionId}`);
+  }
+
+  if (recommendation.baseRef) {
+    lines.push(`Base ref: ${recommendation.baseRef}`);
+  }
+
+  if (recommendation.feedbackQueuePath) {
+    lines.push(`Feedback queue: ${recommendation.feedbackQueuePath}`);
   }
 
   lines.push("");

@@ -59,6 +59,18 @@ test("help lists the implemented commands", async () => {
     "pathfinder review run --base <base-ref>",
     "pathfinder review list",
     "pathfinder review show",
+    "pathfinder branch-review next [--json]",
+    "pathfinder branch-review start --base <base-ref>",
+    "pathfinder branch-review refresh <session-id>",
+    "pathfinder branch-review approve <session-id>",
+    "pathfinder branch-review sessions [--json]",
+    "pathfinder branch-review session <session-id> [--json]",
+    "pathfinder branch-review diff <session-id> [--json]",
+    "pathfinder branch-review comment add <session-id>",
+    "pathfinder branch-review comment list [--session <session-id>] [--open] [--json]",
+    "pathfinder branch-review comment resolve <comment-id>",
+    "pathfinder branch-review feedback export [--session <session-id>] [--file ./feedback.md]",
+    "pathfinder branch-review pr generate [--base <base-ref>]",
     "pathfinder evidence add",
     "pathfinder evidence list",
     "pathfinder diff show --base <base-ref> [--json]",
@@ -1467,6 +1479,116 @@ test("starts, lists, and shows a review session against committed branch changes
   assert.match(stored, /"sessions": \[/);
 });
 
+test("runs standalone branch review with comments feedback approval and PR markdown", async () => {
+  const repo = await createRealTempGitRepo();
+
+  await runCli(["init"], repo);
+  await git(repo, ["add", "."]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "pathfinder state"]);
+  await git(repo, ["checkout", "-b", "feature-branch-review"]);
+  await mkdir(path.join(repo, "src"));
+  await writeFile(path.join(repo, "src", "report.ts"), "export const report = [];\n", "utf8");
+  await git(repo, ["add", "src/report.ts"]);
+  await git(repo, ["-c", "user.name=Pathfinder Test", "-c", "user.email=test@example.invalid", "commit", "-m", "add report"]);
+
+  const initialNext = await runCli(["branch-review", "next", "--json"], repo);
+  const parsedInitialNext = JSON.parse(initialNext.stdout);
+  const start = await runCli(["branch-review", "start", "--base", "main"], repo);
+  const approvalNext = await runCli(["branch-review", "next", "--json"], repo);
+  const parsedApprovalNext = JSON.parse(approvalNext.stdout);
+  const list = await runCli(["branch-review", "sessions"], repo);
+  const diff = await runCli(["branch-review", "diff", "review-feature-branch-review"], repo);
+  const comment = await runCli(
+    [
+      "branch-review",
+      "comment",
+      "add",
+      "review-feature-branch-review",
+      "--file",
+      "src/report.ts",
+      "--line",
+      "1",
+      "--side",
+      "new",
+      "--body",
+      "Handle the empty branch case."
+    ],
+    repo
+  );
+  const feedbackNext = await runCli(["branch-review", "next", "--json"], repo);
+  const parsedFeedbackNext = JSON.parse(feedbackNext.stdout);
+  const feedback = await runCli(
+    [
+      "branch-review",
+      "feedback",
+      "export",
+      "--session",
+      "review-feature-branch-review",
+      "--file",
+      ".pathfinder-branch-feedback.md"
+    ],
+    repo
+  );
+  let approvalError: Error & { code: number; stderr: string } | undefined;
+  try {
+    await runCli(["branch-review", "approve", "review-feature-branch-review"], repo);
+  } catch (error) {
+    if (isExecError(error)) {
+      approvalError = error;
+    } else {
+      throw error;
+    }
+  }
+  assert.ok(approvalError);
+  await runCli(["branch-review", "comment", "resolve", "handle-the-empty-branch-case"], repo);
+  const approve = await runCli(["branch-review", "approve", "review-feature-branch-review"], repo);
+  const prNext = await runCli(["branch-review", "next", "--json"], repo);
+  const parsedPrNext = JSON.parse(prNext.stdout);
+  const pr = await runCli(["branch-review", "pr", "generate", "--base", "main"], repo);
+  const completeNext = await runCli(["branch-review", "next", "--json"], repo);
+  const parsedCompleteNext = JSON.parse(completeNext.stdout);
+  const storedPr = await readFile(path.join(repo, ".pathfinder", "branch-reviews", "pr.md"), "utf8");
+  const agentNext = await runCli(["agent", "next", "--json"], repo);
+  const parsedAgentNext = JSON.parse(agentNext.stdout);
+
+  assert.equal(parsedInitialNext.phase, "needs_session");
+  assert.deepEqual(parsedInitialNext.commands, ["pathfinder branch-review start --base main"]);
+  assert.match(start.stdout, /# Pathfinder Branch Review Session/);
+  assert.match(start.stdout, /Session: review-feature-branch-review/);
+  assert.match(start.stdout, /Base ref: main/);
+  assert.match(start.stdout, /Head ref: feature-branch-review/);
+  assert.match(start.stdout, /- A\tsource\tsrc\/report\.ts/);
+  assert.equal(parsedApprovalNext.phase, "awaiting_human_approval");
+  assert.equal(parsedApprovalNext.reviewSessionId, "review-feature-branch-review");
+  assert.match(list.stdout, /review-feature-branch-review\tmain\tfeature-branch-review\t[a-f0-9]+\t1 file\(s\)/);
+  assert.match(diff.stdout, /src\/report\.ts/);
+  assert.match(
+    comment.stdout,
+    /handle-the-empty-branch-case\topen\tsession review-feature-branch-review file src\/report\.ts new line 1\tHandle the empty branch case\./
+  );
+  assert.equal(parsedFeedbackNext.phase, "feedback");
+  assert.deepEqual(parsedFeedbackNext.commands, [
+    "pathfinder branch-review feedback export --session review-feature-branch-review --file ./.pathfinder-branch-feedback.md",
+    "pathfinder branch-review refresh review-feature-branch-review"
+  ]);
+  assert.match(feedback.stdout, /Exported branch review feedback queue to \.pathfinder-branch-feedback\.md\./);
+  assert.match(
+    approvalError.stderr,
+    /Cannot approve branch review session 'review-feature-branch-review' while 1 open review comment\(s\) remain/
+  );
+  assert.match(approve.stdout, /# Pathfinder Branch Review Approval/);
+  assert.match(approve.stdout, /Session: review-feature-branch-review/);
+  assert.equal(parsedPrNext.phase, "ready_for_pr");
+  assert.deepEqual(parsedPrNext.commands, ["pathfinder branch-review pr generate --base main"]);
+  assert.equal(storedPr, pr.stdout.replace(/^Wrote branch review PR markdown to .+\r?\n/, ""));
+  assert.match(pr.stdout, /## Branch Review Sessions/);
+  assert.match(pr.stdout, /Session `review-feature-branch-review`/);
+  assert.match(pr.stdout, /approved /);
+  assert.match(pr.stdout, /- `handle-the-empty-branch-case` \(resolved, resolved .*; session review-feature-branch-review file src\/report\.ts new line 1\): Handle the empty branch case\./);
+  assert.equal(parsedCompleteNext.phase, "complete");
+  assert.equal(parsedAgentNext.phase, "needs_workstream");
+});
+
 test("refreshes review sessions and reports stale comment anchors", async () => {
   const repo = await createRealTempGitRepo();
 
@@ -2054,7 +2176,7 @@ test("review start requires a clean committed worktree", async () => {
       isExecError(error) &&
       error.code === 1 &&
       /Cannot start a review session with uncommitted changes/.test(error.stderr) &&
-      /Commit the slice changes, stash or remove unrelated changes/.test(error.stderr)
+      /Commit the relevant changes, stash or remove unrelated changes/.test(error.stderr)
   );
 
   await git(repo, ["add", "src/report.ts"]);

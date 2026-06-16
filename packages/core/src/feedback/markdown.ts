@@ -1,4 +1,5 @@
 import {
+  BranchFeedbackQueueMarkdownInput,
   FeedbackQueueMarkdownInput,
   ReviewComment,
   ReviewCommentFileTarget,
@@ -65,6 +66,50 @@ export function generateFeedbackQueueMarkdown(input: FeedbackQueueMarkdownInput)
   lines.push("### Slice And Workstream Comments");
   lines.push("");
   lines.push(...formatBroadComments(grouped.broadComments, input.slices));
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function generateBranchFeedbackQueueMarkdown(input: BranchFeedbackQueueMarkdownInput): string {
+  const openComments = sortComments(input.comments.filter((comment) => !comment.resolved));
+  const grouped = groupFeedbackComments(openComments);
+
+  const lines = [
+    "# Pathfinder Branch Feedback Queue",
+    "",
+    "This queue is generated from local Pathfinder branch review comments. It is intended for a coding agent to action in bulk.",
+    "",
+    "## Agent Instructions",
+    "",
+    "- Address every open item below.",
+    "- Keep changes scoped to the current branch review.",
+    "- Run the relevant tests and checks before stopping.",
+    "- Do not resolve Pathfinder comments unless the user explicitly asks you to.",
+    "",
+    ...formatBranchSession(input),
+    "## Open Feedback",
+    ""
+  ];
+
+  if (openComments.length === 0) {
+    lines.push("- No open feedback items found.");
+    lines.push("- Re-run review or add comments before handing this queue to an agent.");
+    return `${lines.join("\n").trimEnd()}\n`;
+  }
+
+  lines.push(`Open items: ${openComments.length}`);
+  lines.push("");
+  lines.push("### Line Comments");
+  lines.push("");
+  lines.push(...formatLineCommentGroups(grouped.lineGroups));
+  lines.push("");
+  lines.push("### File Comments");
+  lines.push("");
+  lines.push(...formatFileCommentGroups(grouped.fileGroups));
+  lines.push("");
+  lines.push("### Branch Comments");
+  lines.push("");
+  lines.push(...formatBranchBroadComments(grouped.broadComments));
 
   return `${lines.join("\n").trimEnd()}\n`;
 }
@@ -139,6 +184,24 @@ function formatSession(input: FeedbackQueueMarkdownInput): string[] {
   ];
 }
 
+function formatBranchSession(input: BranchFeedbackQueueMarkdownInput): string[] {
+  if (!input.session) {
+    return [];
+  }
+
+  return [
+    "## Branch Review Session",
+    "",
+    `- Session: \`${input.session.id}\``,
+    `- Base ref: \`${input.session.baseRef}\``,
+    `- Head ref: \`${input.session.headRef}\``,
+    `- Head commit: \`${input.session.headCommit}\``,
+    `- Merge base: \`${input.session.mergeBase}\``,
+    `- Changed files: ${input.session.changedFiles.length}`,
+    ""
+  ];
+}
+
 function formatLineCommentGroups(groups: LineCommentGroup[]): string[] {
   if (groups.length === 0) {
     return ["- No open line comments."];
@@ -175,6 +238,14 @@ function formatFileCommentGroups(groups: FileCommentGroup[]): string[] {
   }
 
   return trimTrailingBlank(lines);
+}
+
+function formatBranchBroadComments(comments: ReviewComment[]): string[] {
+  if (comments.length === 0) {
+    return ["- No open branch-level comments."];
+  }
+
+  return comments.map((comment) => `- \`${comment.id}\` (branch): ${comment.body}`);
 }
 
 function formatBroadComments(comments: ReviewComment[], slices: Slice[]): string[] {

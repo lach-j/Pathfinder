@@ -12,6 +12,7 @@ export * from "./review/comment-targets.js";
 export * from "./review/deterministic-review.js";
 export * from "./feedback/markdown.js";
 export * from "./pr/markdown.js";
+export * from "./branch-review/next.js";
 export * from "./agent/next.js";
 export * from "./agent/prompt.js";
 export * from "./agent/checks.js";

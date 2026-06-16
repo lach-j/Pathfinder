@@ -1,4 +1,6 @@
 import {
+  BranchPrMarkdownInput,
+  BranchReviewSession,
   Evidence,
   PrMarkdownInput,
   RepositoryChangeStatus,
@@ -90,6 +92,52 @@ export function generatePrMarkdown(input: PrMarkdownInput): string {
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
+export function generateBranchPrMarkdown(input: BranchPrMarkdownInput): string {
+  const sessions = sortBranchReviewSessions(input.sessions);
+  const openComments = sortComments(input.comments.filter((comment) => !comment.resolved));
+  const resolvedComments = sortComments(input.comments.filter((comment) => comment.resolved));
+  const staleComments = sortComments(
+    input.comments.filter((comment) => comment.anchorStatus === "stale" || comment.anchorStatus === "unknown")
+  );
+
+  const lines = [
+    "## Summary",
+    "",
+    "- Scope: Local Pathfinder PR draft assembled from a standalone branch review.",
+    "",
+    "## Changed Files",
+    "",
+    ...formatChangedFiles(input.repositorySummary),
+    "",
+    "## Branch Review Sessions",
+    "",
+    ...formatBranchReviewSessions(sessions),
+    "",
+    "## Local Review Feedback",
+    "",
+    ...formatLocalReviewFeedback(openComments, resolvedComments, staleComments),
+    "",
+    "## Agent Feedback Queue",
+    "",
+    ...formatBranchAgentFeedbackQueue(input.feedbackQueuePath),
+    "",
+    "## Risks",
+    "",
+    ...formatBranchRisks(openComments, staleComments, sessions),
+    "",
+    "## Checklist",
+    "",
+    "- [ ] Branch diff reviewed in Pathfinder",
+    "- [ ] Agent feedback queue addressed",
+    "- [ ] Open review comments resolved or accepted",
+    "- [ ] Changed files reviewed against branch scope",
+    "- [ ] Tests and checks reviewed",
+    ""
+  ];
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
 function sortSlices(slices: Slice[]): Slice[] {
   return [...slices].sort((left, right) => {
     const createdComparison = left.createdAt.localeCompare(right.createdAt);
@@ -118,6 +166,13 @@ function sortReviewSessions(sessions: ReviewSession[]): ReviewSession[] {
   });
 }
 
+function sortBranchReviewSessions(sessions: BranchReviewSession[]): BranchReviewSession[] {
+  return [...sessions].sort((left, right) => {
+    const createdComparison = left.createdAt.localeCompare(right.createdAt);
+    return createdComparison === 0 ? left.id.localeCompare(right.id) : createdComparison;
+  });
+}
+
 function sortEvidence(evidence: Evidence[]): Evidence[] {
   return [...evidence].sort((left, right) => {
     const createdComparison = left.createdAt.localeCompare(right.createdAt);
@@ -134,6 +189,33 @@ function formatReviewSessions(sessions: ReviewSession[]): string[] {
   for (const session of sessions) {
     lines.push(
       `- Session \`${session.id}\` for slice \`${session.sliceId}\`: base \`${session.baseRef}\`, head \`${session.headRef}\`, head commit \`${session.headCommit}\`, merge base \`${session.mergeBase}\`, changed files ${session.changedFiles.length}, created ${session.createdAt}${session.refreshedAt ? `, refreshed ${session.refreshedAt}` : ""}.`
+    );
+
+    const files = [...session.changedFiles].sort((left, right) => {
+      const leftPath = left.previousPath ? `${left.previousPath} -> ${left.path}` : left.path;
+      const rightPath = right.previousPath ? `${right.previousPath} -> ${right.path}` : right.path;
+      return leftPath.localeCompare(rightPath);
+    });
+
+    for (const file of files) {
+      const pathText = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
+      lines.push(`  - ${formatRepositoryStatus(file.status)} ${file.category}: ${pathText}`);
+    }
+  }
+
+  return lines;
+}
+
+function formatBranchReviewSessions(sessions: BranchReviewSession[]): string[] {
+  if (sessions.length === 0) {
+    return ["- No branch review sessions recorded."];
+  }
+
+  const lines: string[] = [];
+  for (const session of sessions) {
+    const approval = session.approvedAt ? `, approved ${session.approvedAt}` : "";
+    lines.push(
+      `- Session \`${session.id}\`: base \`${session.baseRef}\`, head \`${session.headRef}\`, head commit \`${session.headCommit}\`, merge base \`${session.mergeBase}\`, changed files ${session.changedFiles.length}, created ${session.createdAt}${session.refreshedAt ? `, refreshed ${session.refreshedAt}` : ""}${approval}.`
     );
 
     const files = [...session.changedFiles].sort((left, right) => {
@@ -195,6 +277,14 @@ function formatAgentFeedbackQueue(feedbackQueuePath: string | undefined): string
   }
 
   return ["- No exported feedback queue file found. Run `pathfinder feedback export <workstream-id> --file ./.pathfinder-feedback.md` if an agent handoff is needed."];
+}
+
+function formatBranchAgentFeedbackQueue(feedbackQueuePath: string | undefined): string[] {
+  if (feedbackQueuePath) {
+    return [`- Exported feedback queue: \`${feedbackQueuePath}\``];
+  }
+
+  return ["- No exported feedback queue file found. Run `pathfinder branch-review feedback export --file ./.pathfinder-branch-feedback.md` if an agent handoff is needed."];
 }
 
 function formatMarkdownSection(markdown: string, label: string): string[] {
@@ -360,6 +450,34 @@ function formatReviewNotes(
 
 function formatCommentTarget(comment: ReviewComment): string {
   return describeReviewCommentTarget(comment).replace(/^slice (.+)$/, "slice `$1`");
+}
+
+function formatBranchRisks(
+  openComments: ReviewComment[],
+  staleComments: ReviewComment[],
+  sessions: BranchReviewSession[]
+): string[] {
+  const unapprovedSessions = sessions.filter((session) => !session.approvedAt);
+
+  if (openComments.length === 0 && staleComments.length === 0 && unapprovedSessions.length === 0) {
+    return ["- No unresolved comments, stale anchors, or unapproved branch review sessions recorded."];
+  }
+
+  const lines: string[] = [];
+
+  if (openComments.length > 0) {
+    lines.push(`- ${openComments.length} unresolved review comment(s) remain.`);
+  }
+
+  if (staleComments.length > 0) {
+    lines.push(`- ${staleComments.length} stale or unknown review comment anchor(s) need review.`);
+  }
+
+  if (unapprovedSessions.length > 0) {
+    lines.push(`- ${unapprovedSessions.length} branch review session(s) have not been explicitly approved.`);
+  }
+
+  return lines;
 }
 
 function formatRisks(openComments: ReviewComment[], staleComments: ReviewComment[], reviews: Review[]): string[] {

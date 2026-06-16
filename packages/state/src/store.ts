@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  BranchReviewSession,
+  BranchReviewNextRecommendation,
   DeterministicReviewResult,
   Evidence,
   AGENT_COMMAND_MANAGED_END,
@@ -35,6 +37,9 @@ import {
   getAgentCheckGuidance,
   getAgentNextRecommendation,
   getAgentUserInstallToolDefinitions,
+  getBranchReviewNextRecommendation,
+  generateBranchFeedbackQueueMarkdown,
+  generateBranchPrMarkdown,
   generateDeterministicReview,
   generateFeedbackQueueMarkdown,
   generatePrMarkdown,
@@ -213,10 +218,19 @@ export interface RefreshedReviewSession {
   comments: ReviewComment[];
 }
 
+export interface RefreshedBranchReviewSession {
+  session: BranchReviewSession;
+  comments: ReviewComment[];
+}
+
 export interface ReviewApprovalResult {
   session: ReviewSession;
   slice: Slice;
   evidence: Evidence;
+}
+
+export interface BranchReviewApprovalResult {
+  session: BranchReviewSession;
 }
 
 interface SlicesFile {
@@ -233,6 +247,10 @@ interface ReviewsFile {
 
 interface ReviewSessionsFile {
   sessions: ReviewSession[];
+}
+
+interface BranchReviewSessionsFile {
+  sessions: BranchReviewSession[];
 }
 
 interface EvidenceFile {
@@ -1066,6 +1084,238 @@ export class PathfinderStore {
     throw new PathfinderError(`Review session '${sessionId}' was not found.`);
   }
 
+  async startBranchReviewSession(repositorySummary: RepositorySummary): Promise<BranchReviewSession> {
+    const root = await this.ensureBranchReviewRoot();
+    const sessionsFile = await this.readBranchReviewSessions(root);
+    const id = nextAvailableId(
+      `review-${toUrlSafeId(repositorySummary.headRef)}`,
+      sessionsFile.sessions.map((session) => session.id)
+    );
+    const session: BranchReviewSession = {
+      id,
+      baseRef: repositorySummary.baseRef,
+      headRef: repositorySummary.headRef,
+      headCommit: repositorySummary.headCommit,
+      mergeBase: repositorySummary.mergeBase,
+      changedFiles: repositorySummary.files,
+      createdAt: createTimestamp()
+    };
+
+    sessionsFile.sessions.push(session);
+    await writeJson(path.join(root, "review-sessions.json"), sessionsFile);
+    return session;
+  }
+
+  async listBranchReviewSessions(): Promise<BranchReviewSession[]> {
+    const root = await this.getBranchReviewRoot();
+    const sessionsFile = await this.readBranchReviewSessions(root);
+    return sessionsFile.sessions;
+  }
+
+  async getBranchReviewSession(sessionId: string): Promise<BranchReviewSession> {
+    const sessions = await this.listBranchReviewSessions();
+    const session = sessions.find((candidate) => candidate.id === sessionId);
+
+    if (!session) {
+      throw new PathfinderError(`Branch review session '${sessionId}' was not found.`);
+    }
+
+    return session;
+  }
+
+  async refreshBranchReviewSession(
+    sessionId: string,
+    repositorySummary: RepositorySummary,
+    structuredDiff: StructuredDiff
+  ): Promise<RefreshedBranchReviewSession> {
+    const root = await this.ensureBranchReviewRoot();
+    const sessionsFile = await this.readBranchReviewSessions(root);
+    const sessionIndex = sessionsFile.sessions.findIndex((candidate) => candidate.id === sessionId);
+
+    if (sessionIndex === -1) {
+      throw new PathfinderError(`Branch review session '${sessionId}' was not found.`);
+    }
+
+    const existingSession = sessionsFile.sessions[sessionIndex];
+    const refreshedSession: BranchReviewSession = {
+      ...existingSession,
+      baseRef: repositorySummary.baseRef,
+      headRef: repositorySummary.headRef,
+      headCommit: repositorySummary.headCommit,
+      mergeBase: repositorySummary.mergeBase,
+      changedFiles: repositorySummary.files,
+      refreshedAt: createTimestamp()
+    };
+    delete refreshedSession.approvedAt;
+    sessionsFile.sessions[sessionIndex] = refreshedSession;
+
+    const commentsFile = await this.readBranchReviewComments(root);
+    const refreshedComments = commentsFile.comments.map((comment) => {
+      if (!commentTargetsSession(comment, sessionId)) {
+        return comment;
+      }
+
+      return {
+        ...comment,
+        anchorStatus: getReviewCommentAnchorStatus(comment, sessionId, structuredDiff)
+      };
+    });
+    commentsFile.comments = refreshedComments;
+
+    await writeJson(path.join(root, "review-sessions.json"), sessionsFile);
+    await writeJson(path.join(root, "comments.json"), commentsFile);
+
+    return {
+      session: refreshedSession,
+      comments: refreshedComments.filter((comment) => commentTargetsSession(comment, sessionId))
+    };
+  }
+
+  async addBranchReviewComment(input: AddCommentInput): Promise<ReviewComment> {
+    const root = await this.ensureBranchReviewRoot();
+    const cleanBody = assertNonEmptyText(input.body, "Comment body");
+    const target = await this.validateBranchReviewCommentTarget(input.target, input.structuredDiff);
+    const commentsFile = await this.readBranchReviewComments(root);
+    const id = nextAvailableId(
+      toUrlSafeId(cleanBody),
+      commentsFile.comments.map((comment) => comment.id)
+    );
+    const comment: ReviewComment = {
+      id,
+      target,
+      body: cleanBody,
+      resolved: false,
+      createdAt: createTimestamp()
+    };
+
+    commentsFile.comments.push(comment);
+    await writeJson(path.join(root, "comments.json"), commentsFile);
+    return comment;
+  }
+
+  async listBranchReviewComments(options: ListCommentsOptions = {}): Promise<ReviewComment[]> {
+    const root = await this.getBranchReviewRoot();
+    const commentsFile = await this.readBranchReviewComments(root);
+    return commentsFile.comments.filter((comment) => {
+      if (options.openOnly && comment.resolved) {
+        return false;
+      }
+
+      if (options.sessionId && !commentTargetsSession(comment, options.sessionId)) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  async resolveBranchReviewComment(commentId: string): Promise<ReviewComment> {
+    const root = await this.ensureBranchReviewRoot();
+    const commentsFile = await this.readBranchReviewComments(root);
+    const comment = commentsFile.comments.find((candidate) => candidate.id === commentId);
+
+    if (!comment) {
+      throw new PathfinderError(`Branch review comment '${commentId}' was not found.`);
+    }
+
+    if (comment.resolved) {
+      throw new PathfinderError(`Branch review comment '${commentId}' is already resolved.`);
+    }
+
+    const resolved: ReviewComment = {
+      ...comment,
+      resolved: true,
+      resolvedAt: createTimestamp()
+    };
+    commentsFile.comments = commentsFile.comments.map((candidate) =>
+      candidate.id === commentId ? resolved : candidate
+    );
+    await writeJson(path.join(root, "comments.json"), commentsFile);
+    return resolved;
+  }
+
+  async approveBranchReviewSession(sessionId: string): Promise<BranchReviewApprovalResult> {
+    const root = await this.ensureBranchReviewRoot();
+    const sessionsFile = await this.readBranchReviewSessions(root);
+    const sessionIndex = sessionsFile.sessions.findIndex((candidate) => candidate.id === sessionId);
+
+    if (sessionIndex === -1) {
+      throw new PathfinderError(`Branch review session '${sessionId}' was not found.`);
+    }
+
+    const openSessionComments = await this.listBranchReviewComments({
+      sessionId,
+      openOnly: true
+    });
+
+    if (openSessionComments.length > 0) {
+      throw new PathfinderError(
+        `Cannot approve branch review session '${sessionId}' while ${openSessionComments.length} open review comment(s) remain. Resolve or address them first.`
+      );
+    }
+
+    const session: BranchReviewSession = {
+      ...sessionsFile.sessions[sessionIndex],
+      approvedAt: createTimestamp()
+    };
+    sessionsFile.sessions[sessionIndex] = session;
+    await writeJson(path.join(root, "review-sessions.json"), sessionsFile);
+
+    return { session };
+  }
+
+  async exportBranchReviewFeedbackQueue(options: ExportFeedbackOptions = {}): Promise<FeedbackQueueExport> {
+    const session = options.sessionId ? await this.getBranchReviewSession(options.sessionId) : undefined;
+    const comments = await this.listBranchReviewComments({
+      sessionId: options.sessionId,
+      openOnly: true
+    });
+
+    return {
+      markdown: generateBranchFeedbackQueueMarkdown({
+        session,
+        comments
+      }),
+      defaultPath: await this.getDefaultBranchFeedbackQueuePath()
+    };
+  }
+
+  async generateBranchReviewPrMarkdown(repositorySummary?: RepositorySummary): Promise<GeneratedPrMarkdown> {
+    const root = await this.ensureBranchReviewRoot();
+    const feedbackQueuePath = await this.getExistingBranchFeedbackQueuePath();
+    const markdown = generateBranchPrMarkdown({
+      sessions: await this.listBranchReviewSessions(),
+      comments: await this.listBranchReviewComments(),
+      repositorySummary,
+      feedbackQueuePath
+    });
+    const outputPath = path.join(root, "pr.md");
+
+    await writeFile(outputPath, markdown, "utf8");
+
+    return {
+      markdown,
+      path: outputPath
+    };
+  }
+
+  async getStoredBranchReviewPrMarkdown(): Promise<StoredMarkdownFile> {
+    const root = await this.getBranchReviewRoot();
+    const prPath = path.join(root, "pr.md");
+
+    if (!(await exists(prPath))) {
+      return {
+        markdown: "",
+        path: prPath
+      };
+    }
+
+    return {
+      markdown: await readFile(prPath, "utf8"),
+      path: prPath
+    };
+  }
+
   async generatePrMarkdown(
     workstreamId: string,
     repositorySummary?: RepositorySummary
@@ -1351,6 +1601,52 @@ export class PathfinderStore {
     });
   }
 
+  async getBranchReviewNext(
+    provider?: RepositorySummaryProvider,
+    suggestedBaseRefProvider?: SuggestedBaseRefProvider,
+    uncommittedChangesProvider?: UncommittedChangesProvider
+  ): Promise<BranchReviewNextRecommendation> {
+    try {
+      await this.getProject();
+    } catch (error) {
+      if (error instanceof PathfinderError && error.message.includes("Pathfinder state not found")) {
+        return getBranchReviewNextRecommendation({
+          isInitialized: false,
+          sessions: []
+        });
+      }
+
+      return getBranchReviewNextRecommendation({
+        isInitialized: false,
+        sessions: [],
+        stateError: errorMessage(error)
+      });
+    }
+
+    const sessions = await this.listBranchReviewSessions();
+    const latestSession = latestBranchReviewSession(sessions);
+    const knownBaseRef = latestSession?.baseRef;
+    const repository = knownBaseRef && provider ? await this.tryGetRepositorySummary(provider, knownBaseRef) : {};
+    const suggestedBaseRef = !latestSession && suggestedBaseRefProvider
+      ? await this.tryGetSuggestedBaseRef(suggestedBaseRefProvider)
+      : undefined;
+    const hasUncommittedChanges = uncommittedChangesProvider
+      ? await this.tryGetUncommittedChanges(uncommittedChangesProvider)
+      : undefined;
+    const pr = await this.getStoredBranchReviewPrMarkdown();
+
+    return getBranchReviewNextRecommendation({
+      isInitialized: true,
+      sessions,
+      openComments: (await this.listBranchReviewComments()).filter((comment) => !comment.resolved),
+      hasUncommittedChanges,
+      suggestedBaseRef,
+      feedbackQueuePath: await this.getDefaultBranchFeedbackQueuePath(),
+      prMarkdown: pr.markdown,
+      ...repository
+    });
+  }
+
   async getAgentPrompt(
     phase?: AgentPromptPhase,
     provider?: RepositorySummaryProvider,
@@ -1516,6 +1812,55 @@ export class PathfinderStore {
     return resolution.mode === "external" ? path.join(resolution.stateRoot, ".pathfinder-feedback.md") : undefined;
   }
 
+  private async getDefaultBranchFeedbackQueuePath(): Promise<string | undefined> {
+    const resolution = await resolveExistingStateRoot(this.cwd, this.options);
+    return resolution.mode === "external"
+      ? path.join(resolution.stateRoot, ".pathfinder-branch-feedback.md")
+      : undefined;
+  }
+
+  private async getExistingBranchFeedbackQueuePath(): Promise<string | undefined> {
+    const resolution = await resolveExistingStateRoot(this.cwd, this.options);
+    const conventionalFeedbackPath = path.join(path.dirname(resolution.stateRoot), ".pathfinder-branch-feedback.md");
+    const externalFeedbackPath = path.join(resolution.stateRoot, ".pathfinder-branch-feedback.md");
+
+    if (resolution.mode === "external" && await exists(externalFeedbackPath)) {
+      return externalFeedbackPath;
+    }
+
+    return (await exists(conventionalFeedbackPath)) ? ".pathfinder-branch-feedback.md" : undefined;
+  }
+
+  private async getBranchReviewRoot(): Promise<string> {
+    const stateRoot = await this.requireStateRoot();
+    return path.join(stateRoot, "branch-reviews");
+  }
+
+  private async ensureBranchReviewRoot(): Promise<string> {
+    const root = await this.getBranchReviewRoot();
+
+    if (!(await exists(root))) {
+      await mkdir(root, { recursive: true });
+    }
+
+    const sessionsPath = path.join(root, "review-sessions.json");
+    if (!(await exists(sessionsPath))) {
+      await writeJson(sessionsPath, { sessions: [] } satisfies BranchReviewSessionsFile);
+    }
+
+    const commentsPath = path.join(root, "comments.json");
+    if (!(await exists(commentsPath))) {
+      await writeJson(commentsPath, { comments: [] } satisfies CommentsFile);
+    }
+
+    const prPath = path.join(root, "pr.md");
+    if (!(await exists(prPath))) {
+      await writeFile(prPath, "", "utf8");
+    }
+
+    return root;
+  }
+
   private async requireGitRootForAgentCommands(): Promise<string> {
     const gitRoot = await findGitRoot(this.cwd);
     if (!gitRoot) {
@@ -1640,6 +1985,52 @@ export class PathfinderStore {
     return path.resolve(process.env.CODEX_HOME ?? path.join(os.homedir(), ".codex"));
   }
 
+  private async validateBranchReviewCommentTarget(
+    target: ReviewCommentTarget | undefined,
+    structuredDiff: StructuredDiff | undefined
+  ): Promise<ReviewCommentTarget> {
+    if (!target || target.type === "workstream") {
+      return { type: "workstream" };
+    }
+
+    if (target.type === "slice") {
+      throw new PathfinderError("Branch review comments cannot target a slice.");
+    }
+
+    const session = await this.getBranchReviewSession(target.sessionId);
+    if (!session.changedFiles.some((file) => changedFileMatches(file.path, file.previousPath, target.filePath))) {
+      throw new PathfinderError(
+        `File '${target.filePath}' was not found in branch review session '${target.sessionId}'.`
+      );
+    }
+
+    if (structuredDiff && !structuredDiffHasFile(structuredDiff, target.filePath)) {
+      throw new PathfinderError(
+        `File '${target.filePath}' was not found in the parsed diff for branch review session '${target.sessionId}'.`
+      );
+    }
+
+    if (target.type === "file") {
+      return target;
+    }
+
+    if (!Number.isInteger(target.lineNumber) || target.lineNumber < 1) {
+      throw new PathfinderError("Comment line number must be a positive integer.");
+    }
+
+    if (!isReviewCommentSide(target.side)) {
+      throw new PathfinderError("Invalid comment side. Expected old or new.");
+    }
+
+    if (structuredDiff && !structuredDiffHasLine(structuredDiff, target.filePath, target.lineNumber, target.side)) {
+      throw new PathfinderError(
+        `Line ${target.lineNumber} (${target.side}) was not found for '${target.filePath}' in branch review session '${target.sessionId}'.`
+      );
+    }
+
+    return target;
+  }
+
   private async requireWorkstreamRoot(workstreamId: string): Promise<string> {
     const stateRoot = await this.requireStateRoot();
     const root = path.join(stateRoot, "workstreams", workstreamId);
@@ -1690,6 +2081,24 @@ export class PathfinderStore {
     }
 
     return readJson<ReviewSessionsFile>(filePath);
+  }
+
+  private async readBranchReviewSessions(branchReviewRoot: string): Promise<BranchReviewSessionsFile> {
+    const filePath = path.join(branchReviewRoot, "review-sessions.json");
+    if (!(await exists(filePath))) {
+      return { sessions: [] };
+    }
+
+    return readJson<BranchReviewSessionsFile>(filePath);
+  }
+
+  private async readBranchReviewComments(branchReviewRoot: string): Promise<CommentsFile> {
+    const filePath = path.join(branchReviewRoot, "comments.json");
+    if (!(await exists(filePath))) {
+      return { comments: [] };
+    }
+
+    return readJson<CommentsFile>(filePath);
   }
 
   private async readEvidence(workstreamRoot: string): Promise<EvidenceFile> {
@@ -2091,6 +2500,10 @@ function latestSessionForSlice(sessions: ReviewSession[], sliceId: string | unde
     .filter((session) => session.sliceId === sliceId)
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
     .at(-1);
+}
+
+function latestBranchReviewSession(sessions: BranchReviewSession[]): BranchReviewSession | undefined {
+  return [...sessions].sort((left, right) => left.createdAt.localeCompare(right.createdAt)).at(-1);
 }
 
 function errorMessage(error: unknown): string {

@@ -197,6 +197,18 @@ export interface ReviewSession {
   refreshedAt?: string;
 }
 
+export interface BranchReviewSession {
+  id: string;
+  baseRef: string;
+  headRef: string;
+  headCommit: string;
+  mergeBase: string;
+  changedFiles: RepositorySummaryFile[];
+  createdAt: string;
+  refreshedAt?: string;
+  approvedAt?: string;
+}
+
 export interface Evidence {
   id: string;
   sliceId: string;
@@ -251,6 +263,53 @@ export interface FeedbackQueueMarkdownInput {
   session?: ReviewSession;
   comments: ReviewComment[];
   slices: Slice[];
+}
+
+export interface BranchFeedbackQueueMarkdownInput {
+  session?: BranchReviewSession;
+  comments: ReviewComment[];
+}
+
+export interface BranchPrMarkdownInput {
+  sessions: BranchReviewSession[];
+  comments: ReviewComment[];
+  repositorySummary?: RepositorySummary;
+  feedbackQueuePath?: string;
+}
+
+export type BranchReviewNextPhase =
+  | "uninitialized"
+  | "needs_session"
+  | "needs_commit"
+  | "feedback"
+  | "needs_refresh"
+  | "awaiting_human_approval"
+  | "ready_for_pr"
+  | "complete"
+  | "blocked";
+
+export interface BranchReviewNextRecommendation {
+  phase: BranchReviewNextPhase;
+  reason: string;
+  reviewSessionId?: string;
+  baseRef?: string;
+  feedbackQueuePath?: string;
+  commands: string[];
+  agentInstruction: string;
+  humanInstruction: string;
+}
+
+export interface BranchReviewNextInput {
+  isInitialized: boolean;
+  sessions: BranchReviewSession[];
+  openComments?: ReviewComment[];
+  hasUncommittedChanges?: boolean;
+  repositorySummary?: RepositorySummary;
+  repositorySummaryError?: string;
+  suggestedBaseRef?: string;
+  feedbackQueuePath?: string;
+  prMarkdown?: string;
+  stateError?: string;
 }
 
 export type AgentNextPhase =

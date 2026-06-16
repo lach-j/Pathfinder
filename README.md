@@ -158,6 +158,50 @@ Generate PR markdown:
 pathfinder pr generate <workstream-id> --base main
 ```
 
+## Standalone Branch Review
+
+For small branch-only tasks, you can review the current branch without creating a workstream or slice. This is separate from the agent state workflow: `pathfinder agent next` still uses workstreams and active slices as its source of truth.
+
+Ask an agent to use the standalone branch review state machine:
+
+```text
+Use Pathfinder branch review mode. Run `pathfinder branch-review next --json` and follow it.
+```
+
+The command reports the next step for the current branch review:
+
+```bash
+pathfinder branch-review next --json
+```
+
+For manual control, start from a clean committed branch, then create a branch review session:
+
+```bash
+pathfinder branch-review start --base main
+```
+
+Inspect the stored diff and leave local file or line comments:
+
+```bash
+pathfinder branch-review diff <session-id>
+pathfinder branch-review comment add <session-id> --file src/example.ts --line 12 --side new --body "Handle the empty case."
+pathfinder branch-review comment list --session <session-id> --open
+```
+
+Export open branch-review feedback for an agent, refresh the session after fixes, and approve when no open comments remain:
+
+```bash
+pathfinder branch-review feedback export --session <session-id> --file ./.pathfinder-branch-feedback.md
+pathfinder branch-review refresh <session-id>
+pathfinder branch-review approve <session-id>
+```
+
+Generate PR markdown for the standalone branch review:
+
+```bash
+pathfinder branch-review pr generate --base main
+```
+
 ## Command Guide
 
 The main commands are:
@@ -177,6 +221,11 @@ pathfinder workspace serve
 pathfinder review serve
 pathfinder feedback export <workstream-id>
 pathfinder pr generate <workstream-id>
+pathfinder branch-review next --json
+pathfinder branch-review start --base <base-ref>
+pathfinder branch-review comment add <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
+pathfinder branch-review feedback export [--session <session-id>] [--file ./feedback.md]
+pathfinder branch-review pr generate [--base <base-ref>]
 ```
 
 Setup-related commands:

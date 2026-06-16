@@ -47,6 +47,21 @@ Usage:
   pathfinder review run --base <base-ref>
   pathfinder review list <workstream-id>
   pathfinder review show <workstream-id> <review-id>`,
+  "branch-review": `Pathfinder branch review commands
+
+Usage:
+  pathfinder branch-review next [--json]
+  pathfinder branch-review start --base <base-ref>
+  pathfinder branch-review refresh <session-id>
+  pathfinder branch-review approve <session-id>
+  pathfinder branch-review sessions [--json]
+  pathfinder branch-review session <session-id> [--json]
+  pathfinder branch-review diff <session-id> [--json]
+  pathfinder branch-review comment add <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
+  pathfinder branch-review comment list [--session <session-id>] [--open] [--json]
+  pathfinder branch-review comment resolve <comment-id>
+  pathfinder branch-review feedback export [--session <session-id>] [--file ./feedback.md]
+  pathfinder branch-review pr generate [--base <base-ref>]`,
   workspace: `Pathfinder workspace commands
 
 Usage:
@@ -106,6 +121,18 @@ Usage:
   pathfinder review run --base <base-ref>
   pathfinder review list <workstream-id>
   pathfinder review show <workstream-id> <review-id>
+  pathfinder branch-review next [--json]
+  pathfinder branch-review start --base <base-ref>
+  pathfinder branch-review refresh <session-id>
+  pathfinder branch-review approve <session-id>
+  pathfinder branch-review sessions [--json]
+  pathfinder branch-review session <session-id> [--json]
+  pathfinder branch-review diff <session-id> [--json]
+  pathfinder branch-review comment add <session-id> --file <path> [--line <line-number> --side old|new] --body "..."
+  pathfinder branch-review comment list [--session <session-id>] [--open] [--json]
+  pathfinder branch-review comment resolve <comment-id>
+  pathfinder branch-review feedback export [--session <session-id>] [--file ./feedback.md]
+  pathfinder branch-review pr generate [--base <base-ref>]
   pathfinder evidence add <workstream-id> --slice <slice-id> --kind <kind> --description "..." [--path ./artifact.txt]
   pathfinder evidence list <workstream-id>
   pathfinder diff show --base <base-ref> [--json]
