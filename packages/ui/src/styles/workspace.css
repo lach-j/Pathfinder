@@ -27,7 +27,8 @@
 }
 
 .rail-content,
-.inspector-content {
+.inspector-content,
+.artifact-panel {
   display: grid;
   gap: 18px;
   padding: 18px;
@@ -356,6 +357,228 @@
 .inspector-heading {
   display: grid;
   gap: 4px;
+}
+
+.artifact-panel {
+  align-content: start;
+}
+
+.artifact-header {
+  display: grid;
+  gap: 4px;
+}
+
+.artifact-header h2,
+.artifact-heading h3,
+.artifact-empty h3,
+.evidence-group h3,
+.evidence-item h4 {
+  margin: 0;
+}
+
+.artifact-header h2 {
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.artifact-header p,
+.artifact-heading p,
+.artifact-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.artifact-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.artifact-tab {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.2;
+  padding: 8px 9px;
+}
+
+.artifact-tab:hover,
+.artifact-tab[aria-selected="true"] {
+  border-color: var(--focus);
+  background: var(--selected);
+}
+
+.artifact-body,
+.artifact-section,
+.evidence-preview,
+.evidence-group,
+.evidence-list {
+  display: grid;
+  gap: 14px;
+}
+
+.artifact-actions {
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.artifact-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.artifact-heading h3,
+.artifact-empty h3,
+.evidence-group h3 {
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.artifact-empty {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.markdown-preview {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.markdown-preview > :first-child {
+  margin-top: 0;
+}
+
+.markdown-preview > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3 {
+  line-height: 1.25;
+  margin: 18px 0 8px;
+}
+
+.markdown-preview h1 {
+  font-size: 20px;
+}
+
+.markdown-preview h2 {
+  font-size: 17px;
+}
+
+.markdown-preview h3 {
+  font-size: 15px;
+}
+
+.markdown-preview p,
+.markdown-preview ul,
+.markdown-preview ol,
+.markdown-preview blockquote,
+.markdown-preview pre,
+.markdown-preview table {
+  margin: 0 0 12px;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  padding-left: 20px;
+}
+
+.markdown-preview code {
+  border-radius: 4px;
+  background: var(--metadata);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  padding: 1px 4px;
+}
+
+.markdown-preview pre {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--metadata);
+  padding: 10px;
+}
+
+.markdown-preview pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-preview blockquote {
+  border-left: 3px solid var(--border-strong);
+  color: var(--muted);
+  padding-left: 10px;
+}
+
+.markdown-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+  border: 1px solid var(--border);
+  padding: 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.evidence-group {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.evidence-group:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.evidence-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+}
+
+.evidence-item.is-highlighted {
+  border-color: var(--focus);
+  background: var(--selected);
+}
+
+.evidence-topline {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.evidence-item h4 {
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .inspector-actions .button:disabled {

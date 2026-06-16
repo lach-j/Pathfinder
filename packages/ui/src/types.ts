@@ -80,6 +80,10 @@ export interface WorkstreamOverviewResponse {
   prDraft: StoredMarkdownFile;
 }
 
+export interface FeedbackResponse {
+  markdown: string;
+}
+
 export interface ActiveSliceResponse {
   workstream: Workstream;
   slice: Slice;

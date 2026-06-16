@@ -1,6 +1,6 @@
 # Slice 44: Artifact Preview Panel
 
-Status: ready
+Status: done
 
 ## Goal
 
@@ -88,4 +88,3 @@ pathfinder workspace serve --port 4783
 ```
 
 Verify requirements, plan, evidence, feedback, and PR tabs in a workstream with representative state.
-

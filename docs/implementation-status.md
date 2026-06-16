@@ -150,7 +150,7 @@ After agent workflow stability, the next focus is expanding the local browser UI
 | 41 | done | `docs/slices/41-workspace-server-and-api-foundation.md` |
 | 42 | done | `docs/slices/42-workspace-shell-current-repo.md` |
 | 43 | done | `docs/slices/43-workstream-dependency-canvas.md` |
-| 44 | ready | `docs/slices/44-artifact-preview-panel.md` |
+| 44 | done | `docs/slices/44-artifact-preview-panel.md` |
 | 45 | ready | `docs/slices/45-workspace-review-panel.md` |
 | 46 | ready | `docs/slices/46-pr-rich-copy.md` |
 

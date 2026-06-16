@@ -1,7 +1,8 @@
 import type { ReactElement } from "react";
 
-import type { Slice, Workstream, WorkstreamOverviewResponse, WorkspaceResponse } from "../types";
-import { countsForSlice, countsForWorkstream, dependencyLabels } from "./workspace-model";
+import type { Workstream, WorkstreamOverviewResponse, WorkspaceResponse } from "../types";
+import { countsForWorkstream } from "./workspace-model";
+import { ArtifactPreviewPanel } from "./ArtifactPreviewPanel";
 import { SliceDependencyCanvas } from "./SliceDependencyCanvas";
 
 interface WorkspaceShellProps {
@@ -57,7 +58,7 @@ export function WorkspaceShell({
         />
       </section>
       <aside className="workspace-inspector">
-        <Inspector
+        <ArtifactPreviewPanel
           loading={loading}
           error={error}
           overview={overview}
@@ -187,88 +188,6 @@ function WorkspaceOverview({
   );
 }
 
-function Inspector({
-  loading,
-  error,
-  overview,
-  selectedWorkstream,
-  selectedSlice,
-  activeSliceId,
-  statusMessage,
-  onMakeActive
-}: {
-  loading: boolean;
-  error?: string;
-  overview?: WorkstreamOverviewResponse;
-  selectedWorkstream?: Workstream;
-  selectedSlice?: Slice;
-  activeSliceId?: string;
-  statusMessage?: string;
-  onMakeActive: () => void;
-}): ReactElement {
-  if (loading) {
-    return <InspectorEmpty title="Inspector" message="Loading details." />;
-  }
-
-  if (error) {
-    return <InspectorEmpty title="Inspector" message="Workspace details are unavailable." />;
-  }
-
-  if (!selectedWorkstream || !overview) {
-    return <InspectorEmpty title="Inspector" message="Select a workstream to inspect its state." />;
-  }
-
-  if (!selectedSlice) {
-    const counts = countsForWorkstream(overview);
-    return (
-      <div className="inspector-content">
-        <div className="inspector-heading">
-          <div className="eyebrow">Selected workstream</div>
-          <h2>{selectedWorkstream.title}</h2>
-          <p>{selectedWorkstream.id}</p>
-        </div>
-        <InspectorCounts counts={counts} />
-        {statusMessage ? <p className="status-text">{statusMessage}</p> : null}
-      </div>
-    );
-  }
-
-  const counts = countsForSlice(selectedSlice, overview.comments, overview.reviewSessions, overview.evidence);
-  const dependencies = dependencyLabels(selectedSlice, overview.slices);
-  const isActive = selectedSlice.id === activeSliceId;
-
-  return (
-    <div className="inspector-content">
-      <div className="inspector-heading">
-        <div className="eyebrow">Selected slice</div>
-        <h2>{selectedSlice.title}</h2>
-        <p>{selectedSlice.id}</p>
-      </div>
-      <div className="inspector-actions">
-        <StatusPill status={selectedSlice.status} />
-        <button
-          className="button button-primary"
-          type="button"
-          disabled={isActive}
-          onClick={onMakeActive}
-        >
-          {isActive ? "Active" : "Make active"}
-        </button>
-      </div>
-      <p className="inspector-description">{selectedSlice.description || "No description recorded."}</p>
-      <DetailList
-        items={[
-          ["Dependencies", dependencies.length > 0 ? dependencies.join(", ") : "None"],
-          ["Branch", selectedSlice.branchName || "Not started"],
-          ["Base", selectedSlice.baseRef || "Not recorded"]
-        ]}
-      />
-      <InspectorCounts counts={counts} />
-      {statusMessage ? <p className="status-text">{statusMessage}</p> : null}
-    </div>
-  );
-}
-
 function Metric({ label, value }: { label: string; value: number }): ReactElement {
   return (
     <div className="metric">
@@ -278,49 +197,11 @@ function Metric({ label, value }: { label: string; value: number }): ReactElemen
   );
 }
 
-function InspectorCounts({ counts }: { counts: { openCommentCount: number; reviewSessionCount: number; evidenceCount: number } }): ReactElement {
-  return (
-    <div className="inspector-counts">
-      <Metric label="Open comments" value={counts.openCommentCount} />
-      <Metric label="Review sessions" value={counts.reviewSessionCount} />
-      <Metric label="Evidence" value={counts.evidenceCount} />
-    </div>
-  );
-}
-
-function DetailList({ items }: { items: [string, string][] }): ReactElement {
-  return (
-    <dl className="detail-list">
-      {items.map(([label, value]) => (
-        <div key={label}>
-          <dt>{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function StatusPill({ status }: { status: Slice["status"] }): ReactElement {
-  return <span className={`slice-status slice-status-${status}`}>{status.replace("_", " ")}</span>;
-}
-
 function EmptyState({ title, message }: { title: string; message: string }): ReactElement {
   return (
     <div className="empty workspace-empty">
       <h2>{title}</h2>
       <p>{message}</p>
-    </div>
-  );
-}
-
-function InspectorEmpty({ title, message }: { title: string; message: string }): ReactElement {
-  return (
-    <div className="inspector-content">
-      <div className="inspector-heading">
-        <div className="eyebrow">{title}</div>
-        <p>{message}</p>
-      </div>
     </div>
   );
 }
