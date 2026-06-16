@@ -344,6 +344,14 @@
   overflow-wrap: anywhere;
 }
 
+.dependency-handle {
+  width: 1px;
+  height: 1px;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+}
+
 .slice-status {
   border: 1px solid var(--border-strong);
   border-radius: 999px;

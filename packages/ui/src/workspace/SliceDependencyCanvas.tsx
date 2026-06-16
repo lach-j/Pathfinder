@@ -5,11 +5,13 @@ import { useMemo } from "react";
 import {
   Background,
   Controls,
+  Handle,
   MiniMap,
+  Position,
   ReactFlow,
   type Edge,
   type Node,
-  type NodeProps
+  type NodeProps,
 } from "@xyflow/react";
 
 import type { Slice, WorkstreamOverviewResponse } from "../types";
@@ -43,18 +45,18 @@ const columnGap = 120;
 const rowGap = 44;
 
 const nodeTypes = {
-  sliceNode: SliceNode
+  sliceNode: SliceNode,
 };
 
 export function SliceDependencyCanvas({
   overview,
   activeSliceId,
   selectedSliceId,
-  onSelectSlice
+  onSelectSlice,
 }: SliceDependencyCanvasProps): ReactElement {
   const graph = useMemo(
     () => buildSliceGraph(overview, activeSliceId, selectedSliceId),
-    [activeSliceId, overview, selectedSliceId]
+    [activeSliceId, overview, selectedSliceId],
   );
 
   if (overview.slices.length === 0) {
@@ -97,7 +99,8 @@ export function SliceDependencyCanvas({
           pannable
           zoomable
           nodeColor={(node) => {
-            const status = (node.data as SliceNodeData | undefined)?.slice.status;
+            const status = (node.data as SliceNodeData | undefined)?.slice
+              .status;
             return statusColor(status);
           }}
         />
@@ -109,7 +112,7 @@ export function SliceDependencyCanvas({
 function buildSliceGraph(
   overview: WorkstreamOverviewResponse,
   activeSliceId?: string,
-  selectedSliceId?: string
+  selectedSliceId?: string,
 ): SliceGraph {
   const warnings = dependencyWarnings(overview.slices);
   const columns = dependencyColumns(overview.slices);
@@ -119,14 +122,19 @@ function buildSliceGraph(
     const column = columns.get(slice.id) || 0;
     const row = rowsByColumn.get(column) || 0;
     rowsByColumn.set(column, row + 1);
-    const counts = countsForSlice(slice, overview.comments, overview.reviewSessions, overview.evidence);
+    const counts = countsForSlice(
+      slice,
+      overview.comments,
+      overview.reviewSessions,
+      overview.evidence,
+    );
 
     return {
       id: slice.id,
       type: "sliceNode",
       position: {
         x: column * (nodeWidth + columnGap),
-        y: row * (nodeHeight + rowGap)
+        y: row * (nodeHeight + rowGap),
       },
       draggable: false,
       data: {
@@ -135,8 +143,8 @@ function buildSliceGraph(
         isSelected: slice.id === selectedSliceId,
         openCommentCount: counts.openCommentCount,
         reviewSessionCount: counts.reviewSessionCount,
-        evidenceCount: counts.evidenceCount
-      }
+        evidenceCount: counts.evidenceCount,
+      },
     };
   });
 
@@ -144,14 +152,18 @@ function buildSliceGraph(
   const edges = overview.slices.flatMap((slice) =>
     (slice.dependsOnSliceIds || [])
       .filter((dependencyId) => sliceIds.has(dependencyId))
-      .map((dependencyId): Edge => ({
-        id: `${dependencyId}->${slice.id}`,
-        source: dependencyId,
-        target: slice.id,
-        type: "smoothstep",
-        animated: slice.id === activeSliceId,
-        style: { strokeWidth: 2 }
-      }))
+      .map(
+        (dependencyId): Edge => ({
+          id: `${dependencyId}->${slice.id}`,
+          source: dependencyId,
+          target: slice.id,
+          sourceHandle: "out",
+          targetHandle: "in",
+          type: "bezier",
+          animated: slice.id === activeSliceId,
+          style: { strokeWidth: 2 },
+        }),
+      ),
   );
 
   return { nodes, edges, warnings };
@@ -199,7 +211,8 @@ function dependencyColumns(slices: Slice[]): Map<string, number> {
       .map((dependency) => depthFor(dependency));
     visiting.delete(slice.id);
 
-    const depth = dependencyDepths.length === 0 ? 0 : Math.max(...dependencyDepths) + 1;
+    const depth =
+      dependencyDepths.length === 0 ? 0 : Math.max(...dependencyDepths) + 1;
     columns.set(slice.id, depth);
     return depth;
   }
@@ -266,9 +279,25 @@ function SliceNode({ data }: NodeProps<Node<SliceNodeData>>): ReactElement {
         "dependency-node",
         `dependency-node-${slice.status}`,
         data.isSelected ? "is-selected" : "",
-        data.isActive ? "is-active" : ""
-      ].filter(Boolean).join(" ")}
+        data.isActive ? "is-active" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
+      <Handle
+        id="in"
+        type="target"
+        position={Position.Left}
+        className="dependency-handle"
+        isConnectable={false}
+      />
+      <Handle
+        id="out"
+        type="source"
+        position={Position.Right}
+        className="dependency-handle"
+        isConnectable={false}
+      />
       <div className="dependency-node-top">
         <span className="dependency-node-title">{slice.title}</span>
         <span className="slice-status">{slice.status.replace("_", " ")}</span>
