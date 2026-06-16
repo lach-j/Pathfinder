@@ -100,3 +100,21 @@ npm run lint --if-present
 
 3. Smoke test any CLI command, server route, or UI path introduced or changed by the work.
 4. Summarise changed files, checks run, and manual verification commands.
+
+<!-- pathfinder-agent:start -->
+## Pathfinder Agent Workflow
+
+Pathfinder is the source of truth for planning, slice scope, review feedback, and PR output in this repository.
+
+When asked to plan, implement, continue, review, or address feedback here, first run:
+
+```bash
+pathfinder agent next --json
+```
+
+Follow the returned `phase`, `commands`, and `agentInstruction`. Use `pathfinder agent prompt` when you need tool-neutral markdown instructions for the current phase.
+
+Do not create unmanaged task lists or parallel plans when Pathfinder state exists. Keep implementation scoped to the active Pathfinder slice, and do not resolve Pathfinder comments automatically after making code changes.
+
+MCP is not required for this workflow; use the local Pathfinder CLI commands above.
+<!-- pathfinder-agent:end -->
