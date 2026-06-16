@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 
 import type { Workstream, WorkstreamOverviewResponse, WorkspaceResponse } from "../types";
 import { countsForWorkstream } from "./workspace-model";
-import { ArtifactPreviewPanel } from "./ArtifactPreviewPanel";
+import { ArtifactPreviewPanel, type ArtifactTab } from "./ArtifactPreviewPanel";
 import { BranchReviewWorkspace } from "./BranchReviewWorkspace";
 import { SliceDependencyCanvas } from "./SliceDependencyCanvas";
 
@@ -33,13 +33,21 @@ export function WorkspaceShell({
   onMakeActive
 }: WorkspaceShellProps): ReactElement {
   const [mode, setMode] = useState<"workstreams" | "branch-review">("workstreams");
+  const [artifactTab, setArtifactTab] = useState<ArtifactTab>("details");
   const selectedWorkstream = workspace?.workstreams.find((workstream) => workstream.id === selectedWorkstreamId);
   const selectedSlice = overview?.slices.find((slice) => slice.id === selectedSliceId);
   const activeWorkstreamId = workspace?.activeWorkstream?.id;
   const activeSliceId = workspace?.activeSlice?.id;
+  const isSliceReviewOpen = mode === "workstreams" && artifactTab === "review";
 
   return (
-    <main className={`workspace-app${mode === "branch-review" ? " is-branch-review" : ""}`}>
+    <main
+      className={[
+        "workspace-app",
+        mode === "branch-review" ? "is-branch-review" : "",
+        isSliceReviewOpen ? "is-slice-review" : ""
+      ].filter(Boolean).join(" ")}
+    >
       <aside className="workspace-rail">
         <ProjectNav
           workspace={workspace}
@@ -81,6 +89,7 @@ export function WorkspaceShell({
               activeSliceId={activeSliceId}
               statusMessage={statusMessage}
               onMakeActive={onMakeActive}
+              onSelectTab={setArtifactTab}
             />
           </aside>
         </>

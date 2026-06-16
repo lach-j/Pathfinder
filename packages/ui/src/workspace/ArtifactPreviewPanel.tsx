@@ -6,11 +6,13 @@ import remarkGfm from "remark-gfm";
 import type { Evidence, Slice, Workstream, WorkstreamOverviewResponse } from "../types";
 import { loadFeedbackMarkdown } from "./artifact-api";
 import { countsForSlice, countsForWorkstream, dependencyLabels } from "./workspace-model";
+import { WorkspaceReviewPanel } from "./WorkspaceReviewPanel";
 
-type ArtifactTab = "details" | "requirements" | "plan" | "evidence" | "feedback" | "pr";
+export type ArtifactTab = "details" | "review" | "requirements" | "plan" | "evidence" | "feedback" | "pr";
 
 const tabs: { id: ArtifactTab; label: string }[] = [
   { id: "details", label: "Details" },
+  { id: "review", label: "Review" },
   { id: "requirements", label: "Requirements" },
   { id: "plan", label: "Plan" },
   { id: "evidence", label: "Evidence" },
@@ -27,6 +29,7 @@ interface ArtifactPreviewPanelProps {
   activeSliceId?: string;
   statusMessage?: string;
   onMakeActive: () => void;
+  onSelectTab?: (tab: ArtifactTab) => void;
 }
 
 export function ArtifactPreviewPanel({
@@ -37,7 +40,8 @@ export function ArtifactPreviewPanel({
   selectedSlice,
   activeSliceId,
   statusMessage,
-  onMakeActive
+  onMakeActive,
+  onSelectTab
 }: ArtifactPreviewPanelProps): ReactElement {
   const [selectedTab, setSelectedTab] = useState<ArtifactTab>("details");
   const [feedbackMarkdown, setFeedbackMarkdown] = useState<string>();
@@ -48,6 +52,10 @@ export function ArtifactPreviewPanel({
     setFeedbackMarkdown(undefined);
     setFeedbackError(undefined);
   }, [selectedWorkstream?.id]);
+
+  useEffect(() => {
+    onSelectTab?.(selectedTab);
+  }, [onSelectTab, selectedTab]);
 
   useEffect(() => {
     if (selectedTab !== "feedback" || !selectedWorkstream) {
@@ -108,7 +116,10 @@ export function ArtifactPreviewPanel({
             className="artifact-tab"
             role="tab"
             aria-selected={selectedTab === tab.id}
-            onClick={() => setSelectedTab(tab.id)}
+            onClick={() => {
+              setSelectedTab(tab.id);
+              onSelectTab?.(tab.id);
+            }}
           >
             {tab.label}
           </button>
@@ -124,6 +135,14 @@ export function ArtifactPreviewPanel({
             activeSliceId={activeSliceId}
             statusMessage={statusMessage}
             onMakeActive={onMakeActive}
+          />
+        ) : null}
+        {selectedTab === "review" ? (
+          <WorkspaceReviewPanel
+            workstream={selectedWorkstream}
+            selectedSlice={selectedSlice}
+            sessions={overview.reviewSessions}
+            comments={overview.comments}
           />
         ) : null}
         {selectedTab === "requirements" ? (

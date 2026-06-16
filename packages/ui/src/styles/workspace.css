@@ -9,6 +9,10 @@
   grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
 }
 
+.workspace-app.is-slice-review {
+  grid-template-columns: minmax(210px, 260px) minmax(280px, 0.55fr) minmax(720px, 1.45fr);
+}
+
 .workspace-rail,
 .workspace-inspector {
   min-width: 0;
@@ -22,6 +26,10 @@
 
 .workspace-inspector {
   border-left: 1px solid var(--border);
+}
+
+.workspace-app.is-slice-review .workspace-inspector {
+  overflow: hidden;
 }
 
 .workspace-main {
@@ -370,6 +378,25 @@
 
 .artifact-panel {
   align-content: start;
+}
+
+.workspace-app.is-slice-review .artifact-panel {
+  min-height: 100vh;
+  align-content: stretch;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  padding: 0;
+}
+
+.workspace-app.is-slice-review .artifact-header {
+  padding: 18px 18px 0;
+}
+
+.workspace-app.is-slice-review .artifact-tabs {
+  padding: 0 18px;
+}
+
+.workspace-app.is-slice-review .artifact-body {
+  min-height: 0;
 }
 
 .artifact-header {
@@ -727,12 +754,41 @@
   padding: 8px;
 }
 
+.slice-review-panel {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.slice-review-sidebar {
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  overflow: auto;
+}
+
+.slice-review-main {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.slice-review-toolbar {
+  padding: 12px 14px;
+}
+
 @media (max-width: 980px) {
   .workspace-app {
     grid-template-columns: 1fr;
   }
 
-  .workspace-app.is-branch-review {
+  .workspace-app.is-branch-review,
+  .workspace-app.is-slice-review {
     grid-template-columns: 1fr;
   }
 
@@ -762,5 +818,19 @@
 
   .branch-review-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-app.is-slice-review .artifact-panel {
+    min-height: auto;
+  }
+
+  .slice-review-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .slice-review-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    max-height: 42vh;
   }
 }
