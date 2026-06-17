@@ -54,9 +54,9 @@
       "id": "slice-64-workspace-shell-ux-refresh",
       "title": "Slice 64: Workspace Shell UX Refresh",
       "description": "Refactor the repository workspace shell onto the base design system and improve navigation hierarchy, active/selected states, workstream scanning, branch review entry, loading/error/empty states, and responsive behavior. This should improve the workflow rather than restyle the old layout one-for-one.",
-      "status": "proposed",
+      "status": "complete",
       "createdAt": "2026-06-17T09:39:32.840Z",
-      "updatedAt": "2026-06-17T12:13:26.076Z",
+      "updatedAt": "2026-06-17T12:47:15.153Z",
       "dependsOnSliceIds": [
         "slice-63-base-design-system-components"
       ],
