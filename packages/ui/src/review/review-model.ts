@@ -48,6 +48,34 @@ export function commentsForLine(file: DiffFile, line: DiffLine, comments: Review
   });
 }
 
+export function commentCountsForFile(
+  file: DiffFile,
+  comments: ReviewComment[]
+): { open: number; resolved: number; stale: number; total: number } {
+  const fileComments = commentsForFile(file, comments);
+
+  return {
+    open: fileComments.filter((comment) => !comment.resolved).length,
+    resolved: fileComments.filter((comment) => Boolean(comment.resolved)).length,
+    stale: fileComments.filter((comment) => comment.anchorStatus === "stale").length,
+    total: fileComments.length
+  };
+}
+
+export function reviewCommentSummary(comments: ReviewComment[]): {
+  open: number;
+  resolved: number;
+  stale: number;
+  total: number;
+} {
+  return {
+    open: comments.filter((comment) => !comment.resolved).length,
+    resolved: comments.filter((comment) => Boolean(comment.resolved)).length,
+    stale: comments.filter((comment) => comment.anchorStatus === "stale").length,
+    total: comments.length
+  };
+}
+
 export function staleCommentsForSelectedFile(
   file: DiffFile,
   files: DiffFile[],
@@ -150,4 +178,3 @@ export function linePrefix(kind: string): string {
 
   return " ";
 }
-

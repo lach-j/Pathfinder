@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 
 import { DiffPane } from "../review/DiffPane";
 import { FileList } from "../review/FileList";
-import { firstFilePath } from "../review/review-model";
+import { firstFilePath, reviewCommentSummary } from "../review/review-model";
 import type {
   BranchReviewOverviewResponse,
   BranchReviewSession,
@@ -175,6 +175,7 @@ export function BranchReviewWorkspace(): ReactElement {
         />
         {diff?.files.length ? (
           <FileList
+            comments={comments}
             files={diff.files}
             selectedPath={selectedPath}
             onSelectFile={setSelectedPath}
@@ -184,6 +185,7 @@ export function BranchReviewWorkspace(): ReactElement {
 
       <section className="branch-review-main">
         <BranchReviewToolbar
+          comments={comments}
           session={session}
           commentFilter={commentFilter}
           onChangeCommentFilter={setCommentFilter}
@@ -226,22 +228,31 @@ export function BranchReviewWorkspace(): ReactElement {
 }
 
 function BranchReviewToolbar({
+  comments,
   session,
   commentFilter,
   onChangeCommentFilter,
   onRefresh
 }: {
+  comments: ReviewComment[];
   session?: BranchReviewSession;
   commentFilter: CommentFilter;
   onChangeCommentFilter: (filter: CommentFilter) => void;
   onRefresh: () => void;
 }): ReactElement {
+  const summary = reviewCommentSummary(comments);
+
   return (
     <div className="branch-review-toolbar">
       <div className="identity">
         <div className="eyebrow">Pathfinder Branch Review</div>
         <h1>{session ? session.headRef : "Standalone branch review"}</h1>
         <div className="slice">{session ? `${session.baseRef} to ${session.headCommit}` : "No session selected"}</div>
+        <div className="review-status-strip" aria-label="Review comment status">
+          <span>{summary.open} open</span>
+          <span>{summary.resolved} resolved</span>
+          {summary.stale > 0 && <span className="is-stale">{summary.stale} stale</span>}
+        </div>
       </div>
       <div className="review-controls">
         <div className="control">

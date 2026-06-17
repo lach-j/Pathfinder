@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { DiffPane } from "../review/DiffPane";
 import { FileList } from "../review/FileList";
+import { reviewCommentSummary } from "../review/review-model";
 import type { BranchReviewSession } from "../types";
 import { WorkspaceShell } from "./WorkspaceShell";
 import {
@@ -80,6 +81,7 @@ export const BranchReviewMode: Story = {
 function BranchReviewPreview() {
   const session = branchReviewOverviewFixture.sessions[0] as BranchReviewSession;
   const selectedPath = branchReviewDiffFixture.files[0]?.path;
+  const summary = reviewCommentSummary(branchReviewOverviewFixture.comments);
 
   return (
     <div className="branch-review-workspace">
@@ -95,7 +97,12 @@ function BranchReviewPreview() {
             <span className="session-meta">1 open comment</span>
           </button>
         </div>
-        <FileList files={branchReviewDiffFixture.files} selectedPath={selectedPath} onSelectFile={noop} />
+        <FileList
+          comments={branchReviewOverviewFixture.comments}
+          files={branchReviewDiffFixture.files}
+          selectedPath={selectedPath}
+          onSelectFile={noop}
+        />
       </aside>
       <section className="branch-review-main">
         <div className="branch-review-toolbar">
@@ -103,6 +110,11 @@ function BranchReviewPreview() {
             <div className="eyebrow">Pathfinder Branch Review</div>
             <h1>{session.headRef}</h1>
             <div className="slice">{session.baseRef} to {session.headCommit}</div>
+            <div className="review-status-strip" aria-label="Review comment status">
+              <span>{summary.open} open</span>
+              <span>{summary.resolved} resolved</span>
+              {summary.stale > 0 && <span className="is-stale">{summary.stale} stale</span>}
+            </div>
           </div>
           <div className="review-controls">
             <div className="control">

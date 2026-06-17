@@ -10,6 +10,7 @@ import {
   fileStats,
   lineCommentTarget,
   linePrefix,
+  reviewCommentSummary,
   staleCommentsForSelectedFile,
   visibleComments
 } from "./review-model";
@@ -78,6 +79,7 @@ export function DiffPane({
   const fileComments = commentsForFile(selectedFile, filteredComments).filter((comment) => comment.target?.type === "file");
   const staleComments = staleCommentsForSelectedFile(selectedFile, files, diff, filteredComments);
   const stats = fileStats(selectedFile);
+  const summary = reviewCommentSummary(filteredComments);
 
   return (
     <section className="diff-pane">
@@ -85,14 +87,23 @@ export function DiffPane({
         <div className="file-heading-main">
           <h2>{selectedFile.path}</h2>
           <div className="file-subtitle">
-            {selectedFile.status || "modified"} - +{stats.additions} -{stats.deletions}
-            {session ? ` - ${session.baseRef} to ${session.headRef}` : ""}
+            <span>{selectedFile.status || "modified"}</span>
+            <span className="diff-stat stat-addition">+{stats.additions}</span>
+            <span className="diff-stat stat-deletion">-{stats.deletions}</span>
+            {session ? <span>{session.baseRef} to {session.headRef}</span> : null}
           </div>
           {statusMessage && <div className="status-text">{statusMessage}</div>}
         </div>
-        <button className="button" type="button" onClick={() => onBeginFileComment(selectedFile)}>
-          Add file comment
-        </button>
+        <div className="file-heading-actions">
+          <div className="review-summary" aria-label="Visible review comments">
+            <span>{summary.open} open</span>
+            <span>{summary.resolved} resolved</span>
+            {summary.stale > 0 && <span className="is-stale">{summary.stale} stale</span>}
+          </div>
+          <button className="button" type="button" onClick={() => onBeginFileComment(selectedFile)}>
+            Add file comment
+          </button>
+        </div>
       </div>
       <table className="diff-table" aria-label={`Unified diff for ${selectedFile.path}`}>
         <tbody>
@@ -182,7 +193,7 @@ function DiffLineRow({
             aria-label="Add line comment"
             onClick={() => onBeginLineComment(file, line)}
           >
-            +
+            <span aria-hidden="true">+</span>
           </button>
         )}
       </td>
@@ -212,8 +223,11 @@ function CommentRow({
         <div className={`comment${comment.resolved ? " comment-resolved" : ""}`}>
           <div className="comment-header">
             <div className="comment-meta">
-              {comment.id} - {commentTargetText(comment)}
-              {comment.resolved ? " - resolved" : ""}
+              <span className="comment-id">{comment.id}</span>
+              <span>{commentTargetText(comment)}</span>
+              <span className={`comment-state${comment.resolved ? " is-resolved" : " is-open"}`}>
+                {comment.resolved ? "resolved" : "open"}
+              </span>
               {comment.origin && comment.origin !== "human" && (
                 <span className={`comment-origin origin-${comment.origin}`}>{comment.origin}</span>
               )}

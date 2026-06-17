@@ -721,12 +721,19 @@
 
 .branch-review-toolbar {
   border-bottom: 1px solid var(--border);
-  background: var(--panel);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--pf-color-surface-soft) 62%, transparent), transparent),
+    var(--panel);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   padding: 14px 18px;
   align-items: start;
+}
+
+.branch-review-toolbar .identity {
+  display: grid;
+  gap: 4px;
 }
 
 .session-list {
@@ -737,6 +744,7 @@
 .session-button {
   appearance: none;
   border: 0;
+  border-left: 3px solid transparent;
   border-bottom: 1px solid var(--border);
   background: transparent;
   color: var(--text);
@@ -749,6 +757,10 @@
 .session-button:hover,
 .session-button[aria-current="true"] {
   background: var(--selected);
+}
+
+.session-button[aria-current="true"] {
+  border-left-color: var(--pf-color-accent);
 }
 
 .session-title {
