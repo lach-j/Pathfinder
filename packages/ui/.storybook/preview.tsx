@@ -2,6 +2,7 @@ import type { Preview } from "@storybook/react-vite";
 
 import "../src/styles/tokens.css";
 import "../src/styles/base.css";
+import "../src/styles/design-system.css";
 import "../src/styles/review.css";
 import "../src/styles/workspace.css";
 
