@@ -185,6 +185,53 @@
         }
       ],
       "createdAt": "2026-06-17T10:33:44.997Z"
+    },
+    {
+      "id": "review-slice-63-base-design-system-components",
+      "workstreamId": "ui-overhaul-and-design-system",
+      "sliceId": "slice-63-base-design-system-components",
+      "baseRef": "HEAD~1",
+      "headRef": "main",
+      "headCommit": "1dcf8db",
+      "mergeBase": "2533fc9ea6d57c527241d202a99a5992fea15bfa",
+      "changedFiles": [
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/workstream.json",
+          "status": "modified",
+          "category": "state"
+        },
+        {
+          "path": "packages/ui/.storybook/preview.tsx",
+          "status": "modified",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/design-system/DesignSystem.stories.tsx",
+          "status": "added",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/design-system/components.tsx",
+          "status": "added",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/design-system/index.ts",
+          "status": "added",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/main.tsx",
+          "status": "modified",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/styles/design-system.css",
+          "status": "added",
+          "category": "other"
+        }
+      ],
+      "createdAt": "2026-06-17T11:34:59.649Z"
     }
   ]
 }
