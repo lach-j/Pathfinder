@@ -3,12 +3,28 @@ import type { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import type { Evidence, Slice, Workstream, WorkstreamOverviewResponse } from "../types";
+import type {
+  Evidence,
+  Slice,
+  Workstream,
+  WorkstreamOverviewResponse,
+} from "../types";
 import { loadFeedbackMarkdown } from "./artifact-api";
-import { countsForSlice, countsForWorkstream, dependencyLabels } from "./workspace-model";
+import {
+  countsForSlice,
+  countsForWorkstream,
+  dependencyLabels,
+} from "./workspace-model";
 import { WorkspaceReviewPanel } from "./WorkspaceReviewPanel";
 
-export type ArtifactTab = "details" | "review" | "requirements" | "plan" | "evidence" | "feedback" | "pr";
+export type ArtifactTab =
+  | "details"
+  | "review"
+  | "requirements"
+  | "plan"
+  | "evidence"
+  | "feedback"
+  | "pr";
 
 const tabs: { id: ArtifactTab; label: string }[] = [
   { id: "details", label: "Details" },
@@ -17,7 +33,7 @@ const tabs: { id: ArtifactTab; label: string }[] = [
   { id: "plan", label: "Plan" },
   { id: "evidence", label: "Evidence" },
   { id: "feedback", label: "Feedback" },
-  { id: "pr", label: "PR draft" }
+  { id: "pr", label: "PR draft" },
 ];
 
 interface ArtifactPreviewPanelProps {
@@ -41,7 +57,7 @@ export function ArtifactPreviewPanel({
   activeSliceId,
   statusMessage,
   onMakeActive,
-  onSelectTab
+  onSelectTab,
 }: ArtifactPreviewPanelProps): ReactElement {
   const [selectedTab, setSelectedTab] = useState<ArtifactTab>("details");
   const [feedbackMarkdown, setFeedbackMarkdown] = useState<string>();
@@ -74,7 +90,11 @@ export function ArtifactPreviewPanel({
       })
       .catch((loadError) => {
         if (!cancelled) {
-          setFeedbackError(loadError instanceof Error ? loadError.message : "Could not load feedback.");
+          setFeedbackError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Could not load feedback.",
+          );
         }
       })
       .finally(() => {
@@ -93,22 +113,38 @@ export function ArtifactPreviewPanel({
   }
 
   if (error) {
-    return <PanelEmpty title="Artifacts" message="Workspace details are unavailable." />;
+    return (
+      <PanelEmpty
+        title="Artifacts"
+        message="Workspace details are unavailable."
+      />
+    );
   }
 
   if (!selectedWorkstream || !overview) {
-    return <PanelEmpty title="Artifacts" message="Select a workstream to inspect its state." />;
+    return (
+      <PanelEmpty
+        title="Artifacts"
+        message="Select a workstream to inspect its state."
+      />
+    );
   }
 
   return (
     <div className="artifact-panel">
       <div className="artifact-header">
         <div className="eyebrow">Artifacts</div>
-        <h2>{selectedSlice ? selectedSlice.title : selectedWorkstream.title}</h2>
+        <h2>
+          {selectedSlice ? selectedSlice.title : selectedWorkstream.title}
+        </h2>
         <p>{selectedSlice ? selectedSlice.id : selectedWorkstream.id}</p>
       </div>
 
-      <div className="artifact-tabs" role="tablist" aria-label="Artifact previews">
+      <div
+        className="artifact-tabs"
+        role="tablist"
+        aria-label="Artifact previews"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -160,7 +196,10 @@ export function ArtifactPreviewPanel({
           />
         ) : null}
         {selectedTab === "evidence" ? (
-          <EvidencePreview evidence={overview.evidence} selectedSlice={selectedSlice} />
+          <EvidencePreview
+            evidence={overview.evidence}
+            selectedSlice={selectedSlice}
+          />
         ) : null}
         {selectedTab === "feedback" ? (
           <FeedbackPreview
@@ -188,7 +227,7 @@ function DetailsPreview({
   selectedSlice,
   activeSliceId,
   statusMessage,
-  onMakeActive
+  onMakeActive,
 }: {
   overview: WorkstreamOverviewResponse;
   selectedWorkstream: Workstream;
@@ -211,7 +250,12 @@ function DetailsPreview({
     );
   }
 
-  const counts = countsForSlice(selectedSlice, overview.comments, overview.reviewSessions, overview.evidence);
+  const counts = countsForSlice(
+    selectedSlice,
+    overview.comments,
+    overview.reviewSessions,
+    overview.evidence,
+  );
   const dependencies = dependencyLabels(selectedSlice, overview.slices);
   const isActive = selectedSlice.id === activeSliceId;
 
@@ -228,14 +272,21 @@ function DetailsPreview({
           {isActive ? "Active" : "Make active"}
         </button>
       </div>
-      <p className="inspector-description">{selectedSlice.description || "No description recorded."}</p>
+      <MarkdownPreview
+        emptyMessage=""
+        emptyTitle=""
+        markdown={selectedSlice.description || "No description recorded."}
+      ></MarkdownPreview>
       <DetailList
         items={[
-          ["Dependencies", dependencies.length > 0 ? dependencies.join(", ") : "None"],
+          [
+            "Dependencies",
+            dependencies.length > 0 ? dependencies.join(", ") : "None",
+          ],
           ["Branch", selectedSlice.branchName || "Not started"],
           ["Base", selectedSlice.baseRef || "Not recorded"],
           ["Created", selectedSlice.createdAt],
-          ["Updated", selectedSlice.updatedAt]
+          ["Updated", selectedSlice.updatedAt],
         ]}
       />
       <InspectorCounts counts={counts} />
@@ -247,7 +298,7 @@ function DetailsPreview({
 function MarkdownPreview({
   markdown,
   emptyTitle,
-  emptyMessage
+  emptyMessage,
 }: {
   markdown: string;
   emptyTitle: string;
@@ -268,7 +319,7 @@ function FeedbackPreview({
   markdown,
   loading,
   error,
-  openCommentCount
+  openCommentCount,
 }: {
   markdown?: string;
   loading: boolean;
@@ -276,7 +327,12 @@ function FeedbackPreview({
   openCommentCount: number;
 }): ReactElement {
   if (loading) {
-    return <ArtifactEmpty title="Loading feedback" message="Reading the open feedback queue." />;
+    return (
+      <ArtifactEmpty
+        title="Loading feedback"
+        message="Reading the open feedback queue."
+      />
+    );
   }
 
   if (error) {
@@ -284,7 +340,12 @@ function FeedbackPreview({
   }
 
   if (openCommentCount === 0) {
-    return <ArtifactEmpty title="No open comments" message="There are no open feedback items for this workstream." />;
+    return (
+      <ArtifactEmpty
+        title="No open comments"
+        message="There are no open feedback items for this workstream."
+      />
+    );
   }
 
   return (
@@ -298,21 +359,29 @@ function FeedbackPreview({
 
 function EvidencePreview({
   evidence,
-  selectedSlice
+  selectedSlice,
 }: {
   evidence: Evidence[];
   selectedSlice?: Slice;
 }): ReactElement {
   const selectedEvidence = useMemo(
-    () => selectedSlice ? evidence.filter((item) => item.sliceId === selectedSlice.id) : [],
-    [evidence, selectedSlice]
+    () =>
+      selectedSlice
+        ? evidence.filter((item) => item.sliceId === selectedSlice.id)
+        : [],
+    [evidence, selectedSlice],
   );
   const otherEvidence = selectedSlice
     ? evidence.filter((item) => item.sliceId !== selectedSlice.id)
     : evidence;
 
   if (evidence.length === 0) {
-    return <ArtifactEmpty title="No evidence" message="No evidence records are stored for this workstream." />;
+    return (
+      <ArtifactEmpty
+        title="No evidence"
+        message="No evidence records are stored for this workstream."
+      />
+    );
   }
 
   return (
@@ -326,7 +395,9 @@ function EvidencePreview({
         />
       ) : null}
       <EvidenceGroup
-        title={selectedSlice ? "Other workstream evidence" : "Workstream evidence"}
+        title={
+          selectedSlice ? "Other workstream evidence" : "Workstream evidence"
+        }
         emptyMessage="No other evidence records are stored for this workstream."
         evidence={otherEvidence}
       />
@@ -338,7 +409,7 @@ function EvidenceGroup({
   title,
   emptyMessage,
   evidence,
-  highlighted = false
+  highlighted = false,
 }: {
   title: string;
   emptyMessage: string;
@@ -353,7 +424,10 @@ function EvidenceGroup({
       ) : (
         <div className="evidence-list">
           {evidence.map((item) => (
-            <article className={`evidence-item${highlighted ? " is-highlighted" : ""}`} key={item.id}>
+            <article
+              className={`evidence-item${highlighted ? " is-highlighted" : ""}`}
+              key={item.id}
+            >
               <div className="evidence-topline">
                 <span>{item.kind}</span>
                 <span>{item.sliceId}</span>
@@ -363,7 +437,7 @@ function EvidenceGroup({
                 items={[
                   ["ID", item.id],
                   ["Path", item.path || "Not recorded"],
-                  ["Created", item.createdAt]
+                  ["Created", item.createdAt],
                 ]}
               />
             </article>
@@ -374,7 +448,15 @@ function EvidenceGroup({
   );
 }
 
-function InspectorCounts({ counts }: { counts: { openCommentCount: number; reviewSessionCount: number; evidenceCount: number } }): ReactElement {
+function InspectorCounts({
+  counts,
+}: {
+  counts: {
+    openCommentCount: number;
+    reviewSessionCount: number;
+    evidenceCount: number;
+  };
+}): ReactElement {
   return (
     <div className="inspector-counts">
       <Metric label="Open comments" value={counts.openCommentCount} />
@@ -384,7 +466,13 @@ function InspectorCounts({ counts }: { counts: { openCommentCount: number; revie
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }): ReactElement {
+function Metric({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}): ReactElement {
   return (
     <div className="metric">
       <span>{value}</span>
@@ -407,10 +495,20 @@ function DetailList({ items }: { items: [string, string][] }): ReactElement {
 }
 
 function StatusPill({ status }: { status: Slice["status"] }): ReactElement {
-  return <span className={`slice-status slice-status-${status}`}>{status.replace("_", " ")}</span>;
+  return (
+    <span className={`slice-status slice-status-${status}`}>
+      {status.replace("_", " ")}
+    </span>
+  );
 }
 
-function PanelEmpty({ title, message }: { title: string; message: string }): ReactElement {
+function PanelEmpty({
+  title,
+  message,
+}: {
+  title: string;
+  message: string;
+}): ReactElement {
   return (
     <div className="artifact-panel">
       <div className="artifact-header">
@@ -421,7 +519,13 @@ function PanelEmpty({ title, message }: { title: string; message: string }): Rea
   );
 }
 
-function ArtifactEmpty({ title, message }: { title: string; message: string }): ReactElement {
+function ArtifactEmpty({
+  title,
+  message,
+}: {
+  title: string;
+  message: string;
+}): ReactElement {
   return (
     <div className="artifact-empty">
       <h3>{title}</h3>

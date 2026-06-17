@@ -1,0 +1,91 @@
+{
+  "slices": [
+    {
+      "id": "slice-60-ui-audit-and-experience-principles",
+      "title": "Slice 60: UI Audit And Experience Principles",
+      "description": "Audit the current workspace, branch review, artifact, canvas, and review UI. Capture concrete UX problems, target design principles, screen inventory, responsive concerns, accessibility concerns, and before screenshots or notes that future slices can verify against.",
+      "status": "proposed",
+      "createdAt": "2026-06-17T09:39:32.272Z",
+      "updatedAt": "2026-06-17T09:39:32.272Z"
+    },
+    {
+      "id": "slice-61-storybook-foundation",
+      "title": "Slice 61: Storybook Foundation",
+      "description": "Add Storybook to @pathfinder/ui with scripts, preview decorators, browser-safe Pathfinder fixtures, base CSS loading, and initial stories for current shell states. Static Storybook build should be available for local visual review.",
+      "status": "proposed",
+      "createdAt": "2026-06-17T09:39:32.413Z",
+      "updatedAt": "2026-06-17T09:39:33.378Z",
+      "dependsOnSliceIds": [
+        "slice-60-ui-audit-and-experience-principles"
+      ]
+    },
+    {
+      "id": "slice-62-design-tokens-and-app-foundations",
+      "title": "Slice 62: Design Tokens And App Foundations",
+      "description": "Centralize UI tokens and global foundations for color, typography, spacing, radii, borders, elevation, focus, density, and motion. Establish the Pathfinder visual language inspired by the attached prompt while preserving readability and app-like workflows.",
+      "status": "proposed",
+      "createdAt": "2026-06-17T09:39:32.557Z",
+      "updatedAt": "2026-06-17T09:39:33.527Z",
+      "dependsOnSliceIds": [
+        "slice-61-storybook-foundation"
+      ]
+    },
+    {
+      "id": "slice-63-base-design-system-components",
+      "title": "Slice 63: Base Design System Components",
+      "description": "Create reusable UI primitives such as Button, IconButton, StatusChip, Badge, Panel, Toolbar, Tabs, ListRow, EmptyState, Notice, Metric, and layout primitives. Cover variants and states in Storybook with realistic dense examples.",
+      "status": "proposed",
+      "createdAt": "2026-06-17T09:39:32.712Z",
+      "updatedAt": "2026-06-17T09:39:33.660Z",
+      "dependsOnSliceIds": [
+        "slice-62-design-tokens-and-app-foundations"
+      ]
+    },
+    {
+      "id": "slice-64-workspace-shell-ux-refresh",
+      "title": "Slice 64: Workspace Shell UX Refresh",
+      "description": "Refactor the repository workspace shell onto the base design system and improve navigation hierarchy, active/selected states, workstream scanning, branch review entry, loading/error/empty states, and responsive behavior. This should improve the workflow rather than restyle the old layout one-for-one.",
+      "status": "proposed",
+      "createdAt": "2026-06-17T09:39:32.840Z",
+      "updatedAt": "2026-06-17T09:39:33.793Z",
+      "dependsOnSliceIds": [
+        "slice-63-base-design-system-components"
+      ]
+    },
+    {
+      "id": "slice-65-canvas-and-artifact-panel-refresh",
+      "title": "Slice 65: Canvas And Artifact Panel Refresh",
+      "description": "Refresh the slice dependency canvas, graph nodes, status/count presentation, invalid dependency warnings, artifact tabs, markdown previews, evidence groups, feedback preview, and PR draft panel using the design-system primitives.",
+      "status": "proposed",
+      "createdAt": "2026-06-17T09:39:32.976Z",
+      "updatedAt": "2026-06-17T09:39:33.927Z",
+      "dependsOnSliceIds": [
+        "slice-64-workspace-shell-ux-refresh"
+      ]
+    },
+    {
+      "id": "slice-66-review-experience-refresh",
+      "title": "Slice 66: Review Experience Refresh",
+      "description": "Refresh slice and branch review surfaces with a code-review-first layout: clearer file navigation, readable diffs, accessible line/file comment controls, visible comment state, refresh/status actions, and styling that supports long review sessions.",
+      "status": "proposed",
+      "createdAt": "2026-06-17T09:39:33.112Z",
+      "updatedAt": "2026-06-17T09:39:34.189Z",
+      "dependsOnSliceIds": [
+        "slice-64-workspace-shell-ux-refresh",
+        "slice-63-base-design-system-components"
+      ]
+    },
+    {
+      "id": "slice-67-accessibility-polish-and-visual-qa",
+      "title": "Slice 67: Accessibility Polish And Visual QA",
+      "description": "Complete cross-surface polish with keyboard and focus review, reduced-motion support, responsive screenshots, Storybook coverage gaps, text-overlap checks, local workspace smoke tests, and documentation for future UI contributors.",
+      "status": "proposed",
+      "createdAt": "2026-06-17T09:39:33.243Z",
+      "updatedAt": "2026-06-17T09:39:34.470Z",
+      "dependsOnSliceIds": [
+        "slice-65-canvas-and-artifact-panel-refresh",
+        "slice-66-review-experience-refresh"
+      ]
+    }
+  ]
+}
