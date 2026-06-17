@@ -7,7 +7,7 @@ import { ArtifactPreviewPanel, type ArtifactTab } from "./ArtifactPreviewPanel";
 import { BranchReviewWorkspace } from "./BranchReviewWorkspace";
 import { SliceDependencyCanvas } from "./SliceDependencyCanvas";
 
-interface WorkspaceShellProps {
+export interface WorkspaceShellProps {
   workspace?: WorkspaceResponse;
   overview?: WorkstreamOverviewResponse;
   selectedWorkstreamId?: string;
@@ -15,6 +15,8 @@ interface WorkspaceShellProps {
   loading: boolean;
   error?: string;
   statusMessage?: string;
+  initialMode?: "workstreams" | "branch-review";
+  renderBranchReview?: () => ReactElement;
   onSelectWorkstream: (workstreamId: string) => void;
   onSelectSlice: (sliceId: string) => void;
   onMakeActive: () => void;
@@ -28,11 +30,13 @@ export function WorkspaceShell({
   loading,
   error,
   statusMessage,
+  initialMode = "workstreams",
+  renderBranchReview,
   onSelectWorkstream,
   onSelectSlice,
   onMakeActive
 }: WorkspaceShellProps): ReactElement {
-  const [mode, setMode] = useState<"workstreams" | "branch-review">("workstreams");
+  const [mode, setMode] = useState<"workstreams" | "branch-review">(initialMode);
   const [artifactTab, setArtifactTab] = useState<ArtifactTab>("details");
   const selectedWorkstream = workspace?.workstreams.find((workstream) => workstream.id === selectedWorkstreamId);
   const selectedSlice = overview?.slices.find((slice) => slice.id === selectedSliceId);
@@ -63,7 +67,7 @@ export function WorkspaceShell({
       </aside>
       {mode === "branch-review" ? (
         <section className="workspace-main workspace-main-branch">
-          <BranchReviewWorkspace />
+          {renderBranchReview ? renderBranchReview() : <BranchReviewWorkspace />}
         </section>
       ) : (
         <>

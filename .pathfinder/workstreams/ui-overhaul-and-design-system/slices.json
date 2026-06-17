@@ -17,10 +17,13 @@
       "description": "Add Storybook to @pathfinder/ui with scripts, preview decorators, browser-safe Pathfinder fixtures, base CSS loading, and initial stories for current shell states. Static Storybook build should be available for local visual review.",
       "status": "proposed",
       "createdAt": "2026-06-17T09:39:32.413Z",
-      "updatedAt": "2026-06-17T09:39:33.378Z",
+      "updatedAt": "2026-06-17T09:56:19.125Z",
       "dependsOnSliceIds": [
         "slice-60-ui-audit-and-experience-principles"
-      ]
+      ],
+      "branchName": "pathfinder/ui-overhaul-and-design-system/slice-61-storybook-foundation",
+      "baseRef": "HEAD",
+      "startedAt": "2026-06-17T09:56:19.124Z"
     },
     {
       "id": "slice-62-design-tokens-and-app-foundations",
