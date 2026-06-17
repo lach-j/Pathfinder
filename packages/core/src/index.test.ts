@@ -143,7 +143,11 @@ test("recommends agent next phases for setup and slice selection", () => {
 
 test("recommends implementation, feedback, and PR phases for agents", () => {
   const workstream = testWorkstream("inventory-alerts", "add-report");
-  const activeSlice = testSlice("add-report", "in_progress", "2026-01-01T00:00:00.000Z");
+  const activeSlice = {
+    ...testSlice("add-report", "in_progress", "2026-01-01T00:00:00.000Z"),
+    branchName: "task/INV-1234-add-report",
+    baseRef: "main"
+  };
 
   assert.equal(
     getAgentNextRecommendation({
@@ -158,6 +162,24 @@ test("recommends implementation, feedback, and PR phases for agents", () => {
     }).phase,
     "ready_to_implement"
   );
+
+  const unbranchedRecommendation = getAgentNextRecommendation({
+    isInitialized: true,
+    workstreams: [workstream],
+    activeWorkstream: workstream,
+    slices: [testSlice("add-report", "in_progress", "2026-01-01T00:00:00.000Z")],
+    activeSlice: testSlice("add-report", "in_progress", "2026-01-01T00:00:00.000Z"),
+    planMarkdown: "# Plan",
+    openComments: [],
+    reviewSessions: [],
+    suggestedBaseRef: "main"
+  });
+
+  assert.equal(unbranchedRecommendation.phase, "needs_slice_selection");
+  assert.deepEqual(unbranchedRecommendation.commands, [
+    "pathfinder slice start inventory-alerts add-report --base main",
+    "pathfinder current"
+  ]);
 
   const session = {
     id: "review-add-report",

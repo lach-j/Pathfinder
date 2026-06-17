@@ -782,7 +782,9 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     requireArgument(sliceId, "slice id");
     const options = parseOptions(optionArgs);
     requireOption(options.base, "--base");
-    const { branchName, updated, action: branchAction } = await startSliceBranch(workstreamId, sliceId, options.base);
+    const { branchName, updated, action: branchAction } = await startSliceBranch(workstreamId, sliceId, options.base, {
+      branch: options.branch
+    });
     console.log(`${branchAction === "created" ? "Started" : "Checked out"} branch ${branchName} for slice ${workstreamId}/${updated.id}.`);
     return;
   }
@@ -793,7 +795,9 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
     requireArgument(sliceId, "slice id");
     const options = parseOptions(optionArgs);
     requireOption(options.base, "--base");
-    const { branchName, updated, action: branchAction } = await startSliceBranch(workstreamId, sliceId, options.base);
+    const { branchName, updated, action: branchAction } = await startSliceBranch(workstreamId, sliceId, options.base, {
+      branch: options.branch
+    });
     const active = await store.setActiveSlice(workstreamId, sliceId);
     console.log(`${branchAction === "created" ? "Started" : "Checked out"} branch ${branchName} for slice ${workstreamId}/${updated.id}.`);
     console.log(`Active slice: ${active.workstream.id}/${active.slice.id}`);
@@ -819,7 +823,8 @@ async function runSlice(action: string | undefined, args: string[]): Promise<voi
 async function startSliceBranch(
   workstreamId: string,
   sliceId: string,
-  baseRef: string
+  baseRef: string,
+  options: { branch?: string } = {}
 ): Promise<SliceBranchStartResult> {
   const slices = await store.listSlices(workstreamId);
   const slice = slices.find((candidate) => candidate.id === sliceId);
@@ -847,7 +852,14 @@ async function startSliceBranch(
     );
   }
 
-  const branchName = slice.branchName ?? `pathfinder/${workstreamId}/${sliceId}`;
+  const requestedBranchName = branchNameFromOptions(options);
+  if (slice.branchName && requestedBranchName && slice.branchName !== requestedBranchName) {
+    throw new PathfinderError(
+      `Slice '${sliceId}' is already recorded with branch '${slice.branchName}'. Refusing to start it as '${requestedBranchName}'.`
+    );
+  }
+
+  const branchName = slice.branchName ?? requestedBranchName ?? `pathfinder/${workstreamId}/${sliceId}`;
   const action = await git.createOrCheckoutBranch(branchName, baseRef);
   const updated = await store.setSliceBranchMetadata(workstreamId, sliceId, {
     branchName,
@@ -855,6 +867,24 @@ async function startSliceBranch(
   });
 
   return { branchName, updated, action };
+}
+
+function branchNameFromOptions(options: { branch?: string }): string | undefined {
+  return options.branch ? validateBranchNameInput(options.branch, "--branch") : undefined;
+}
+
+function validateBranchNameInput(value: string, label: string): string {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    throw new PathfinderError(`${label} must not be empty.`);
+  }
+
+  if (/[\s~^:?*[\\\x00-\x1f\x7f]/.test(trimmed) || trimmed.includes("..") || trimmed.endsWith(".") || trimmed.endsWith("/")) {
+    throw new PathfinderError(`${label} is not a valid branch name segment.`);
+  }
+
+  return trimmed;
 }
 
 async function runComment(action: string | undefined, args: string[]): Promise<void> {

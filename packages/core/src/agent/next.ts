@@ -197,6 +197,23 @@ export function getAgentNextRecommendation(input: AgentNextInput): AgentNextReco
       });
     }
 
+    if (!activeSlice.branchName || !activeSlice.baseRef) {
+      const baseRef = activeSlice.baseRef ?? input.suggestedBaseRef ?? "<base-ref>";
+
+      return recommendation({
+        phase: "needs_slice_selection",
+        reason: "The active slice has no recorded slice branch. Start the slice branch before implementing.",
+        workstreamId: workstream.id,
+        sliceId: activeSlice.id,
+        commands: [
+          `pathfinder slice start ${workstream.id} ${activeSlice.id} --base ${baseRef}`,
+          "pathfinder current"
+        ],
+        agentInstruction: "Do not implement until the active slice branch is started and checked out.",
+        humanInstruction: "Start the slice branch, then rerun pathfinder agent next."
+      });
+    }
+
     const baseRef = activeSlice.baseRef ?? "<base-ref>";
     return recommendation({
       phase: "ready_to_implement",

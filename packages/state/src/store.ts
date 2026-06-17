@@ -1579,7 +1579,7 @@ export class PathfinderStore {
     const hasUncommittedChanges = activeSlice && uncommittedChangesProvider
       ? await this.tryGetUncommittedChanges(uncommittedChangesProvider)
       : undefined;
-    const suggestedBaseRef = !activeSlice && suggestedBaseRefProvider
+    const suggestedBaseRef = (!activeSlice || !activeSlice.baseRef) && suggestedBaseRefProvider
       ? await this.tryGetSuggestedBaseRef(suggestedBaseRefProvider)
       : undefined;
 

@@ -24,8 +24,8 @@ Usage:
   pathfinder slice depend <workstream-id> <slice-id> <dependency-slice-id>
   pathfinder slice next <workstream-id> [--json]
   pathfinder slice status <workstream-id> <slice-id> <status>
-  pathfinder slice branch <workstream-id> <slice-id> --base <base-ref>
-  pathfinder slice start <workstream-id> <slice-id> --base <base-ref>
+  pathfinder slice branch <workstream-id> <slice-id> --base <base-ref> [--branch <branch-name>]
+  pathfinder slice start <workstream-id> <slice-id> --base <base-ref> [--branch <branch-name>]
   pathfinder slice show-active`,
   comment: `Pathfinder comment commands
 
@@ -111,8 +111,8 @@ Usage:
   pathfinder slice depend <workstream-id> <slice-id> <dependency-slice-id>
   pathfinder slice next <workstream-id> [--json]
   pathfinder slice status <workstream-id> <slice-id> <status>
-  pathfinder slice branch <workstream-id> <slice-id> --base <base-ref>
-  pathfinder slice start <workstream-id> <slice-id> --base <base-ref>
+  pathfinder slice branch <workstream-id> <slice-id> --base <base-ref> [--branch <branch-name>]
+  pathfinder slice start <workstream-id> <slice-id> --base <base-ref> [--branch <branch-name>]
   pathfinder slice show-active
   pathfinder comment add <workstream-id> --slice <slice-id> --body "..."
   pathfinder comment add <workstream-id> --session <session-id> --file <path> [--line <line-number> --side old|new] --body "..."

@@ -121,6 +121,8 @@ Start the selected slice on its own branch before implementing:
 pathfinder slice start <workstream-id> <slice-id> --base main
 ```
 
+Use `--branch <branch-name>` when the repository has its own branch naming convention.
+
 Start a review session for the active slice:
 
 ```bash
@@ -245,7 +247,7 @@ pathfinder workstream list --json
 pathfinder workstream show <workstream-id> --json
 pathfinder slice list <workstream-id> --json
 pathfinder slice next <workstream-id> --json
-pathfinder slice start <workstream-id> <slice-id> --base <base-ref>
+pathfinder slice start <workstream-id> <slice-id> --base <base-ref> [--branch <branch-name>]
 pathfinder review sessions <workstream-id> --json
 pathfinder comment list <workstream-id> --session <session-id> --open --json
 pathfinder workspace serve
