@@ -1,3 +1,20 @@
 {
-  "evidence": []
+  "evidence": [
+    {
+      "id": "before-screenshots-for-workspace-slice-review-and-branch-review",
+      "sliceId": "slice-60-ui-audit-and-experience-principles",
+      "kind": "screenshot",
+      "description": "Before screenshots for workspace, slice review, and branch review",
+      "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/evidence/slice-60-ui-audit",
+      "createdAt": "2026-06-17T09:47:49.753Z"
+    },
+    {
+      "id": "ui-audit-and-target-experience-principles",
+      "sliceId": "slice-60-ui-audit-and-experience-principles",
+      "kind": "manual",
+      "description": "UI audit and target experience principles",
+      "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/ui-audit-and-experience-principles.md",
+      "createdAt": "2026-06-17T09:47:58.059Z"
+    }
+  ]
 }
