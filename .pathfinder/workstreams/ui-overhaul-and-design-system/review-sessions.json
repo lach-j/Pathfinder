@@ -232,6 +232,48 @@
         }
       ],
       "createdAt": "2026-06-17T11:34:59.649Z"
+    },
+    {
+      "id": "review-slice-64-workspace-shell-ux-refresh",
+      "workstreamId": "ui-overhaul-and-design-system",
+      "sliceId": "slice-64-workspace-shell-ux-refresh",
+      "baseRef": "HEAD~1",
+      "headRef": "pathfinder/ui-overhaul-and-design-system/slice-64-workspace-shell-ux-refresh",
+      "headCommit": "223b732",
+      "mergeBase": "1ddaee7cdfa351b8ffcb5e2216936043ab83f6f6",
+      "changedFiles": [
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/slices.json",
+          "status": "modified",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/workstream.json",
+          "status": "modified",
+          "category": "state"
+        },
+        {
+          "path": "packages/ui/src/styles/workspace.css",
+          "status": "modified",
+          "category": "other"
+        },
+        {
+          "path": "packages/ui/src/workspace/ArtifactPreviewPanel.tsx",
+          "status": "modified",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/workspace/SliceDependencyCanvas.tsx",
+          "status": "modified",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/workspace/WorkspaceShell.tsx",
+          "status": "modified",
+          "category": "source"
+        }
+      ],
+      "createdAt": "2026-06-17T12:25:54.655Z"
     }
   ]
 }

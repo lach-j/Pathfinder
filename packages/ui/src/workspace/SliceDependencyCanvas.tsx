@@ -93,18 +93,10 @@ export function SliceDependencyCanvas({
         minZoom={0.35}
         maxZoom={1.4}
         onNodeClick={(_, node) => onSelectSlice(node.id)}
+        proOptions={{ hideAttribution: true }}
       >
         <Background gap={18} color="var(--pf-color-canvas-grid)" />
         <Controls showInteractive={false} />
-        <MiniMap
-          pannable
-          zoomable
-          nodeColor={(node) => {
-            const status = (node.data as SliceNodeData | undefined)?.slice
-              .status;
-            return statusColor(status);
-          }}
-        />
       </ReactFlow>
     </div>
   );
