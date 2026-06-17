@@ -1,6 +1,19 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 
+import {
+  Badge,
+  EmptyState,
+  InspectorPanel,
+  MainSurface,
+  Metric,
+  Notice,
+  Panel,
+  PanelHeader,
+  Sidebar,
+  StatusChip,
+  WorkspaceFrame
+} from "../design-system";
 import type { Workstream, WorkstreamOverviewResponse, WorkspaceResponse } from "../types";
 import { countsForWorkstream } from "./workspace-model";
 import { ArtifactPreviewPanel, type ArtifactTab } from "./ArtifactPreviewPanel";
@@ -45,14 +58,14 @@ export function WorkspaceShell({
   const isSliceReviewOpen = mode === "workstreams" && artifactTab === "review";
 
   return (
-    <main
+    <WorkspaceFrame
       className={[
         "workspace-app",
         mode === "branch-review" ? "is-branch-review" : "",
         isSliceReviewOpen ? "is-slice-review" : ""
       ].filter(Boolean).join(" ")}
     >
-      <aside className="workspace-rail">
+      <Sidebar className="workspace-rail" aria-label="Workspace navigation">
         <ProjectNav
           workspace={workspace}
           mode={mode}
@@ -64,14 +77,14 @@ export function WorkspaceShell({
             onSelectWorkstream(workstreamId);
           }}
         />
-      </aside>
+      </Sidebar>
       {mode === "branch-review" ? (
-        <section className="workspace-main workspace-main-branch">
+        <MainSurface className="workspace-main workspace-main-branch">
           {renderBranchReview ? renderBranchReview() : <BranchReviewWorkspace />}
-        </section>
+        </MainSurface>
       ) : (
         <>
-          <section className="workspace-main">
+          <MainSurface className="workspace-main">
             <WorkspaceOverview
               loading={loading}
               error={error}
@@ -82,8 +95,8 @@ export function WorkspaceShell({
               activeSliceId={activeSliceId}
               onSelectSlice={onSelectSlice}
             />
-          </section>
-          <aside className="workspace-inspector">
+          </MainSurface>
+          <InspectorPanel className="workspace-inspector" aria-label="Workstream artifacts">
             <ArtifactPreviewPanel
               loading={loading}
               error={error}
@@ -95,10 +108,10 @@ export function WorkspaceShell({
               onMakeActive={onMakeActive}
               onSelectTab={setArtifactTab}
             />
-          </aside>
+          </InspectorPanel>
         </>
       )}
-    </main>
+    </WorkspaceFrame>
   );
 }
 
@@ -119,30 +132,43 @@ function ProjectNav({
 }): ReactElement {
   return (
     <div className="rail-content">
-      <div className="repo-block">
-        <div className="eyebrow">Current repository</div>
-        <h1>{workspace?.project.name || "Pathfinder workspace"}</h1>
-      </div>
+      <Panel className="repo-block" density="compact">
+        <PanelHeader
+          eyebrow="Current repository"
+          title={workspace?.project.name || "Pathfinder workspace"}
+          description={workspace ? `${workspace.workstreams.length} workstream${workspace.workstreams.length === 1 ? "" : "s"}` : "Pathfinder state loading"}
+          actions={activeWorkstreamId ? <Badge tone="accent">Active set</Badge> : undefined}
+        />
+      </Panel>
       <div className="rail-section">
         <div className="rail-heading">Review modes</div>
         <div className="workstream-list">
           <button
-            className="workstream-button"
+            className="workstream-button mode-button"
             type="button"
             aria-current={mode === "branch-review"}
             onClick={onSelectBranchReview}
           >
             <span className="workstream-title">Branch review</span>
-            <span className="workstream-meta">Standalone diff review</span>
+            <span className="workstream-meta">Standalone committed diff review</span>
+            <Badge tone={mode === "branch-review" ? "accent" : "neutral"}>Mode</Badge>
           </button>
         </div>
       </div>
       <div className="rail-section">
         <div className="rail-heading">Workstreams</div>
         {!workspace ? (
-          <p className="muted-copy">Pathfinder state is not loaded.</p>
+          <EmptyState
+            className="rail-empty"
+            title="Loading workstreams"
+            description="Reading Pathfinder state for this repository."
+          />
         ) : workspace.workstreams.length === 0 ? (
-          <p className="muted-copy">No workstreams have been created for this repository.</p>
+          <EmptyState
+            className="rail-empty"
+            title="No workstreams"
+            description="Create a workstream to populate this workspace."
+          />
         ) : (
           <div className="workstream-list">
             {workspace.workstreams.map((workstream) => (
@@ -156,8 +182,8 @@ function ProjectNav({
                 <span className="workstream-title">{workstream.title}</span>
                 <span className="workstream-meta">
                   {workstream.id}
-                  {workstream.id === activeWorkstreamId ? " · active" : ""}
                 </span>
+                {workstream.id === activeWorkstreamId ? <Badge tone="success">Active</Badge> : null}
               </button>
             ))}
           </div>
@@ -187,43 +213,89 @@ function WorkspaceOverview({
   onSelectSlice: (sliceId: string) => void;
 }): ReactElement {
   if (loading) {
-    return <EmptyState title="Loading workspace" message="Reading Pathfinder state for the current repository." />;
+    return (
+      <EmptyState
+        className="workspace-empty"
+        title="Loading workspace"
+        description="Reading Pathfinder state for the current repository."
+      />
+    );
   }
 
   if (error) {
-    return <EmptyState title="No Pathfinder workspace" message={error} />;
+    return (
+      <EmptyState
+        className="workspace-empty"
+        title="No Pathfinder workspace"
+        description={error}
+      />
+    );
   }
 
   if (!workspace) {
-    return <EmptyState title="No Pathfinder workspace" message="Initialize Pathfinder for this repository to use the workspace." />;
+    return (
+      <EmptyState
+        className="workspace-empty"
+        title="No Pathfinder workspace"
+        description="Initialize Pathfinder for this repository to use the workspace."
+      />
+    );
   }
 
   if (workspace.workstreams.length === 0) {
-    return <EmptyState title="No workstreams" message="Create a workstream to populate the workspace." />;
+    return (
+      <EmptyState
+        className="workspace-empty"
+        title="No workstreams"
+        description="Create a workstream to populate the workspace."
+      />
+    );
   }
 
   if (!selectedWorkstream) {
-    return <EmptyState title="Workstream not found" message="The selected workstream is no longer available in this repository." />;
+    return (
+      <EmptyState
+        className="workspace-empty"
+        title="Workstream not found"
+        description="The selected workstream is no longer available in this repository."
+      />
+    );
   }
 
   if (!overview) {
-    return <EmptyState title="Loading workstream" message="Reading workstream slices and review state." />;
+    return (
+      <EmptyState
+        className="workspace-empty"
+        title="Loading workstream"
+        description="Reading workstream slices and review state."
+      />
+    );
   }
+
+  const counts = countsForWorkstream(overview);
+  const selectedSlice = overview.slices.find((slice) => slice.id === selectedSliceId);
+  const activeSlice = overview.slices.find((slice) => slice.id === activeSliceId);
 
   return (
     <div className="workspace-surface">
-      <div className="surface-header">
-        <div>
-          <div className="eyebrow">Workstream overview</div>
-          <h2>{overview.workstream.title}</h2>
-          <p>{overview.workstream.id}</p>
-        </div>
+      <Panel className="surface-header" density="compact">
+        <PanelHeader
+          eyebrow="Workstream overview"
+          title={overview.workstream.title}
+          description={overview.workstream.id}
+          actions={activeSlice ? <StatusChip status={activeSlice.status} label="Active slice" /> : undefined}
+        />
         <div className="surface-stats" aria-label="Workstream counts">
           <Metric label="Slices" value={overview.slices.length} />
-          <Metric label="Open comments" value={countsForWorkstream(overview).openCommentCount} />
+          <Metric label="Open comments" value={counts.openCommentCount} tone={counts.openCommentCount > 0 ? "warning" : "neutral"} />
           <Metric label="Reviews" value={overview.reviewSessions.length} />
         </div>
-      </div>
+        {selectedSlice ? (
+          <Notice className="selection-notice" tone="info" title="Selected slice">
+            {selectedSlice.title}
+          </Notice>
+        ) : null}
+      </Panel>
 
       <SliceDependencyCanvas
         overview={overview}
@@ -231,24 +303,6 @@ function WorkspaceOverview({
         selectedSliceId={selectedSliceId}
         onSelectSlice={onSelectSlice}
       />
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: number }): ReactElement {
-  return (
-    <div className="metric">
-      <span>{value}</span>
-      <span>{label}</span>
-    </div>
-  );
-}
-
-function EmptyState({ title, message }: { title: string; message: string }): ReactElement {
-  return (
-    <div className="empty workspace-empty">
-      <h2>{title}</h2>
-      <p>{message}</p>
     </div>
   );
 }

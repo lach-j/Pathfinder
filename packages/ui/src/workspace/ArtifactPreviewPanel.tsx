@@ -3,6 +3,14 @@ import type { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import {
+  Button,
+  EmptyState,
+  Metric as DesignMetric,
+  PanelHeader,
+  StatusChip,
+  Tabs
+} from "../design-system";
 import type {
   Evidence,
   Slice,
@@ -132,35 +140,24 @@ export function ArtifactPreviewPanel({
 
   return (
     <div className="artifact-panel">
-      <div className="artifact-header">
-        <div className="eyebrow">Artifacts</div>
-        <h2>
-          {selectedSlice ? selectedSlice.title : selectedWorkstream.title}
-        </h2>
-        <p>{selectedSlice ? selectedSlice.id : selectedWorkstream.id}</p>
-      </div>
+      <PanelHeader
+        className="artifact-header"
+        eyebrow="Artifacts"
+        title={selectedSlice ? selectedSlice.title : selectedWorkstream.title}
+        description={selectedSlice ? selectedSlice.id : selectedWorkstream.id}
+      />
 
-      <div
+      <Tabs
         className="artifact-tabs"
-        role="tablist"
         aria-label="Artifact previews"
-      >
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className="artifact-tab"
-            role="tab"
-            aria-selected={selectedTab === tab.id}
-            onClick={() => {
-              setSelectedTab(tab.id);
-              onSelectTab?.(tab.id);
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        activeId={selectedTab}
+        tabs={tabs}
+        onSelect={(tabId) => {
+          const nextTab = tabId as ArtifactTab;
+          setSelectedTab(nextTab);
+          onSelectTab?.(nextTab);
+        }}
+      />
 
       <div className="artifact-body">
         {selectedTab === "details" ? (
@@ -262,15 +259,15 @@ function DetailsPreview({
   return (
     <div className="artifact-section">
       <div className="artifact-actions">
-        <StatusPill status={selectedSlice.status} />
-        <button
-          className="button button-primary"
-          type="button"
+        <StatusChip status={selectedSlice.status} />
+        <Button
+          variant="primary"
+          size="sm"
           disabled={isActive}
           onClick={onMakeActive}
         >
           {isActive ? "Active" : "Make active"}
-        </button>
+        </Button>
       </div>
       <MarkdownPreview
         emptyMessage=""
@@ -473,12 +470,7 @@ function Metric({
   label: string;
   value: number;
 }): ReactElement {
-  return (
-    <div className="metric">
-      <span>{value}</span>
-      <span>{label}</span>
-    </div>
-  );
+  return <DesignMetric label={label} value={value} />;
 }
 
 function DetailList({ items }: { items: [string, string][] }): ReactElement {
@@ -494,14 +486,6 @@ function DetailList({ items }: { items: [string, string][] }): ReactElement {
   );
 }
 
-function StatusPill({ status }: { status: Slice["status"] }): ReactElement {
-  return (
-    <span className={`slice-status slice-status-${status}`}>
-      {status.replace("_", " ")}
-    </span>
-  );
-}
-
 function PanelEmpty({
   title,
   message,
@@ -511,10 +495,12 @@ function PanelEmpty({
 }): ReactElement {
   return (
     <div className="artifact-panel">
-      <div className="artifact-header">
-        <div className="eyebrow">{title}</div>
-        <p>{message}</p>
-      </div>
+      <PanelHeader
+        className="artifact-header"
+        eyebrow={title}
+        title="Workspace artifacts"
+        description={message}
+      />
     </div>
   );
 }
@@ -527,9 +513,6 @@ function ArtifactEmpty({
   message: string;
 }): ReactElement {
   return (
-    <div className="artifact-empty">
-      <h3>{title}</h3>
-      <p>{message}</p>
-    </div>
+    <EmptyState className="artifact-empty" title={title} description={message} />
   );
 }

@@ -14,6 +14,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 
+import { StatusChip } from "../design-system";
 import type { Slice, WorkstreamOverviewResponse } from "../types";
 import { countsForSlice } from "./workspace-model";
 
@@ -300,7 +301,7 @@ function SliceNode({ data }: NodeProps<Node<SliceNodeData>>): ReactElement {
       />
       <div className="dependency-node-top">
         <span className="dependency-node-title">{slice.title}</span>
-        <span className="slice-status">{slice.status.replace("_", " ")}</span>
+        <StatusChip status={slice.status} />
       </div>
       <div className="dependency-node-id">
         {slice.id}
