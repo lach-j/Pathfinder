@@ -15,6 +15,13 @@
       "description": "UI audit and target experience principles",
       "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/ui-audit-and-experience-principles.md",
       "createdAt": "2026-06-17T09:47:58.059Z"
+    },
+    {
+      "id": "human-approved-review-session-review-slice-60-ui-audit-and-experience-principles",
+      "sliceId": "slice-60-ui-audit-and-experience-principles",
+      "kind": "manual",
+      "description": "Human approved review session review-slice-60-ui-audit-and-experience-principles.",
+      "createdAt": "2026-06-17T09:54:58.573Z"
     }
   ]
 }

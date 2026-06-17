@@ -1,3 +1,66 @@
 {
-  "sessions": []
+  "sessions": [
+    {
+      "id": "review-slice-60-ui-audit-and-experience-principles",
+      "workstreamId": "ui-overhaul-and-design-system",
+      "sliceId": "slice-60-ui-audit-and-experience-principles",
+      "baseRef": "main",
+      "headRef": "pathfinder/ui-overhaul-and-design-system/slice-60-ui-audit-and-experience-principles",
+      "headCommit": "6a31fc1",
+      "mergeBase": "90677f1358be7a3e6b6d7c29e11cf03a712c9f40",
+      "changedFiles": [
+        {
+          "path": ".pathfinder/project.json",
+          "status": "modified",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/evidence.json",
+          "status": "modified",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/evidence/slice-60-ui-audit/branch-review-desktop.png",
+          "status": "added",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/evidence/slice-60-ui-audit/branch-review-mobile-390.png",
+          "status": "added",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/evidence/slice-60-ui-audit/slice-review-empty-desktop.png",
+          "status": "added",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/evidence/slice-60-ui-audit/workspace-desktop.png",
+          "status": "added",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/evidence/slice-60-ui-audit/workspace-mobile-390.png",
+          "status": "added",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/slices.json",
+          "status": "modified",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/ui-audit-and-experience-principles.md",
+          "status": "added",
+          "category": "state"
+        },
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/workstream.json",
+          "status": "modified",
+          "category": "state"
+        }
+      ],
+      "createdAt": "2026-06-17T09:51:11.672Z"
+    }
+  ]
 }
