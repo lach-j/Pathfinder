@@ -93,7 +93,7 @@ export function SliceDependencyCanvas({
         maxZoom={1.4}
         onNodeClick={(_, node) => onSelectSlice(node.id)}
       >
-        <Background gap={18} color="#d7dee8" />
+        <Background gap={18} color="var(--pf-color-canvas-grid)" />
         <Controls showInteractive={false} />
         <MiniMap
           pannable
@@ -161,7 +161,7 @@ function buildSliceGraph(
           targetHandle: "in",
           type: "bezier",
           animated: slice.id === activeSliceId,
-          style: { strokeWidth: 2 },
+          style: { stroke: "var(--pf-color-border-strong)", strokeWidth: 2 },
         }),
       ),
   );
@@ -322,16 +322,16 @@ function SliceNode({ data }: NodeProps<Node<SliceNodeData>>): ReactElement {
 
 function statusColor(status: Slice["status"] | undefined): string {
   if (status === "complete") {
-    return "#6b7280";
+    return "var(--pf-status-complete)";
   }
 
   if (status === "review") {
-    return "#b7791f";
+    return "var(--pf-status-review)";
   }
 
   if (status === "ready" || status === "in_progress") {
-    return "#2f855a";
+    return "var(--pf-status-ready)";
   }
 
-  return "#64748b";
+  return "var(--pf-status-proposed)";
 }

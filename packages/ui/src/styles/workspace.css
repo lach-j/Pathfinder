@@ -18,6 +18,7 @@
   min-width: 0;
   background: var(--panel);
   overflow: auto;
+  box-shadow: inset -1px 0 0 var(--pf-color-shadow-line);
 }
 
 .workspace-rail {
@@ -35,7 +36,7 @@
 .workspace-main {
   min-width: 0;
   overflow: auto;
-  padding: 18px;
+  padding: var(--pf-space-8);
 }
 
 .workspace-main-branch {
@@ -47,8 +48,8 @@
 .inspector-content,
 .artifact-panel {
   display: grid;
-  gap: 18px;
-  padding: 18px;
+  gap: var(--pf-space-8);
+  padding: var(--pf-space-8);
 }
 
 .repo-block {
@@ -103,16 +104,20 @@
 }
 
 .workstream-button {
-  border-radius: 6px;
+  border-radius: var(--pf-radius-sm);
   display: grid;
   gap: 4px;
   padding: 10px;
 }
 
-.workstream-button:hover,
-.workstream-button[aria-current="true"] {
+.workstream-button:hover {
   border-color: var(--border);
   background: var(--selected);
+}
+
+.workstream-button[aria-current="true"] {
+  border-color: var(--pf-color-accent);
+  background: var(--pf-color-accent-muted);
 }
 
 .workstream-title,
@@ -156,7 +161,7 @@
 
 .metric {
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--pf-radius-sm);
   background: var(--panel);
   min-width: 92px;
   padding: 8px 10px;
@@ -193,8 +198,8 @@
   min-height: 420px;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #f7f9fc;
+  border-radius: var(--pf-radius-md);
+  background: var(--pf-color-canvas);
 }
 
 .dependency-canvas .react-flow__pane {
@@ -205,19 +210,44 @@
   cursor: grabbing;
 }
 
+.dependency-canvas .react-flow__controls {
+  box-shadow: var(--pf-shadow-sm);
+}
+
+.dependency-canvas .react-flow__controls-button {
+  border-bottom: 1px solid var(--pf-color-border);
+  background: var(--pf-color-surface);
+  color: var(--pf-color-text);
+}
+
+.dependency-canvas .react-flow__controls-button:hover {
+  background: var(--pf-color-surface-soft);
+}
+
+.dependency-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.dependency-canvas .react-flow__minimap {
+  border: 1px solid var(--pf-color-border);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-color-surface-inset);
+  box-shadow: var(--pf-shadow-sm);
+}
+
 .dependency-warning {
   position: absolute;
-  z-index: 5;
+  z-index: var(--pf-z-raised);
   top: 12px;
   left: 12px;
   right: 12px;
   max-width: 620px;
-  border: 1px solid #b7791f;
-  border-radius: 6px;
-  background: #fffaf0;
-  color: #6f4209;
+  border: 1px solid var(--pf-color-warning-border);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-color-warning-muted);
+  color: var(--pf-color-warning);
   padding: 10px 12px;
-  box-shadow: 0 8px 24px rgb(15 23 42 / 10%);
+  box-shadow: var(--pf-shadow-md);
 }
 
 .dependency-warning strong {
@@ -239,7 +269,7 @@
 
 .canvas-empty {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--pf-radius-md);
   background: var(--panel);
   display: grid;
   gap: 6px;
@@ -270,9 +300,9 @@
   min-height: 176px;
   border: 1px solid var(--border-strong);
   border-left-width: 6px;
-  border-radius: 8px;
+  border-radius: var(--pf-radius-md);
   background: var(--panel);
-  box-shadow: 0 10px 24px rgb(15 23 42 / 9%);
+  box-shadow: var(--pf-shadow-sm);
   color: var(--text);
   display: grid;
   gap: 9px;
@@ -280,25 +310,25 @@
 }
 
 .dependency-node.is-selected {
-  outline: 3px solid rgb(37 99 235 / 20%);
+  outline: 3px solid var(--pf-color-focus-ring);
   border-color: var(--focus);
 }
 
 .dependency-node.is-active {
-  box-shadow: 0 12px 28px rgb(47 133 90 / 18%);
+  box-shadow: 0 0 0 1px var(--pf-color-accent-ring), var(--pf-shadow-md);
 }
 
 .dependency-node-ready,
 .dependency-node-in_progress {
-  border-left-color: #2f855a;
+  border-left-color: var(--pf-status-ready);
 }
 
 .dependency-node-review {
-  border-left-color: #b7791f;
+  border-left-color: var(--pf-status-review);
 }
 
 .dependency-node-complete {
-  border-left-color: #6b7280;
+  border-left-color: var(--pf-status-complete);
 }
 
 .dependency-node-top {
@@ -354,7 +384,7 @@
 
 .slice-status {
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--pf-radius-pill);
   color: var(--text);
   font-size: 11px;
   font-weight: 700;
@@ -365,18 +395,18 @@
 
 .slice-status-ready,
 .slice-status-in_progress {
-  border-color: #3d7c54;
-  color: #225f38;
+  border-color: var(--pf-color-success-border);
+  color: var(--pf-color-success);
 }
 
 .slice-status-review {
-  border-color: #9b6b1f;
-  color: #7b4d06;
+  border-color: var(--pf-color-warning-border);
+  color: var(--pf-color-warning);
 }
 
 .slice-status-complete {
-  border-color: #526170;
-  color: #46525f;
+  border-color: var(--pf-color-border-strong);
+  color: var(--pf-color-neutral);
 }
 
 .inspector-heading {
@@ -443,7 +473,7 @@
 .artifact-tab {
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--pf-radius-sm);
   background: var(--panel);
   color: var(--text);
   font-size: 12px;
@@ -454,8 +484,8 @@
 
 .artifact-tab:hover,
 .artifact-tab[aria-selected="true"] {
-  border-color: var(--focus);
-  background: var(--selected);
+  border-color: var(--pf-color-accent);
+  background: var(--pf-color-accent-muted);
 }
 
 .artifact-body,
@@ -489,7 +519,7 @@
 
 .artifact-empty {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--pf-radius-md);
   background: var(--panel-soft);
   display: grid;
   gap: 6px;
@@ -546,9 +576,9 @@
 }
 
 .markdown-preview code {
-  border-radius: 4px;
+  border-radius: var(--pf-radius-xs);
   background: var(--metadata);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: var(--pf-font-mono);
   font-size: 12px;
   padding: 1px 4px;
 }
@@ -556,7 +586,7 @@
 .markdown-preview pre {
   overflow: auto;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--pf-radius-sm);
   background: var(--metadata);
   padding: 10px;
 }
@@ -598,7 +628,7 @@
 
 .evidence-item {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--pf-radius-md);
   background: var(--panel);
   display: grid;
   gap: 9px;
@@ -606,8 +636,8 @@
 }
 
 .evidence-item.is-highlighted {
-  border-color: var(--focus);
-  background: var(--selected);
+  border-color: var(--pf-color-accent);
+  background: var(--pf-color-accent-muted);
 }
 
 .evidence-topline {
@@ -752,10 +782,10 @@
 .branch-review-empty code {
   display: block;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--pf-radius-sm);
   background: var(--metadata);
   color: var(--text);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: var(--pf-font-mono);
   font-size: 12px;
   line-height: 1.4;
   overflow-wrap: anywhere;

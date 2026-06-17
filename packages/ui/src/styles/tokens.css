@@ -1,0 +1,106 @@
+:root {
+  color-scheme: dark;
+
+  --pf-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pf-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  --pf-color-bg: #101418;
+  --pf-color-bg-raised: #151a20;
+  --pf-color-surface: #191f26;
+  --pf-color-surface-soft: #202831;
+  --pf-color-surface-muted: #26313b;
+  --pf-color-surface-inset: #0d1115;
+  --pf-color-border: #303a45;
+  --pf-color-border-strong: #48535f;
+  --pf-color-text: #e7edf3;
+  --pf-color-text-muted: #9eabb8;
+  --pf-color-text-subtle: #74808d;
+  --pf-color-accent: #66c7b2;
+  --pf-color-accent-strong: #8fd9ca;
+  --pf-color-accent-muted: #173b36;
+  --pf-color-focus: #f0c46b;
+  --pf-color-selected: #203b42;
+  --pf-color-selected-strong: #27515a;
+  --pf-color-canvas: #11171d;
+  --pf-color-canvas-grid: #2b3742;
+
+  --pf-color-success: #65c98c;
+  --pf-color-success-muted: #143425;
+  --pf-color-success-border: #2d6d49;
+  --pf-color-danger: #f08a8a;
+  --pf-color-danger-muted: #3a1f23;
+  --pf-color-danger-border: #8d3f46;
+  --pf-color-warning: #e8b85f;
+  --pf-color-warning-muted: #382b14;
+  --pf-color-warning-border: #8f6a22;
+  --pf-color-info: #8db8ff;
+  --pf-color-info-muted: #182c47;
+  --pf-color-neutral: #a8b3bf;
+  --pf-color-shadow-line: rgb(255 255 255 / 3%);
+  --pf-color-focus-ring: color-mix(in srgb, var(--pf-color-focus) 22%, transparent);
+  --pf-color-accent-ring: color-mix(in srgb, var(--pf-color-accent) 45%, transparent);
+  --pf-color-syntax-comment: #74808d;
+  --pf-color-syntax-string: #94d9a9;
+  --pf-color-syntax-keyword: #d2a7ff;
+  --pf-color-syntax-number: #f2d37a;
+  --pf-color-syntax-function: #9ecbff;
+  --pf-color-syntax-property: #ffb48a;
+
+  --pf-status-proposed: #8a96a3;
+  --pf-status-ready: #65c98c;
+  --pf-status-in-progress: #65c98c;
+  --pf-status-review: #e8b85f;
+  --pf-status-complete: #a8b3bf;
+
+  --pf-space-1: 4px;
+  --pf-space-2: 6px;
+  --pf-space-3: 8px;
+  --pf-space-4: 10px;
+  --pf-space-5: 12px;
+  --pf-space-6: 14px;
+  --pf-space-7: 16px;
+  --pf-space-8: 18px;
+  --pf-space-9: 20px;
+  --pf-space-10: 24px;
+
+  --pf-radius-xs: 4px;
+  --pf-radius-sm: 6px;
+  --pf-radius-md: 8px;
+  --pf-radius-pill: 999px;
+
+  --pf-border-subtle: 1px solid var(--pf-color-border);
+  --pf-border-strong: 1px solid var(--pf-color-border-strong);
+
+  --pf-shadow-sm: 0 8px 20px rgb(0 0 0 / 18%);
+  --pf-shadow-md: 0 16px 36px rgb(0 0 0 / 24%);
+  --pf-shadow-focus: 0 0 0 3px rgb(240 196 107 / 24%);
+
+  --pf-z-raised: 5;
+
+  --pf-motion-fast: 120ms ease;
+  --pf-motion-medium: 180ms ease;
+
+  --background: var(--pf-color-bg);
+  --panel: var(--pf-color-surface);
+  --panel-soft: var(--pf-color-surface-soft);
+  --border: var(--pf-color-border);
+  --border-strong: var(--pf-color-border-strong);
+  --text: var(--pf-color-text);
+  --muted: var(--pf-color-text-muted);
+  --added: var(--pf-color-success-muted);
+  --added-line: var(--pf-color-success);
+  --deleted: var(--pf-color-danger-muted);
+  --deleted-line: var(--pf-color-danger);
+  --metadata: var(--pf-color-surface-muted);
+  --selected: var(--pf-color-selected);
+  --comment: var(--pf-color-warning-muted);
+  --comment-border: var(--pf-color-warning-border);
+  --focus: var(--pf-color-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --pf-motion-fast: 1ms linear;
+    --pf-motion-medium: 1ms linear;
+  }
+}

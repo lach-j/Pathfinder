@@ -31,10 +31,13 @@
       "description": "Centralize UI tokens and global foundations for color, typography, spacing, radii, borders, elevation, focus, density, and motion. Establish the Pathfinder visual language inspired by the attached prompt while preserving readability and app-like workflows.",
       "status": "proposed",
       "createdAt": "2026-06-17T09:39:32.557Z",
-      "updatedAt": "2026-06-17T09:39:33.527Z",
+      "updatedAt": "2026-06-17T10:20:15.518Z",
       "dependsOnSliceIds": [
         "slice-61-storybook-foundation"
-      ]
+      ],
+      "branchName": "pathfinder/ui-overhaul-and-design-system/slice-62-design-tokens-and-app-foundations",
+      "baseRef": "HEAD",
+      "startedAt": "2026-06-17T10:20:15.516Z"
     },
     {
       "id": "slice-63-base-design-system-components",

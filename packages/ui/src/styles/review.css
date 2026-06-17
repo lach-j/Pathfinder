@@ -51,8 +51,8 @@
 }
 
 .status {
-  border-radius: 4px;
-  color: #fff;
+  border-radius: var(--pf-radius-xs);
+  color: var(--pf-color-bg);
   font-size: 11px;
   font-weight: 700;
   min-width: 22px;
@@ -62,21 +62,21 @@
 }
 
 .status-added {
-  background: #1f7a45;
+  background: var(--pf-color-success);
 }
 
 .status-deleted {
-  background: #b13a3a;
+  background: var(--pf-color-danger);
 }
 
 .status-renamed,
 .status-copied {
-  background: #8a5a12;
+  background: var(--pf-color-warning);
 }
 
 .status-modified,
 .status-other {
-  background: #526170;
+  background: var(--pf-color-neutral);
 }
 
 .file-name {
@@ -101,7 +101,7 @@
 .file-heading {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--pf-radius-md) var(--pf-radius-md) 0 0;
   padding: 12px 14px;
   display: flex;
   gap: 12px;
@@ -128,8 +128,8 @@
 
 .button {
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  background: #fff;
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-color-surface-inset);
   color: var(--text);
   padding: 7px 10px;
   font-size: 13px;
@@ -142,13 +142,13 @@
 }
 
 .button-primary {
-  border-color: #285f9f;
-  background: #285f9f;
-  color: #fff;
+  border-color: var(--pf-color-accent);
+  background: var(--pf-color-accent);
+  color: var(--pf-color-bg);
 }
 
 .button-primary:hover {
-  background: #1e4d82;
+  background: var(--pf-color-accent-strong);
 }
 
 .button-quiet {
@@ -169,7 +169,7 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-top: 0;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: var(--pf-font-mono);
   font-size: 13px;
   line-height: 1.35;
 }
@@ -191,7 +191,7 @@
   width: 22px;
   height: 21px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--pf-radius-xs);
   background: transparent;
   color: var(--muted);
   font-size: 14px;
@@ -206,7 +206,7 @@ tr:hover .comment-button,
 
 .comment-button:hover {
   border-color: var(--border-strong);
-  background: #fff;
+  background: var(--pf-color-surface);
   color: var(--text);
 }
 
@@ -233,32 +233,32 @@ tr:hover .comment-button,
 }
 
 .code-content {
-  color: #2d333b;
+  color: var(--pf-color-text);
 }
 
 .syntax-comment {
-  color: #6a737d;
+  color: var(--pf-color-syntax-comment);
 }
 
 .syntax-string {
-  color: #0a6b45;
+  color: var(--pf-color-syntax-string);
 }
 
 .syntax-keyword {
-  color: #7f3fbf;
+  color: var(--pf-color-syntax-keyword);
   font-weight: 650;
 }
 
 .syntax-number {
-  color: #986801;
+  color: var(--pf-color-syntax-number);
 }
 
 .syntax-function {
-  color: #0550ae;
+  color: var(--pf-color-syntax-function);
 }
 
 .syntax-property {
-  color: #953800;
+  color: var(--pf-color-syntax-property);
 }
 
 .line-addition .code,
@@ -298,7 +298,7 @@ tr:hover .comment-button,
 
 .comment-cell {
   padding: 9px 12px;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--pf-font-sans);
 }
 
 .comment {
@@ -316,14 +316,14 @@ tr:hover .comment-button,
 }
 
 .comment-meta {
-  color: #72590b;
+  color: var(--pf-color-warning);
   font-size: 12px;
   font-weight: 650;
 }
 
 .anchor-status {
-  border: 1px solid #b58e20;
-  border-radius: 4px;
+  border: 1px solid var(--pf-color-warning-border);
+  border-radius: var(--pf-radius-xs);
   display: inline-block;
   margin-left: 6px;
   padding: 1px 5px;
@@ -331,9 +331,9 @@ tr:hover .comment-button,
 }
 
 .comment-origin {
-  border: 1px solid #6b7280;
-  border-radius: 4px;
-  color: #4b5563;
+  border: 1px solid var(--pf-color-border-strong);
+  border-radius: var(--pf-radius-xs);
+  color: var(--pf-color-neutral);
   display: inline-block;
   margin-left: 6px;
   padding: 1px 5px;
@@ -341,27 +341,27 @@ tr:hover .comment-button,
 }
 
 .origin-agent {
-  border-color: #5f6fb3;
-  color: #35469b;
+  border-color: var(--pf-color-info);
+  color: var(--pf-color-info);
 }
 
 .anchor-current {
-  border-color: #4f8f5b;
-  color: #276d36;
+  border-color: var(--pf-color-success-border);
+  color: var(--pf-color-success);
 }
 
 .anchor-stale {
-  border-color: #b13a3a;
-  color: #9f2828;
+  border-color: var(--pf-color-danger-border);
+  color: var(--pf-color-danger);
 }
 
 .anchor-unknown {
-  border-color: #7d8791;
-  color: #5c6670;
+  border-color: var(--pf-color-border-strong);
+  color: var(--pf-color-text-muted);
 }
 
 .comment-body {
-  color: #382d05;
+  color: var(--pf-color-text);
   font-size: 13px;
   line-height: 1.35;
   white-space: pre-wrap;
@@ -372,18 +372,18 @@ tr:hover .comment-button,
 }
 
 .comment-form-row td {
-  background: #fffdf2;
+  background: var(--pf-color-warning-muted);
   border-top: 1px solid var(--comment-border);
 }
 
 .comment-form {
   display: grid;
   gap: 8px;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--pf-font-sans);
 }
 
 .comment-form-title {
-  color: #72590b;
+  color: var(--pf-color-warning);
   font-size: 12px;
   font-weight: 650;
 }
@@ -403,15 +403,15 @@ tr:hover .comment-button,
 .error {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--pf-radius-md);
   padding: 22px;
   color: var(--muted);
   line-height: 1.45;
 }
 
 .error {
-  border-color: #d99a9a;
-  color: #8f2e2e;
+  border-color: var(--pf-color-danger-border);
+  color: var(--pf-color-danger);
 }
 
 @media (max-width: 760px) {
