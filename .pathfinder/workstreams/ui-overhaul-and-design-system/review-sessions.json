@@ -274,6 +274,63 @@
         }
       ],
       "createdAt": "2026-06-17T12:25:54.655Z"
+    },
+    {
+      "id": "review-slice-66-review-experience-refresh",
+      "workstreamId": "ui-overhaul-and-design-system",
+      "sliceId": "slice-66-review-experience-refresh",
+      "baseRef": "HEAD~1",
+      "headRef": "main",
+      "headCommit": "30e505b",
+      "mergeBase": "ee8c14a126380d388fe2f95faa4a8b67f3290c00",
+      "changedFiles": [
+        {
+          "path": ".pathfinder/workstreams/ui-overhaul-and-design-system/workstream.json",
+          "status": "modified",
+          "category": "state"
+        },
+        {
+          "path": "packages/ui/src/review/DiffPane.tsx",
+          "status": "modified",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/review/FileList.tsx",
+          "status": "modified",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/review/review-model.ts",
+          "status": "modified",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/styles/review.css",
+          "status": "modified",
+          "category": "other"
+        },
+        {
+          "path": "packages/ui/src/styles/workspace.css",
+          "status": "modified",
+          "category": "other"
+        },
+        {
+          "path": "packages/ui/src/workspace/BranchReviewWorkspace.tsx",
+          "status": "modified",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/workspace/WorkspaceReviewPanel.tsx",
+          "status": "modified",
+          "category": "source"
+        },
+        {
+          "path": "packages/ui/src/workspace/WorkspaceShell.stories.tsx",
+          "status": "modified",
+          "category": "source"
+        }
+      ],
+      "createdAt": "2026-06-17T13:05:43.252Z"
     }
   ]
 }
