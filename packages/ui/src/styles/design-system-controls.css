@@ -1,0 +1,186 @@
+.pf-button {
+  appearance: none;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--pf-radius-sm);
+  display: inline-flex;
+  gap: var(--pf-space-3);
+  align-items: center;
+  justify-content: center;
+  color: var(--pf-color-text);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pf-button-sm {
+  min-height: 30px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+.pf-button-md {
+  min-height: 36px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.pf-button-primary {
+  border-color: color-mix(in srgb, var(--pf-color-accent) 58%, var(--pf-color-border));
+  background: linear-gradient(180deg, var(--pf-color-selected-strong), var(--pf-color-accent-muted));
+  color: var(--pf-color-text);
+}
+
+.pf-button-secondary {
+  border-color: var(--pf-color-border-strong);
+  background: var(--pf-color-surface-soft);
+}
+
+.pf-button-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--pf-color-text-muted);
+}
+
+.pf-button-danger {
+  border-color: var(--pf-color-danger-border);
+  background: var(--pf-color-danger-muted);
+  color: var(--pf-color-danger);
+}
+
+.pf-button:hover:not(:disabled) {
+  border-color: var(--pf-color-accent);
+  color: var(--pf-color-text);
+}
+
+.pf-button-primary:hover:not(:disabled) {
+  box-shadow: 0 0 0 3px var(--pf-color-accent-ring);
+}
+
+.pf-button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.pf-button-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-icon-button {
+  width: 36px;
+  min-width: 36px;
+  padding-inline: 0;
+}
+
+.pf-icon-button.pf-button-sm {
+  width: 30px;
+  min-width: 30px;
+}
+
+.pf-icon-button .pf-button-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.pf-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: pf-spin 700ms linear infinite;
+}
+
+@keyframes pf-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.pf-badge,
+.pf-status-chip {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--pf-color-border-strong);
+  border-radius: var(--pf-radius-pill);
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--pf-color-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 3px 7px;
+  text-transform: uppercase;
+}
+
+.pf-status-chip {
+  color: var(--pf-color-text);
+}
+
+.pf-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.pf-status-ready,
+.pf-status-in_progress {
+  border-color: var(--pf-color-success-border);
+  color: var(--pf-color-success);
+}
+
+.pf-status-review {
+  border-color: var(--pf-color-warning-border);
+  color: var(--pf-color-warning);
+}
+
+.pf-status-complete {
+  color: var(--pf-color-neutral);
+}
+
+.pf-status-proposed {
+  color: var(--pf-color-text-subtle);
+}
+
+.pf-tone-accent {
+  border-color: color-mix(in srgb, var(--pf-color-accent) 54%, var(--pf-color-border));
+  background: var(--pf-color-accent-muted);
+  color: var(--pf-color-accent-strong);
+}
+
+.pf-tone-success {
+  border-color: var(--pf-color-success-border);
+  background: var(--pf-color-success-muted);
+  color: var(--pf-color-success);
+}
+
+.pf-tone-warning {
+  border-color: var(--pf-color-warning-border);
+  background: var(--pf-color-warning-muted);
+  color: var(--pf-color-warning);
+}
+
+.pf-tone-danger {
+  border-color: var(--pf-color-danger-border);
+  background: var(--pf-color-danger-muted);
+  color: var(--pf-color-danger);
+}
+
+.pf-tone-info {
+  border-color: color-mix(in srgb, var(--pf-color-info) 44%, var(--pf-color-border));
+  background: var(--pf-color-info-muted);
+  color: var(--pf-color-info);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-spinner {
+    animation-duration: 1ms;
+  }
+}

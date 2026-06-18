@@ -16,24 +16,11 @@ import {
 } from "../design-system";
 import type { Workstream, WorkstreamOverviewResponse, WorkspaceResponse } from "../types";
 import { countsForWorkstream } from "./workspace-model";
-import { ArtifactPreviewPanel, type ArtifactTab } from "./ArtifactPreviewPanel";
+import { ArtifactPreviewPanel } from "./ArtifactPreviewPanel";
 import { BranchReviewWorkspace } from "./BranchReviewWorkspace";
 import { SliceDependencyCanvas } from "./SliceDependencyCanvas";
-
-export interface WorkspaceShellProps {
-  workspace?: WorkspaceResponse;
-  overview?: WorkstreamOverviewResponse;
-  selectedWorkstreamId?: string;
-  selectedSliceId?: string;
-  loading: boolean;
-  error?: string;
-  statusMessage?: string;
-  initialMode?: "workstreams" | "branch-review";
-  renderBranchReview?: () => ReactElement;
-  onSelectWorkstream: (workstreamId: string) => void;
-  onSelectSlice: (sliceId: string) => void;
-  onMakeActive: () => void;
-}
+import type { ArtifactTab, WorkspaceShellProps } from "./workspace-types";
+import styles from "./WorkspaceShell.module.css";
 
 export function WorkspaceShell({
   workspace,
@@ -60,12 +47,12 @@ export function WorkspaceShell({
   return (
     <WorkspaceFrame
       className={[
-        "workspace-app",
-        mode === "branch-review" ? "is-branch-review" : "",
-        isSliceReviewOpen ? "is-slice-review" : ""
+        styles.app,
+        mode === "branch-review" ? styles.branchReview : "",
+        isSliceReviewOpen ? styles.sliceReview : ""
       ].filter(Boolean).join(" ")}
     >
-      <Sidebar className="workspace-rail" aria-label="Workspace navigation">
+      <Sidebar className={styles.rail} aria-label="Workspace navigation">
         <ProjectNav
           workspace={workspace}
           mode={mode}
@@ -79,12 +66,12 @@ export function WorkspaceShell({
         />
       </Sidebar>
       {mode === "branch-review" ? (
-        <MainSurface className="workspace-main workspace-main-branch">
+        <MainSurface className={`${styles.main} ${styles.mainBranch}`}>
           {renderBranchReview ? renderBranchReview() : <BranchReviewWorkspace />}
         </MainSurface>
       ) : (
         <>
-          <MainSurface className="workspace-main">
+          <MainSurface className={styles.main}>
             <WorkspaceOverview
               loading={loading}
               error={error}
@@ -96,7 +83,7 @@ export function WorkspaceShell({
               onSelectSlice={onSelectSlice}
             />
           </MainSurface>
-          <InspectorPanel className="workspace-inspector" aria-label="Workstream artifacts">
+          <InspectorPanel className={styles.inspector} aria-label="Workstream artifacts">
             <ArtifactPreviewPanel
               loading={loading}
               error={error}
@@ -105,6 +92,7 @@ export function WorkspaceShell({
               selectedSlice={selectedSlice}
               activeSliceId={activeSliceId}
               statusMessage={statusMessage}
+              sliceReviewMode={isSliceReviewOpen}
               onMakeActive={onMakeActive}
               onSelectTab={setArtifactTab}
             />
@@ -131,8 +119,8 @@ function ProjectNav({
   onSelectWorkstream: (workstreamId: string) => void;
 }): ReactElement {
   return (
-    <div className="rail-content">
-      <Panel className="repo-block" density="compact">
+    <div className={styles.railContent}>
+      <Panel className={styles.repoBlock} density="compact">
         <PanelHeader
           eyebrow="Current repository"
           title={workspace?.project.name || "Pathfinder workspace"}
@@ -140,47 +128,47 @@ function ProjectNav({
           actions={activeWorkstreamId ? <Badge tone="accent">Active set</Badge> : undefined}
         />
       </Panel>
-      <div className="rail-section">
-        <div className="rail-heading">Review modes</div>
-        <div className="workstream-list">
+      <div className={styles.railSection}>
+        <div className={styles.railHeading}>Review modes</div>
+        <div className={styles.workstreamList}>
           <button
-            className="workstream-button mode-button"
+            className={`${styles.workstreamButton} ${styles.modeButton}`}
             type="button"
             aria-current={mode === "branch-review"}
             onClick={onSelectBranchReview}
           >
-            <span className="workstream-title">Branch review</span>
-            <span className="workstream-meta">Standalone committed diff review</span>
+            <span className={styles.workstreamTitle}>Branch review</span>
+            <span className={styles.workstreamMeta}>Standalone committed diff review</span>
             <Badge tone={mode === "branch-review" ? "accent" : "neutral"}>Mode</Badge>
           </button>
         </div>
       </div>
-      <div className="rail-section">
-        <div className="rail-heading">Workstreams</div>
+      <div className={styles.railSection}>
+        <div className={styles.railHeading}>Workstreams</div>
         {!workspace ? (
           <EmptyState
-            className="rail-empty"
+            className={styles.railEmpty}
             title="Loading workstreams"
             description="Reading Pathfinder state for this repository."
           />
         ) : workspace.workstreams.length === 0 ? (
           <EmptyState
-            className="rail-empty"
+            className={styles.railEmpty}
             title="No workstreams"
             description="Create a workstream to populate this workspace."
           />
         ) : (
-          <div className="workstream-list">
+          <div className={styles.workstreamList}>
             {workspace.workstreams.map((workstream) => (
               <button
-                className="workstream-button"
+                className={styles.workstreamButton}
                 type="button"
                 key={workstream.id}
                 aria-current={workstream.id === selectedWorkstreamId}
                 onClick={() => onSelectWorkstream(workstream.id)}
               >
-                <span className="workstream-title">{workstream.title}</span>
-                <span className="workstream-meta">
+                <span className={styles.workstreamTitle}>{workstream.title}</span>
+                <span className={styles.workstreamMeta}>
                   {workstream.id}
                 </span>
                 {workstream.id === activeWorkstreamId ? <Badge tone="success">Active</Badge> : null}
@@ -215,7 +203,7 @@ function WorkspaceOverview({
   if (loading) {
     return (
       <EmptyState
-        className="workspace-empty"
+        className={styles.workspaceEmpty}
         title="Loading workspace"
         description="Reading Pathfinder state for the current repository."
       />
@@ -225,7 +213,7 @@ function WorkspaceOverview({
   if (error) {
     return (
       <EmptyState
-        className="workspace-empty"
+        className={styles.workspaceEmpty}
         title="No Pathfinder workspace"
         description={error}
       />
@@ -235,7 +223,7 @@ function WorkspaceOverview({
   if (!workspace) {
     return (
       <EmptyState
-        className="workspace-empty"
+        className={styles.workspaceEmpty}
         title="No Pathfinder workspace"
         description="Initialize Pathfinder for this repository to use the workspace."
       />
@@ -245,7 +233,7 @@ function WorkspaceOverview({
   if (workspace.workstreams.length === 0) {
     return (
       <EmptyState
-        className="workspace-empty"
+        className={styles.workspaceEmpty}
         title="No workstreams"
         description="Create a workstream to populate the workspace."
       />
@@ -255,7 +243,7 @@ function WorkspaceOverview({
   if (!selectedWorkstream) {
     return (
       <EmptyState
-        className="workspace-empty"
+        className={styles.workspaceEmpty}
         title="Workstream not found"
         description="The selected workstream is no longer available in this repository."
       />
@@ -265,7 +253,7 @@ function WorkspaceOverview({
   if (!overview) {
     return (
       <EmptyState
-        className="workspace-empty"
+        className={styles.workspaceEmpty}
         title="Loading workstream"
         description="Reading workstream slices and review state."
       />
@@ -277,21 +265,21 @@ function WorkspaceOverview({
   const activeSlice = overview.slices.find((slice) => slice.id === activeSliceId);
 
   return (
-    <div className="workspace-surface">
-      <Panel className="surface-header" density="compact">
+    <div className={styles.workspaceSurface}>
+      <Panel className={styles.surfaceHeader} density="compact">
         <PanelHeader
           eyebrow="Workstream overview"
           title={overview.workstream.title}
           description={overview.workstream.id}
           actions={activeSlice ? <StatusChip status={activeSlice.status} label="Active slice" /> : undefined}
         />
-        <div className="surface-stats" aria-label="Workstream counts">
+        <div className={styles.surfaceStats} aria-label="Workstream counts">
           <Metric label="Slices" value={overview.slices.length} />
           <Metric label="Open comments" value={counts.openCommentCount} tone={counts.openCommentCount > 0 ? "warning" : "neutral"} />
           <Metric label="Reviews" value={overview.reviewSessions.length} />
         </div>
         {selectedSlice ? (
-          <Notice className="selection-notice" tone="info" title="Selected slice">
+          <Notice className={styles.selectionNotice} tone="info" title="Selected slice">
             {selectedSlice.title}
           </Notice>
         ) : null}

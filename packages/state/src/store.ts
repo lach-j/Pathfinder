@@ -5,7 +5,6 @@ import path from "node:path";
 import {
   BranchReviewSession,
   BranchReviewNextRecommendation,
-  DeterministicReviewResult,
   Evidence,
   AGENT_COMMAND_MANAGED_END,
   AGENT_COMMAND_MANAGED_START,
@@ -18,7 +17,6 @@ import {
   AgentPromptPhase,
   AgentUserInstallTool,
   AgentUserInstallToolDefinition,
-  ImportedStagePlan,
   PathfinderError,
   Project,
   RepositorySummary,
@@ -62,208 +60,61 @@ import { findGitRoot } from "./git-root.js";
 import { readJson, writeJson } from "./json-file.js";
 import { validateDependencies } from "./slice-dependencies.js";
 import {
+  AGENT_BOOTSTRAP_END,
+  AGENT_BOOTSTRAP_START,
+  applyAgentBootstrapBlock,
+  applyManagedBlock,
+  changedFileMatches,
+  checkAgentCommandTool,
+  checkPersonalStateMode,
+  commentTargetsSession,
+  errorMessage,
+  latestBranchReviewSession,
+  latestSessionForSlice
+} from "./store-helpers.js";
+import type {
+  ActiveSlice,
+  AddCommentInput,
+  AgentBootstrapResult,
+  AgentCommandFileResult,
+  AgentCommandsInstallResult,
+  AgentCommandsListResult,
+  AgentDoctorCheck,
+  AgentDoctorOptions,
+  AgentDoctorResult,
+  AgentUserInstallFileResult,
+  AgentUserInstallResult,
+  BranchReviewApprovalResult,
+  BranchReviewSessionsFile,
+  CommentsFile,
+  CurrentContext,
+  DeterministicReviewRecord,
+  EvidenceFile,
+  ExportFeedbackOptions,
+  FeedbackQueueExport,
+  GeneratedPrMarkdown,
+  ImportedStagePlanState,
+  InitProjectOptions,
+  ListCommentsOptions,
+  RefreshedBranchReviewSession,
+  RefreshedReviewSession,
+  RepositorySummaryProvider,
+  ReviewApprovalResult,
+  ReviewSessionsFile,
+  ReviewsFile,
+  SliceBranchMetadata,
+  SlicesFile,
+  StoredMarkdownFile,
+  SuggestedBaseRefProvider,
+  UncommittedChangesProvider,
+  ValidatedCommentTarget
+} from "./store-types.js";
+import {
   PathfinderStoreOptions,
   resolveExistingStateRoot,
   resolveStateRootForInit,
   writeExternalProjectMetadata
 } from "./state-root.js";
-
-export interface ActiveSlice {
-  workstream: Workstream;
-  slice: Slice;
-}
-
-export interface CurrentContext {
-  project: Project;
-  workstream?: Workstream;
-  activeSlice?: Slice;
-  requirementsPath?: string;
-  requirementsMarkdown?: string;
-  planPath?: string;
-  planMarkdown?: string;
-  unresolvedComments: ReviewComment[];
-  evidence: Evidence[];
-}
-
-export interface GeneratedPrMarkdown {
-  markdown: string;
-  path: string;
-}
-
-export interface StoredMarkdownFile {
-  markdown: string;
-  path: string;
-}
-
-export interface FeedbackQueueExport {
-  markdown: string;
-  defaultPath?: string;
-}
-
-export interface AgentBootstrapResult {
-  path: string;
-  markdown: string;
-  changed: boolean;
-  dryRun: boolean;
-}
-
-export interface AgentCommandFileResult {
-  tool: AgentCommandTool;
-  commandName: string;
-  path: string;
-  relativePath: string;
-  installed: boolean;
-  managed: boolean;
-  changed: boolean;
-  skipped: boolean;
-  reason?: string;
-}
-
-export interface AgentCommandsInstallResult {
-  dryRun: boolean;
-  files: AgentCommandFileResult[];
-}
-
-export interface AgentCommandsListResult {
-  tools: {
-    tool: AgentCommandTool;
-    displayName: string;
-    files: AgentCommandFileResult[];
-  }[];
-}
-
-export interface AgentUserInstallFileResult {
-  tool: AgentUserInstallTool;
-  path: string;
-  relativePath: string;
-  installed: boolean;
-  managed: boolean;
-  changed: boolean;
-  skipped: boolean;
-  reason?: string;
-}
-
-export interface AgentUserInstallResult {
-  dryRun: boolean;
-  files: AgentUserInstallFileResult[];
-  manualInstructions: {
-    tool: AgentUserInstallTool;
-    displayName: string;
-    instructions: string[];
-  }[];
-}
-
-export type AgentDoctorCheckStatus = "pass" | "missing" | "warning" | "error";
-
-export interface AgentDoctorCheck {
-  id: string;
-  status: AgentDoctorCheckStatus;
-  message: string;
-  fixCommand?: string;
-}
-
-export interface AgentDoctorResult {
-  ok: boolean;
-  checks: AgentDoctorCheck[];
-  next: {
-    phase: AgentNextRecommendation["phase"];
-    command: "pathfinder agent next --json";
-  };
-}
-
-export interface AgentDoctorOptions {
-  personal?: boolean;
-}
-
-export interface DeterministicReviewRecord {
-  review: Review;
-  result: DeterministicReviewResult;
-}
-
-export interface SliceBranchMetadata {
-  branchName: string;
-  baseRef: string;
-  startedAt: string;
-}
-
-export interface ImportedStagePlanState {
-  plan: ImportedStagePlan;
-  workstream: Workstream;
-  slices: Slice[];
-}
-
-export type RepositorySummaryProvider = (baseRef: string) => Promise<RepositorySummary>;
-export type SuggestedBaseRefProvider = () => Promise<string | undefined>;
-export type UncommittedChangesProvider = () => Promise<boolean>;
-
-export interface AddCommentInput {
-  body: string;
-  origin?: ReviewCommentOrigin;
-  target?: ReviewCommentTarget;
-  structuredDiff?: StructuredDiff;
-}
-
-export interface ListCommentsOptions {
-  sessionId?: string;
-  openOnly?: boolean;
-}
-
-export interface ExportFeedbackOptions {
-  sessionId?: string;
-}
-
-export interface InitProjectOptions {
-  personal?: boolean;
-}
-
-export interface RefreshedReviewSession {
-  session: ReviewSession;
-  comments: ReviewComment[];
-}
-
-export interface RefreshedBranchReviewSession {
-  session: BranchReviewSession;
-  comments: ReviewComment[];
-}
-
-export interface ReviewApprovalResult {
-  session: ReviewSession;
-  slice: Slice;
-  evidence: Evidence;
-}
-
-export interface BranchReviewApprovalResult {
-  session: BranchReviewSession;
-}
-
-interface SlicesFile {
-  slices: Slice[];
-}
-
-interface CommentsFile {
-  comments: ReviewComment[];
-}
-
-interface ReviewsFile {
-  reviews: Review[];
-}
-
-interface ReviewSessionsFile {
-  sessions: ReviewSession[];
-}
-
-interface BranchReviewSessionsFile {
-  sessions: BranchReviewSession[];
-}
-
-interface EvidenceFile {
-  evidence: Evidence[];
-}
-
-interface ValidatedCommentTarget {
-  target: ReviewCommentTarget;
-  sliceId?: string;
-}
 
 export class PathfinderStore {
   private readonly cwd: string;
@@ -2411,169 +2262,4 @@ export class PathfinderStore {
       };
     }
   }
-}
-
-function checkAgentCommandTool(tool: AgentCommandsListResult["tools"][number]): AgentDoctorCheck {
-  const id = `${tool.tool}-commands`;
-  const missing = tool.files.filter((file) => !file.installed);
-  const userOwned = tool.files.filter((file) => file.installed && !file.managed);
-  const outdated = tool.files.filter((file) => file.installed && file.managed && file.changed);
-  const fixCommand = `pathfinder agent commands install --tool ${tool.tool}`;
-
-  if (missing.length > 0) {
-    return {
-      id,
-      status: "missing",
-      message: `${tool.displayName} Pathfinder command wrappers are missing: ${missing.map((file) => file.relativePath).join(", ")}.`,
-      fixCommand
-    };
-  }
-
-  if (userOwned.length > 0) {
-    return {
-      id,
-      status: "warning",
-      message: `${tool.displayName} command wrapper paths exist but are not Pathfinder-managed: ${userOwned.map((file) => file.relativePath).join(", ")}.`,
-      fixCommand
-    };
-  }
-
-  if (outdated.length > 0) {
-    return {
-      id,
-      status: "warning",
-      message: `${tool.displayName} Pathfinder command wrappers are installed but need updating: ${outdated.map((file) => file.relativePath).join(", ")}.`,
-      fixCommand
-    };
-  }
-
-  return {
-    id,
-    status: "pass",
-    message: `${tool.displayName} Pathfinder command wrappers are installed.`
-  };
-}
-
-function checkPersonalStateMode(hasExternalProject: boolean, hasRepoProject: boolean): AgentDoctorCheck {
-  if (hasRepoProject) {
-    return {
-      id: "state-mode",
-      status: "error",
-      message: "Repo-local Pathfinder state exists; personal doctor expects external state with no repo-local state."
-    };
-  }
-
-  if (!hasExternalProject) {
-    return {
-      id: "state-mode",
-      status: "missing",
-      message: "External Pathfinder state is not initialized for this repository.",
-      fixCommand: "pathfinder init --personal"
-    };
-  }
-
-  return {
-    id: "state-mode",
-    status: "pass",
-    message: "State mode is external for this repository."
-  };
-}
-
-function changedFileMatches(path: string, previousPath: string | undefined, filePath: string): boolean {
-  return path === filePath || previousPath === filePath;
-}
-
-function commentTargetsSession(comment: ReviewComment, sessionId: string): boolean {
-  return (
-    (comment.target?.type === "file" || comment.target?.type === "line") &&
-    comment.target.sessionId === sessionId
-  );
-}
-
-function latestSessionForSlice(sessions: ReviewSession[], sliceId: string | undefined): ReviewSession | undefined {
-  if (!sliceId) {
-    return undefined;
-  }
-
-  return sessions
-    .filter((session) => session.sliceId === sliceId)
-    .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
-    .at(-1);
-}
-
-function latestBranchReviewSession(sessions: BranchReviewSession[]): BranchReviewSession | undefined {
-  return [...sessions].sort((left, right) => left.createdAt.localeCompare(right.createdAt)).at(-1);
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
-  return "Unknown Pathfinder state error.";
-}
-
-const AGENT_BOOTSTRAP_START = "<!-- pathfinder-agent:start -->";
-const AGENT_BOOTSTRAP_END = "<!-- pathfinder-agent:end -->";
-
-const AGENT_BOOTSTRAP_BLOCK = `${AGENT_BOOTSTRAP_START}
-## Pathfinder Agent Workflow
-
-Pathfinder is the source of truth for planning, slice scope, review feedback, and PR output in this repository.
-
-When asked to plan, implement, continue, review, or address feedback here, first run:
-
-\`\`\`bash
-pathfinder agent next --json
-\`\`\`
-
-Follow the returned \`phase\`, \`commands\`, and \`agentInstruction\`. Use \`pathfinder agent prompt\` when you need tool-neutral markdown instructions for the current phase.
-
-Do not create unmanaged task lists or parallel plans when Pathfinder state exists. Keep implementation scoped to the active Pathfinder slice, and do not resolve Pathfinder comments automatically after making code changes.
-
-MCP is not required for this workflow; use the local Pathfinder CLI commands above.
-${AGENT_BOOTSTRAP_END}
-`;
-
-function applyAgentBootstrapBlock(existing: string): string {
-  return applyManagedBlock(
-    existing,
-    AGENT_BOOTSTRAP_BLOCK,
-    AGENT_BOOTSTRAP_START,
-    AGENT_BOOTSTRAP_END,
-    "AGENTS.md contains an incomplete Pathfinder agent bootstrap block.",
-    "AGENTS.md contains malformed Pathfinder agent bootstrap markers."
-  );
-}
-
-function applyManagedBlock(
-  existing: string,
-  block: string,
-  startMarker: string,
-  endMarker: string,
-  incompleteMessage: string,
-  malformedMessage: string
-): string {
-  const startIndex = existing.indexOf(startMarker);
-  const endIndex = existing.indexOf(endMarker);
-
-  if ((startIndex === -1) !== (endIndex === -1)) {
-    throw new PathfinderError(incompleteMessage);
-  }
-
-  if (startIndex !== -1 && endIndex !== -1) {
-    if (endIndex < startIndex) {
-      throw new PathfinderError(malformedMessage);
-    }
-
-    const afterEnd = endIndex + endMarker.length;
-    return `${existing.slice(0, startIndex)}${block}${existing.slice(afterEnd).replace(/^\r?\n/, "")}`;
-  }
-
-  if (!existing.trim()) {
-    return block;
-  }
-
-  const trimmedEnd = existing.replace(/\s*$/, "");
-  return `${trimmedEnd}\n\n${block}`;
 }

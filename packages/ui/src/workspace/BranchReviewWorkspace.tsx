@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 
 import { DiffPane } from "../review/DiffPane";
 import { FileList } from "../review/FileList";
-import { firstFilePath, reviewCommentSummary } from "../review/review-model";
+import { firstFilePath } from "../review/review-model";
 import type {
   BranchReviewOverviewResponse,
   BranchReviewSession,
@@ -21,6 +21,12 @@ import {
   refreshBranchReviewSession,
   resolveBranchReviewComment
 } from "./branch-review-api";
+import {
+  latestSessionByCreation,
+  lineCommentTarget,
+  ReviewSessionList,
+  ReviewToolbar
+} from "./ReviewWorkspaceParts";
 
 export function BranchReviewWorkspace(): ReactElement {
   const [overview, setOverview] = useState<BranchReviewOverviewResponse>();
@@ -164,10 +170,13 @@ export function BranchReviewWorkspace(): ReactElement {
             {overview ? `${overview.sessions.length} session${overview.sessions.length === 1 ? "" : "s"}` : "Loading"}
           </div>
         </div>
-        <SessionList
+        <ReviewSessionList
           sessions={overview?.sessions ?? []}
           selectedSessionId={selectedSessionId}
           comments={overview?.comments ?? []}
+          emptyTitle="No branch review sessions"
+          emptyMessage="Start one from a clean committed branch:"
+          emptyCommand="pathfinder branch-review start --base <base-ref>"
           onSelectSession={(sessionId) => {
             setSelectedSessionId(sessionId);
             setStatusMessage("");
@@ -184,10 +193,14 @@ export function BranchReviewWorkspace(): ReactElement {
       </aside>
 
       <section className="branch-review-main">
-        <BranchReviewToolbar
+        <ReviewToolbar
+          eyebrow="Pathfinder Branch Review"
+          title={session ? session.headRef : "Standalone branch review"}
+          description={session ? `${session.baseRef} to ${session.headCommit}` : "No session selected"}
           comments={comments}
           session={session}
           commentFilter={commentFilter}
+          commentFilterId="branch-comment-filter"
           onChangeCommentFilter={setCommentFilter}
           onRefresh={() => {
             void refreshSelectedSession();
@@ -225,130 +238,6 @@ export function BranchReviewWorkspace(): ReactElement {
       </section>
     </div>
   );
-}
-
-function BranchReviewToolbar({
-  comments,
-  session,
-  commentFilter,
-  onChangeCommentFilter,
-  onRefresh
-}: {
-  comments: ReviewComment[];
-  session?: BranchReviewSession;
-  commentFilter: CommentFilter;
-  onChangeCommentFilter: (filter: CommentFilter) => void;
-  onRefresh: () => void;
-}): ReactElement {
-  const summary = reviewCommentSummary(comments);
-
-  return (
-    <div className="branch-review-toolbar">
-      <div className="identity">
-        <div className="eyebrow">Pathfinder Branch Review</div>
-        <h1>{session ? session.headRef : "Standalone branch review"}</h1>
-        <div className="slice">{session ? `${session.baseRef} to ${session.headCommit}` : "No session selected"}</div>
-        <div className="review-status-strip" aria-label="Review comment status">
-          <span>{summary.open} open</span>
-          <span>{summary.resolved} resolved</span>
-          {summary.stale > 0 && <span className="is-stale">{summary.stale} stale</span>}
-        </div>
-      </div>
-      <div className="review-controls">
-        <div className="control">
-          <label htmlFor="branch-comment-filter">Comments</label>
-          <select
-            id="branch-comment-filter"
-            value={commentFilter}
-            onChange={(event) => onChangeCommentFilter(event.currentTarget.value as CommentFilter)}
-          >
-            <option value="all">All comments</option>
-            <option value="open">Open comments</option>
-            <option value="resolved">Resolved comments</option>
-          </select>
-        </div>
-        <button className="button" type="button" disabled={!session} onClick={onRefresh}>
-          Refresh
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SessionList({
-  sessions,
-  selectedSessionId,
-  comments,
-  onSelectSession
-}: {
-  sessions: BranchReviewSession[];
-  selectedSessionId?: string;
-  comments: ReviewComment[];
-  onSelectSession: (sessionId: string) => void;
-}): ReactElement {
-  if (sessions.length === 0) {
-    return (
-      <div className="branch-review-empty">
-        <strong>No branch review sessions</strong>
-        <p>Start one from a clean committed branch:</p>
-        <code>pathfinder branch-review start --base &lt;base-ref&gt;</code>
-      </div>
-    );
-  }
-
-  return (
-    <div className="session-list">
-      {sessions.map((session) => {
-        const openCount = comments.filter((comment) => {
-          const target = comment.target;
-          return !comment.resolved &&
-            (target?.type === "file" || target?.type === "line") &&
-            target.sessionId === session.id;
-        }).length;
-
-        return (
-          <button
-            key={session.id}
-            type="button"
-            className="session-button"
-            aria-current={session.id === selectedSessionId}
-            onClick={() => onSelectSession(session.id)}
-          >
-            <span className="session-title">{session.id}</span>
-            <span className="session-meta">{session.baseRef} to {session.headRef}</span>
-            <span className="session-meta">
-              {openCount} open comment{openCount === 1 ? "" : "s"}
-              {session.approvedAt ? " · approved" : ""}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function lineCommentTarget(
-  sessionId: string | undefined,
-  file: DiffFile,
-  line: DiffLine
-): DraftTarget | undefined {
-  if (!sessionId) {
-    return undefined;
-  }
-
-  if (line.newLineNumber) {
-    return { type: "line", sessionId, filePath: file.path, side: "new", lineNumber: line.newLineNumber };
-  }
-
-  if (line.oldLineNumber) {
-    return { type: "line", sessionId, filePath: file.path, side: "old", lineNumber: line.oldLineNumber };
-  }
-
-  return undefined;
-}
-
-function latestSessionByCreation(sessions: BranchReviewSession[]): BranchReviewSession | undefined {
-  return [...sessions].sort((left, right) => (left.createdAt ?? "").localeCompare(right.createdAt ?? "")).at(-1);
 }
 
 function getDiffEmptyState(

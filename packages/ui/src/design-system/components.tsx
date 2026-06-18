@@ -1,25 +1,41 @@
 import type {
-  ButtonHTMLAttributes,
   HTMLAttributes,
-  ReactNode
 } from "react";
-
-type Tone = "neutral" | "accent" | "success" | "warning" | "danger" | "info";
+import type {
+  BadgeProps,
+  ButtonProps,
+  EmptyStateProps,
+  IconButtonProps,
+  ListRowProps,
+  MetricProps,
+  NoticeProps,
+  PanelHeaderProps,
+  PanelProps,
+  StatusChipProps,
+  TabsProps,
+  ToolbarProps
+} from "./component-types";
+export type {
+  BadgeProps,
+  ButtonProps,
+  ButtonSize,
+  ButtonVariant,
+  EmptyStateProps,
+  IconButtonProps,
+  ListRowProps,
+  MetricProps,
+  NoticeProps,
+  PanelHeaderProps,
+  PanelProps,
+  StatusChipProps,
+  TabsProps,
+  Tone,
+  ToolbarProps
+} from "./component-types";
 
 function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
 }
-
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
-export type ButtonSize = "sm" | "md";
-
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  loading?: boolean;
-  leadingIcon?: ReactNode;
-  trailingIcon?: ReactNode;
-};
 
 export function Button({
   children,
@@ -53,11 +69,6 @@ export function Button({
   );
 }
 
-export type IconButtonProps = Omit<ButtonProps, "children" | "leadingIcon" | "trailingIcon"> & {
-  "aria-label": string;
-  icon: ReactNode;
-};
-
 export function IconButton({
   className,
   icon,
@@ -77,10 +88,6 @@ export function IconButton({
   );
 }
 
-export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
-  tone?: Tone;
-};
-
 export function Badge({ children, className, tone = "neutral", ...props }: BadgeProps) {
   return (
     <span className={cx("pf-badge", `pf-tone-${tone}`, className)} {...props}>
@@ -88,11 +95,6 @@ export function Badge({ children, className, tone = "neutral", ...props }: Badge
     </span>
   );
 }
-
-export type StatusChipProps = HTMLAttributes<HTMLSpanElement> & {
-  status: string;
-  label?: string;
-};
 
 export function StatusChip({ className, label, status, ...props }: StatusChipProps) {
   return (
@@ -105,11 +107,6 @@ export function StatusChip({ className, label, status, ...props }: StatusChipPro
     </span>
   );
 }
-
-export type PanelProps = HTMLAttributes<HTMLElement> & {
-  as?: "section" | "aside" | "div";
-  density?: "normal" | "compact";
-};
 
 export function Panel({
   as: Component = "section",
@@ -124,13 +121,6 @@ export function Panel({
     </Component>
   );
 }
-
-export type PanelHeaderProps = HTMLAttributes<HTMLDivElement> & {
-  eyebrow?: string;
-  title: ReactNode;
-  description?: ReactNode;
-  actions?: ReactNode;
-};
 
 export function PanelHeader({
   actions,
@@ -152,10 +142,6 @@ export function PanelHeader({
   );
 }
 
-export type ToolbarProps = HTMLAttributes<HTMLDivElement> & {
-  align?: "start" | "between" | "end";
-};
-
 export function Toolbar({ align = "between", children, className, ...props }: ToolbarProps) {
   return (
     <div className={cx("pf-toolbar", `pf-toolbar-${align}`, className)} {...props}>
@@ -163,12 +149,6 @@ export function Toolbar({ align = "between", children, className, ...props }: To
     </div>
   );
 }
-
-export type TabsProps = HTMLAttributes<HTMLDivElement> & {
-  tabs: Array<{ id: string; label: ReactNode; count?: number }>;
-  activeId: string;
-  onSelect?: (id: string) => void;
-};
 
 export function Tabs({ activeId, className, onSelect, tabs, ...props }: TabsProps) {
   return (
@@ -189,15 +169,6 @@ export function Tabs({ activeId, className, onSelect, tabs, ...props }: TabsProp
     </div>
   );
 }
-
-export type ListRowProps = HTMLAttributes<HTMLDivElement> & {
-  title: ReactNode;
-  description?: ReactNode;
-  meta?: ReactNode;
-  leading?: ReactNode;
-  trailing?: ReactNode;
-  selected?: boolean;
-};
 
 export function ListRow({
   className,
@@ -222,13 +193,6 @@ export function ListRow({
   );
 }
 
-export type EmptyStateProps = HTMLAttributes<HTMLDivElement> & {
-  icon?: ReactNode;
-  title: ReactNode;
-  description?: ReactNode;
-  actions?: ReactNode;
-};
-
 export function EmptyState({
   actions,
   className,
@@ -246,12 +210,6 @@ export function EmptyState({
     </div>
   );
 }
-
-export type NoticeProps = HTMLAttributes<HTMLDivElement> & {
-  tone?: Exclude<Tone, "neutral">;
-  title?: ReactNode;
-  actions?: ReactNode;
-};
 
 export function Notice({
   actions,
@@ -271,13 +229,6 @@ export function Notice({
     </div>
   );
 }
-
-export type MetricProps = HTMLAttributes<HTMLDivElement> & {
-  label: ReactNode;
-  value: ReactNode;
-  hint?: ReactNode;
-  tone?: Tone;
-};
 
 export function Metric({
   className,

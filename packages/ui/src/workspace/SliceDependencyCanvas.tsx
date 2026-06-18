@@ -17,28 +17,8 @@ import {
 import { StatusChip } from "../design-system";
 import type { Slice, WorkstreamOverviewResponse } from "../types";
 import { countsForSlice } from "./workspace-model";
-
-interface SliceDependencyCanvasProps {
-  overview: WorkstreamOverviewResponse;
-  activeSliceId?: string;
-  selectedSliceId?: string;
-  onSelectSlice: (sliceId: string) => void;
-}
-
-interface SliceNodeData extends Record<string, unknown> {
-  slice: Slice;
-  isActive: boolean;
-  isSelected: boolean;
-  openCommentCount: number;
-  reviewSessionCount: number;
-  evidenceCount: number;
-}
-
-interface SliceGraph {
-  nodes: Node<SliceNodeData>[];
-  edges: Edge[];
-  warnings: string[];
-}
+import type { SliceDependencyCanvasProps, SliceGraph, SliceNodeData } from "./workspace-types";
+import styles from "./SliceDependencyCanvas.module.css";
 
 const nodeWidth = 300;
 const nodeHeight = 176;
@@ -62,7 +42,7 @@ export function SliceDependencyCanvas({
 
   if (overview.slices.length === 0) {
     return (
-      <div className="canvas-empty">
+      <div className={styles.empty}>
         <h3>No slices</h3>
         <p>This workstream does not have implementation slices yet.</p>
       </div>
@@ -70,9 +50,9 @@ export function SliceDependencyCanvas({
   }
 
   return (
-    <div className="dependency-canvas">
+    <div className={styles.canvas}>
       {graph.warnings.length > 0 ? (
-        <div className="dependency-warning" role="alert">
+        <div className={styles.warning} role="alert">
           <strong>Dependency warning</strong>
           <ul>
             {graph.warnings.map((warning) => (
@@ -269,10 +249,10 @@ function SliceNode({ data }: NodeProps<Node<SliceNodeData>>): ReactElement {
   return (
     <div
       className={[
-        "dependency-node",
-        `dependency-node-${slice.status}`,
-        data.isSelected ? "is-selected" : "",
-        data.isActive ? "is-active" : "",
+        styles.node,
+        statusClass(slice.status),
+        data.isSelected ? styles.selected : "",
+        data.isActive ? styles.active : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -281,30 +261,30 @@ function SliceNode({ data }: NodeProps<Node<SliceNodeData>>): ReactElement {
         id="in"
         type="target"
         position={Position.Left}
-        className="dependency-handle"
+        className={styles.handle}
         isConnectable={false}
       />
       <Handle
         id="out"
         type="source"
         position={Position.Right}
-        className="dependency-handle"
+        className={styles.handle}
         isConnectable={false}
       />
-      <div className="dependency-node-top">
-        <span className="dependency-node-title">{slice.title}</span>
+      <div className={styles.nodeTop}>
+        <span className={styles.nodeTitle}>{slice.title}</span>
         <StatusChip status={slice.status} />
       </div>
-      <div className="dependency-node-id">
+      <div className={styles.nodeId}>
         {slice.id}
         {data.isActive ? " · active" : ""}
       </div>
-      <div className="dependency-node-meta">
+      <div className={styles.nodeMeta}>
         {slice.branchName ? <span>Branch {slice.branchName}</span> : null}
         {slice.baseRef ? <span>Base {slice.baseRef}</span> : null}
         {!slice.branchName && !slice.baseRef ? <span>Not started</span> : null}
       </div>
-      <div className="dependency-node-counts" aria-label="Slice related counts">
+      <div className={styles.nodeCounts} aria-label="Slice related counts">
         <span>{data.openCommentCount} open comments</span>
         <span>{data.reviewSessionCount} reviews</span>
         <span>{data.evidenceCount} evidence</span>
@@ -313,18 +293,22 @@ function SliceNode({ data }: NodeProps<Node<SliceNodeData>>): ReactElement {
   );
 }
 
-function statusColor(status: Slice["status"] | undefined): string {
+function statusClass(status: Slice["status"] | undefined): string {
   if (status === "complete") {
-    return "var(--pf-status-complete)";
+    return styles.complete;
   }
 
   if (status === "review") {
-    return "var(--pf-status-review)";
+    return styles.review;
   }
 
-  if (status === "ready" || status === "in_progress") {
-    return "var(--pf-status-ready)";
+  if (status === "ready") {
+    return styles.ready;
   }
 
-  return "var(--pf-status-proposed)";
+  if (status === "in_progress") {
+    return styles.inProgress;
+  }
+
+  return "";
 }

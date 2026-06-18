@@ -1,0 +1,270 @@
+.panel {
+  display: grid;
+  gap: var(--pf-space-8);
+  padding: var(--pf-space-8);
+  align-content: start;
+}
+
+.sliceReviewPanel {
+  min-height: 100vh;
+  align-content: stretch;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  padding: 0;
+}
+
+.sliceReviewPanel .header {
+  padding: 18px 18px 0;
+}
+
+.sliceReviewPanel .tabs {
+  padding: 0 18px;
+}
+
+.sliceReviewPanel .body {
+  min-height: 0;
+}
+
+.header {
+  display: grid;
+  gap: 4px;
+}
+
+.header h2,
+.heading h3,
+.empty h3,
+.evidenceGroup h3,
+.evidenceItem h4 {
+  margin: 0;
+}
+
+.header h2 {
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.header p,
+.heading p,
+.empty p,
+.mutedCopy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.tabs {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tabs:global(.pf-tabs) {
+  grid-auto-flow: row;
+}
+
+.tabs :global(.pf-tab) {
+  min-width: 0;
+  width: 100%;
+}
+
+.body,
+.section,
+.evidencePreview,
+.evidenceGroup,
+.evidenceList {
+  display: grid;
+  gap: 14px;
+}
+
+.actions {
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.heading {
+  display: grid;
+  gap: 4px;
+}
+
+.heading h3,
+.empty h3,
+.evidenceGroup h3 {
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.empty {
+  padding: 14px;
+}
+
+.markdownPreview {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.markdownPreview > :first-child {
+  margin-top: 0;
+}
+
+.markdownPreview > :last-child {
+  margin-bottom: 0;
+}
+
+.markdownPreview h1,
+.markdownPreview h2,
+.markdownPreview h3 {
+  line-height: 1.25;
+  margin: 18px 0 8px;
+}
+
+.markdownPreview h1 {
+  font-size: 20px;
+}
+
+.markdownPreview h2 {
+  font-size: 17px;
+}
+
+.markdownPreview h3 {
+  font-size: 15px;
+}
+
+.markdownPreview p,
+.markdownPreview ul,
+.markdownPreview ol,
+.markdownPreview blockquote,
+.markdownPreview pre,
+.markdownPreview table {
+  margin: 0 0 12px;
+}
+
+.markdownPreview ul,
+.markdownPreview ol {
+  padding-left: 20px;
+}
+
+.markdownPreview code {
+  border-radius: var(--pf-radius-xs);
+  background: var(--metadata);
+  font-family: var(--pf-font-mono);
+  font-size: 12px;
+  padding: 1px 4px;
+}
+
+.markdownPreview pre {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--pf-radius-sm);
+  background: var(--metadata);
+  padding: 10px;
+}
+
+.markdownPreview pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdownPreview blockquote {
+  border-left: 3px solid var(--border-strong);
+  color: var(--muted);
+  padding-left: 10px;
+}
+
+.markdownPreview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.markdownPreview th,
+.markdownPreview td {
+  border: 1px solid var(--border);
+  padding: 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.evidenceGroup {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.evidenceGroup:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.evidenceItem {
+  border: 1px solid var(--border);
+  border-radius: var(--pf-radius-md);
+  background: var(--panel);
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+}
+
+.highlightedEvidence {
+  border-color: var(--pf-color-accent);
+  background: var(--pf-color-accent-muted);
+}
+
+.evidenceTopline {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.evidenceItem h4 {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.counts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detailList {
+  border-top: 1px solid var(--border);
+  display: grid;
+  margin: 0;
+}
+
+.detailList div {
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 3px;
+  padding: 10px 0;
+}
+
+.detailList dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.detailList dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 980px) {
+  .sliceReviewPanel {
+    min-height: 0;
+  }
+}

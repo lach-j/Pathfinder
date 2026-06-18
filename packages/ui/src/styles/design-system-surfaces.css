@@ -1,0 +1,246 @@
+.pf-panel {
+  min-width: 0;
+  border: 1px solid var(--pf-color-border);
+  border-radius: var(--pf-radius-md);
+  background: var(--pf-color-surface);
+  box-shadow: var(--pf-shadow-sm);
+}
+
+.pf-panel-normal {
+  padding: var(--pf-space-8);
+}
+
+.pf-panel-compact {
+  padding: var(--pf-space-5);
+}
+
+.pf-panel-header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--pf-space-7);
+  align-items: start;
+}
+
+.pf-panel-heading {
+  min-width: 0;
+  display: grid;
+  gap: var(--pf-space-2);
+}
+
+.pf-eyebrow {
+  color: var(--pf-color-text-subtle);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.pf-panel-heading h2,
+.pf-empty-state h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.pf-panel-heading p,
+.pf-empty-state p {
+  margin: 0;
+  color: var(--pf-color-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pf-panel-actions,
+.pf-toolbar,
+.pf-empty-actions,
+.pf-notice-actions {
+  min-width: 0;
+  display: flex;
+  gap: var(--pf-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pf-toolbar {
+  border-bottom: 1px solid var(--pf-color-border);
+  padding-bottom: var(--pf-space-5);
+}
+
+.pf-toolbar-start {
+  justify-content: start;
+}
+
+.pf-toolbar-between {
+  justify-content: space-between;
+}
+
+.pf-toolbar-end {
+  justify-content: end;
+}
+
+.pf-tabs {
+  min-width: 0;
+  border: 1px solid var(--pf-color-border);
+  border-radius: var(--pf-radius-md);
+  background: var(--pf-color-surface-inset);
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 3px;
+}
+
+.pf-tab {
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--pf-radius-sm);
+  background: transparent;
+  color: var(--pf-color-text-muted);
+  display: inline-flex;
+  gap: var(--pf-space-2);
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.2;
+  padding: 6px 9px;
+}
+
+.pf-tab:hover,
+.pf-tab[aria-selected="true"] {
+  border-color: var(--pf-color-border);
+  background: var(--pf-color-surface-soft);
+  color: var(--pf-color-text);
+}
+
+.pf-tab-count {
+  border-radius: var(--pf-radius-pill);
+  background: var(--pf-color-surface-muted);
+  color: var(--pf-color-text-muted);
+  font-size: 11px;
+  padding: 1px 6px;
+}
+
+.pf-list-row {
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--pf-radius-md);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--pf-space-4);
+  align-items: start;
+  padding: var(--pf-space-5);
+}
+
+.pf-list-row:hover,
+.pf-list-row.is-selected {
+  border-color: var(--pf-color-border);
+  background: var(--pf-color-selected);
+}
+
+.pf-list-row.is-selected {
+  border-color: var(--pf-color-accent);
+}
+
+.pf-list-leading,
+.pf-list-trailing {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.pf-list-trailing {
+  grid-column: 1 / -1;
+  justify-content: start;
+}
+
+.pf-list-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.pf-list-title {
+  min-width: 0;
+  color: var(--pf-color-text);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.pf-list-description,
+.pf-list-meta {
+  min-width: 0;
+  color: var(--pf-color-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.pf-list-meta {
+  color: var(--pf-color-text-subtle);
+}
+
+.pf-empty-state {
+  min-width: 0;
+  border: 1px dashed var(--pf-color-border-strong);
+  border-radius: var(--pf-radius-md);
+  background: var(--pf-color-surface-soft);
+  display: grid;
+  gap: var(--pf-space-4);
+  justify-items: start;
+  padding: var(--pf-space-8);
+}
+
+.pf-empty-icon {
+  color: var(--pf-color-accent-strong);
+}
+
+.pf-notice {
+  min-width: 0;
+  border: 1px solid currentColor;
+  border-radius: var(--pf-radius-md);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--pf-space-5);
+  align-items: start;
+  padding: var(--pf-space-5);
+}
+
+.pf-notice-body {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pf-notice-body strong {
+  color: var(--pf-color-text);
+}
+
+.pf-metric {
+  min-width: 94px;
+  border: 1px solid var(--pf-color-border);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-color-surface-soft);
+  display: grid;
+  gap: 2px;
+  padding: var(--pf-space-4);
+}
+
+.pf-metric-value {
+  color: var(--pf-color-text);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.pf-metric-label,
+.pf-metric-hint {
+  color: var(--pf-color-text-muted);
+  font-size: 12px;
+  line-height: 1.25;
+}

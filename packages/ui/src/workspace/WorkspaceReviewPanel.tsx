@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 
 import { DiffPane } from "../review/DiffPane";
 import { FileList } from "../review/FileList";
-import { firstFilePath, reviewCommentSummary } from "../review/review-model";
+import { firstFilePath } from "../review/review-model";
 import type {
   CommentFilter,
   DiffFile,
@@ -12,8 +12,7 @@ import type {
   ReviewComment,
   ReviewSession,
   Slice,
-  StructuredDiff,
-  Workstream
+  StructuredDiff
 } from "../types";
 import {
   addWorkstreamReviewComment,
@@ -21,13 +20,13 @@ import {
   refreshWorkstreamReviewSession,
   resolveWorkstreamReviewComment
 } from "./workstream-review-api";
-
-interface WorkspaceReviewPanelProps {
-  workstream: Workstream;
-  selectedSlice?: Slice;
-  sessions: ReviewSession[];
-  comments: ReviewComment[];
-}
+import {
+  latestSessionByCreation,
+  lineCommentTarget,
+  ReviewSessionList,
+  ReviewToolbar
+} from "./ReviewWorkspaceParts";
+import type { WorkspaceReviewPanelProps } from "./workspace-types";
 
 export function WorkspaceReviewPanel({
   workstream,
@@ -168,6 +167,10 @@ export function WorkspaceReviewPanel({
           sessions={sliceSessions}
           selectedSessionId={selectedSessionId}
           comments={localComments}
+          emptyTitle="No slice review sessions"
+          emptyMessage="Commit the slice changes, then start a review session:"
+          emptyCommand="pathfinder review start --base <base-ref>"
+          approvedSeparator=" - "
           onSelectSession={(sessionId) => {
             setSelectedSessionId(sessionId);
             setStatusMessage("");
@@ -184,11 +187,15 @@ export function WorkspaceReviewPanel({
       </div>
 
       <section className="slice-review-main">
-        <SliceReviewToolbar
+        <ReviewToolbar
+          eyebrow="Pathfinder Slice Review"
+          title={selectedSlice ? selectedSlice.title : "No slice selected"}
+          description={session ? `${session.id} - ${session.baseRef} to ${session.headRef}` : "No review session selected"}
           comments={sessionComments}
           session={session}
-          selectedSlice={selectedSlice}
           commentFilter={commentFilter}
+          commentFilterId="slice-comment-filter"
+          className="slice-review-toolbar"
           onChangeCommentFilter={setCommentFilter}
           onRefresh={() => {
             void refreshSelectedSession();
@@ -225,134 +232,6 @@ export function WorkspaceReviewPanel({
       </section>
     </div>
   );
-}
-
-function SliceReviewToolbar({
-  comments,
-  session,
-  selectedSlice,
-  commentFilter,
-  onChangeCommentFilter,
-  onRefresh
-}: {
-  comments: ReviewComment[];
-  session?: ReviewSession;
-  selectedSlice?: Slice;
-  commentFilter: CommentFilter;
-  onChangeCommentFilter: (filter: CommentFilter) => void;
-  onRefresh: () => void;
-}): ReactElement {
-  const summary = reviewCommentSummary(comments);
-
-  return (
-    <div className="branch-review-toolbar slice-review-toolbar">
-      <div className="identity">
-        <div className="eyebrow">Pathfinder Slice Review</div>
-        <h1>{selectedSlice ? selectedSlice.title : "No slice selected"}</h1>
-        <div className="slice">
-          {session ? `${session.id} - ${session.baseRef} to ${session.headRef}` : "No review session selected"}
-        </div>
-        <div className="review-status-strip" aria-label="Review comment status">
-          <span>{summary.open} open</span>
-          <span>{summary.resolved} resolved</span>
-          {summary.stale > 0 && <span className="is-stale">{summary.stale} stale</span>}
-        </div>
-      </div>
-      <div className="review-controls">
-        <div className="control">
-          <label htmlFor="slice-comment-filter">Comments</label>
-          <select
-            id="slice-comment-filter"
-            value={commentFilter}
-            onChange={(event) => onChangeCommentFilter(event.currentTarget.value as CommentFilter)}
-          >
-            <option value="all">All comments</option>
-            <option value="open">Open comments</option>
-            <option value="resolved">Resolved comments</option>
-          </select>
-        </div>
-        <button className="button" type="button" disabled={!session} onClick={onRefresh}>
-          Refresh
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ReviewSessionList({
-  sessions,
-  selectedSessionId,
-  comments,
-  onSelectSession
-}: {
-  sessions: ReviewSession[];
-  selectedSessionId?: string;
-  comments: ReviewComment[];
-  onSelectSession: (sessionId: string) => void;
-}): ReactElement {
-  if (sessions.length === 0) {
-    return (
-      <div className="branch-review-empty">
-        <strong>No slice review sessions</strong>
-        <p>Commit the slice changes, then start a review session:</p>
-        <code>pathfinder review start --base &lt;base-ref&gt;</code>
-      </div>
-    );
-  }
-
-  return (
-    <div className="session-list">
-      {sessions.map((session) => {
-        const openCount = comments.filter((comment) => {
-          const target = comment.target;
-          return !comment.resolved &&
-            (target?.type === "file" || target?.type === "line") &&
-            target.sessionId === session.id;
-        }).length;
-
-        return (
-          <button
-            key={session.id}
-            type="button"
-            className="session-button"
-            aria-current={session.id === selectedSessionId}
-            onClick={() => onSelectSession(session.id)}
-          >
-            <span className="session-title">{session.id}</span>
-            <span className="session-meta">{session.baseRef} to {session.headRef}</span>
-            <span className="session-meta">
-              {openCount} open comment{openCount === 1 ? "" : "s"}
-              {session.approvedAt ? " - approved" : ""}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function lineCommentTarget(
-  sessionId: string | undefined,
-  file: DiffFile,
-  line: DiffLine
-): DraftTarget | undefined {
-  if (!sessionId) {
-    return undefined;
-  }
-
-  if (line.newLineNumber) {
-    return { type: "line", sessionId, filePath: file.path, side: "new", lineNumber: line.newLineNumber };
-  }
-
-  if (line.oldLineNumber) {
-    return { type: "line", sessionId, filePath: file.path, side: "old", lineNumber: line.oldLineNumber };
-  }
-
-  return undefined;
-}
-
-function latestSessionByCreation(sessions: ReviewSession[]): ReviewSession | undefined {
-  return [...sessions].sort((left, right) => (left.createdAt ?? "").localeCompare(right.createdAt ?? "")).at(-1);
 }
 
 function getDiffEmptyState(

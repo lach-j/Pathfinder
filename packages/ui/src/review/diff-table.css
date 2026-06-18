@@ -1,0 +1,128 @@
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 0;
+  font-family: var(--pf-font-mono);
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: var(--pf-shadow-sm);
+}
+
+.diff-table td {
+  vertical-align: top;
+  border-top: 0;
+}
+
+.line-action {
+  width: 30px;
+  padding: 1px 2px;
+  background: var(--panel-soft);
+  text-align: center;
+  user-select: none;
+}
+
+.comment-button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: var(--pf-radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+}
+
+tr:hover .comment-button,
+.comment-button:focus-visible {
+  opacity: 1;
+}
+
+.comment-button:hover {
+  border-color: var(--pf-color-accent);
+  background: var(--pf-color-accent-muted);
+  color: var(--pf-color-accent-strong);
+}
+
+.line-number {
+  width: 54px;
+  padding: 1px 8px;
+  color: var(--muted);
+  background: var(--panel-soft);
+  text-align: right;
+  user-select: none;
+}
+
+.code {
+  padding: 1px 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prefix {
+  display: inline-block;
+  width: 18px;
+  color: var(--muted);
+  user-select: none;
+}
+
+.code-content {
+  color: var(--pf-color-text);
+}
+
+.syntax-comment {
+  color: var(--pf-color-syntax-comment);
+}
+
+.syntax-string {
+  color: var(--pf-color-syntax-string);
+}
+
+.syntax-keyword {
+  color: var(--pf-color-syntax-keyword);
+  font-weight: 650;
+}
+
+.syntax-number {
+  color: var(--pf-color-syntax-number);
+}
+
+.syntax-function {
+  color: var(--pf-color-syntax-function);
+}
+
+.syntax-property {
+  color: var(--pf-color-syntax-property);
+}
+
+.line-addition .code,
+.line-addition .line-action,
+.line-addition .line-number {
+  background: var(--added);
+}
+
+.line-addition .prefix {
+  color: var(--added-line);
+}
+
+.line-deletion .code,
+.line-deletion .line-action,
+.line-deletion .line-number {
+  background: var(--deleted);
+}
+
+.line-deletion .prefix {
+  color: var(--deleted-line);
+}
+
+.line-metadata .code,
+.line-metadata .line-action,
+.hunk-row .code,
+.hunk-row .line-action,
+.hunk-row .line-number {
+  background: var(--metadata);
+  color: var(--muted);
+}

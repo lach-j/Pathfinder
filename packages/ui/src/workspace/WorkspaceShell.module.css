@@ -1,0 +1,222 @@
+.app {
+  min-height: 100vh;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr) minmax(280px, 340px);
+  background: var(--background);
+  overflow: hidden;
+}
+
+.branchReview {
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+}
+
+.sliceReview {
+  grid-template-columns: minmax(210px, 260px) minmax(280px, 0.55fr) minmax(720px, 1.45fr);
+}
+
+.rail,
+.inspector {
+  min-width: 0;
+  background: var(--panel);
+  overflow: auto;
+  box-shadow: inset -1px 0 0 var(--pf-color-shadow-line);
+}
+
+.rail {
+  border-right: 1px solid var(--border);
+}
+
+.inspector {
+  border-left: 1px solid var(--border);
+}
+
+.sliceReview .inspector {
+  overflow: hidden;
+}
+
+.main {
+  min-width: 0;
+  overflow: auto;
+  padding: var(--pf-space-8);
+}
+
+.mainBranch {
+  padding: 0;
+  overflow: hidden;
+}
+
+.railContent {
+  display: grid;
+  gap: var(--pf-space-8);
+  padding: var(--pf-space-8);
+}
+
+.repoBlock {
+  display: grid;
+  gap: 4px;
+}
+
+.repoBlock:global(.pf-panel) {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--pf-color-accent-muted) 38%, transparent), transparent 76%),
+    var(--pf-color-surface-soft);
+}
+
+.repoBlock h1,
+.repoBlock h2,
+.surfaceHeader h2,
+.workspaceEmpty h2 {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.railSection {
+  display: grid;
+  gap: 10px;
+}
+
+.railHeading {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.surfaceHeader p,
+.workspaceEmpty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.workstreamList {
+  display: grid;
+  gap: 4px;
+}
+
+.workstreamButton {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  border-radius: var(--pf-radius-sm);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  padding: 10px;
+}
+
+.workstreamTitle,
+.workstreamMeta {
+  grid-column: 1;
+}
+
+.workstreamButton :global(.pf-badge) {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+.modeButton {
+  background: var(--pf-color-surface-inset);
+}
+
+.workstreamButton:hover {
+  border-color: var(--border);
+  background: var(--selected);
+}
+
+.workstreamButton[aria-current="true"] {
+  border-color: var(--pf-color-accent);
+  background: var(--pf-color-accent-muted);
+}
+
+.workstreamTitle {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.workstreamMeta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.workspaceSurface {
+  display: grid;
+  gap: 16px;
+  min-height: calc(100vh - 36px);
+  grid-template-rows: auto minmax(420px, 1fr);
+}
+
+.surfaceHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.surfaceHeader :global(.pf-panel-header) {
+  min-width: 0;
+}
+
+.selectionNotice {
+  grid-column: 1 / -1;
+}
+
+.surfaceStats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.workspaceEmpty {
+  display: grid;
+  gap: 6px;
+  align-self: start;
+}
+
+.railEmpty:global(.pf-empty-state) {
+  padding: 12px;
+  gap: 6px;
+}
+
+.railEmpty h3 {
+  font-size: 13px;
+}
+
+@media (max-width: 980px) {
+  .app,
+  .branchReview,
+  .sliceReview {
+    height: auto;
+    min-height: 100vh;
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .rail,
+  .inspector {
+    max-height: none;
+    border: 0;
+  }
+
+  .rail {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .inspector {
+    border-top: 1px solid var(--border);
+  }
+
+  .surfaceHeader {
+    grid-template-columns: 1fr;
+  }
+}

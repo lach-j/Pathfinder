@@ -8,16 +8,7 @@ import {
   Slice
 } from "../domain.js";
 import { getReviewCommentTarget } from "../review/comment-targets.js";
-
-interface LineCommentGroup {
-  filePath: string;
-  comments: ReviewComment[];
-}
-
-interface FileCommentGroup {
-  filePath: string;
-  comments: ReviewComment[];
-}
+import type { FileCommentGroup, LineCommentGroup } from "./types.js";
 
 export function generateFeedbackQueueMarkdown(input: FeedbackQueueMarkdownInput): string {
   const openComments = sortComments(input.comments.filter((comment) => !comment.resolved));
